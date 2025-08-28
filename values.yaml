@@ -1,7 +1,7 @@
 image:
   pullPolicy: IfNotPresent
   repository: registry.rocket.chat/rocketchat/rocket.chat
-  tag: "7.0.0"  # Latest stable version
+  tag: "7.9.3"  # Latest stable version
 
 mongodb:
   enabled: true

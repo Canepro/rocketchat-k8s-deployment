@@ -46,6 +46,20 @@ grafana:
           editable: true
           options:
             path: /var/lib/grafana/dashboards/rocketchat
+  ingress:
+    enabled: true
+    ingressClassName: public
+    annotations:
+      cert-manager.io/cluster-issuer: production-cert-issuer
+    hosts:
+      - grafana.chat.canepro.me
+    tls:
+      - secretName: grafana-tls
+        hosts:
+          - grafana.chat.canepro.me
+  grafana.ini:
+    server:
+      root_url: https://grafana.chat.canepro.me
 
 # Alertmanager configuration
 alertmanager:
