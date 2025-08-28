@@ -78,8 +78,6 @@ extraEnv:
     value: "true"
   - name: NODE_ENV
     value: "production"
-  - name: ROOT_URL
-    value: "https://chat.canepro.me"
 
 # Pod disruption budget for high availability
 podDisruptionBudget:
