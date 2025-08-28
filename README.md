@@ -4,7 +4,7 @@ This repository contains the configuration files and deployment script for deplo
 
 ## 🚀 Features
 
-- **Rocket.Chat**: Latest stable version (7.0.0) with high availability
+- **Rocket.Chat**: Version 7.9.3 with high availability
 - **MongoDB**: Replica set configuration for data persistence
 - **Monitoring**: Prometheus and Grafana for metrics and dashboards
 - **SSL/TLS**: Automatic certificate management with Let's Encrypt
@@ -153,15 +153,10 @@ If you prefer to deploy manually, follow these steps:
 
 ### Accessing Grafana
 
-1. **Port forward to Grafana**:
-   ```bash
-   kubectl port-forward svc/prometheus-grafana 3000:80 -n monitoring
-   ```
-
-2. **Access Grafana**:
-   - URL: http://localhost:3000
-   - Username: `admin`
-   - Password: `admin123` (or your custom password)
+Grafana is exposed via Ingress:
+- URL: https://grafana.chat.canepro.me
+- Username: `admin`
+- Password: `GrafanaAdmin2024!` (or the value set in `monitoring-values.yaml`)
 
 ### Rocket.Chat Metrics
 
@@ -223,15 +218,15 @@ kubectl get ingress -n rocketchat
 
 To update to a newer version:
 
-1. **Update the image tag in `values.yaml`**:
+1. **Update the image tag in `values-production.yaml`**:
    ```yaml
    image:
-     tag: "7.1.0"  # New version
+     tag: "7.9.3"  # Target version
    ```
 
 2. **Upgrade the deployment**:
    ```bash
-   helm upgrade rocketchat -f values.yaml rocketchat/rocketchat
+   helm upgrade rocketchat -n rocketchat -f values-production.yaml rocketchat/rocketchat
    ```
 
 ## 🗑️ Uninstalling
