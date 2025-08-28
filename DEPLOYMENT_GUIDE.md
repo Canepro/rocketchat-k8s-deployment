@@ -351,3 +351,18 @@ helm upgrade rocketchat -n rocketchat -f values-production.yaml rocketchat/rocke
 - Access:
   - https://chat.canepro.me
   - https://grafana.chat.canepro.me
+
+## Best practices
+- Database: use managed MongoDB for prod or a dedicated VM; ensure replica set and periodic backups.
+- Storage: Premium SSD for MongoDB PVs; separate disk from OS; automate snapshots.
+- Monitoring: create Alertmanager rules (CPU > 80%, memory > 80%, pod down, Mongo connectivity, cert expiry).
+- Security: rotate secrets, restrict admin access, enforce TLS, keep Helm values out of public repos.
+- Change management: test upgrades in staging; pin chart version; record change windows.
+- Capacity: start 4vCPU/16GiB; review `kubectl top` and adjust requests/limits; scale when sustained >70%.
+- Cost controls: VM auto‑shutdown, reservations, and cleanup unused PVCs/images.
+
+## Runbook add-ons
+- Backup MongoDB (example cron): mongodump to secure storage; verify restore quarterly.
+- Disaster recovery: export Helm values, back up `clusterissuer.yaml` and TLS secrets.
+- Log access: `kubectl logs -l app.kubernetes.io/name=rocketchat -n rocketchat` and Grafana/Prometheus UI.
+- Certificates: rotate email in `clusterissuer.yaml` when ownership changes.

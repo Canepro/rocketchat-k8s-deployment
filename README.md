@@ -289,3 +289,13 @@ helm upgrade rocketchat -n rocketchat -f values-production.yaml rocketchat/rocke
 ### References
 - Deploy with Kubernetes: https://docs.rocket.chat/docs/deploy-with-kubernetes
 - Helm chart: https://github.com/RocketChat/helm-charts/tree/master/rocketchat
+
+## Best practices (quick reference)
+- External MongoDB for production (Atlas/Cosmos) or separate VM with backups; enable replica set and Oplog.
+- Storage: use dedicated Premium SSD for MongoDB PVs; schedule snapshots.
+- Backups: regular mongodump/restore or volume snapshots; document RPO/RTO.
+- Monitoring: enable alerts in Grafana/Alertmanager (CPU, memory, pod down, Mongo lag, cert expiry).
+- Security: rotate admin creds, restrict admin IPs if applicable, keep TLS enabled via cert-manager.
+- Upgrades: change image tag in values and `helm upgrade`; test in staging first.
+- Retention: tune Prometheus retention (monitoring-values.yaml) to balance disk usage and history.
+- Cost: use VM auto‑shutdown, reservations/Savings Plan, and scale up only when needed.
