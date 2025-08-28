@@ -268,3 +268,29 @@ Feel free to submit issues and enhancement requests!
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Quick Ops
+
+### Pull latest config on VM and upgrade
+```bash
+cd ~/rocketchat-k8s-deployment
+git pull
+helm repo update
+# Upgrade monitoring (Grafana via Ingress at grafana.chat.canepro.me)
+helm upgrade prometheus prometheus-community/kube-prometheus-stack \
+  -n monitoring -f monitoring-values.yaml
+# Upgrade Rocket.Chat to 7.9.3
+helm upgrade rocketchat -n rocketchat -f values-production.yaml rocketchat/rocketchat
+```
+
+### Access endpoints
+- Rocket.Chat: https://chat.canepro.me
+- Grafana: https://grafana.chat.canepro.me (user: `admin`, pass in `monitoring-values.yaml`)
+
+### Notes
+- MicroK8s ingress class is `public`; cert-manager `ClusterIssuer` uses `public` as well.
+- MongoDB runs as a single-member replicaset for demo on a single VM.
+
+### References
+- Deploy with Kubernetes: https://docs.rocket.chat/docs/deploy-with-kubernetes
+- Helm chart: https://github.com/RocketChat/helm-charts/tree/master/rocketchat

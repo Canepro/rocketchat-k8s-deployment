@@ -263,3 +263,91 @@ You now have a production-grade Rocket.Chat deployment with:
 - ✅ Backup procedures
 
 Your Rocket.Chat instance is ready for production use!
+
+## Full Runbook (Azure D4ads_v5 + MicroK8s)
+
+1) Prepare VM networking and DNS
+- Open inbound 80/443 in Azure NSG
+- A records:
+  - chat.canepro.me → VM IP
+  - grafana.chat.canepro.me → VM IP
+
+2) SSH and clone repo
+```bash
+ssh azureuser@<VM_IP>
+sudo apt update && sudo apt install -y git
+ssh-keygen -t ed25519 -C "azure-vm" -f ~/.ssh/id_ed25519 -N ""
+cat ~/.ssh/id_ed25519.pub   # add to GitHub SSH keys
+ssh -T git@github.com
+git clone git@github.com:Canepro/rocketchat-k8s-deployment.git ~/rocketchat-k8s-deployment
+cd ~/rocketchat-k8s-deployment
+```
+
+3) Server setup
+```bash
+chmod +x setup-ubuntu-server.sh
+./setup-ubuntu-server.sh
+sudo usermod -aG microk8s $USER
+sudo chown -R $USER ~/.kube
+newgrp microk8s
+microk8s status --wait-ready
+kubectl get nodes
+```
+
+4) Deploy stack
+```bash
+chmod +x deploy-rocketchat.sh
+./deploy-rocketchat.sh
+kubectl get pods -n cert-manager
+kubectl get pods -n monitoring
+kubectl get pods -n rocketchat
+kubectl get ingress -n rocketchat
+```
+
+5) Verify DNS and TLS
+```bash
+dig +short chat.canepro.me
+kubectl get certificate -n rocketchat
+kubectl describe certificaterequest -n rocketchat | sed -n '1,120p'
+curl -I https://chat.canepro.me
+```
+
+6) Enable Grafana via Ingress (subdomain)
+```bash
+helm upgrade prometheus prometheus-community/kube-prometheus-stack \
+  -n monitoring -f monitoring-values.yaml
+kubectl get ingress -n monitoring
+# Open https://grafana.chat.canepro.me (admin / GrafanaAdmin2024!)
+```
+
+7) Upgrade Rocket.Chat (example: 7.9.3)
+```bash
+# values-production.yaml already set to 7.9.3
+helm repo update
+helm upgrade rocketchat -n rocketchat -f values-production.yaml rocketchat/rocketchat
+kubectl rollout status deploy/rocketchat-rocketchat -n rocketchat
+```
+
+## Troubleshooting we hit
+- SSH to GitHub failed with sanitized hostname ([email protected]) → fix remote to `git@github.com:...` and add SSH key; verify with `ssh -T git@github.com`.
+- MicroK8s permissions: needed `usermod -aG microk8s` and `newgrp microk8s` before `microk8s status` worked.
+- Ingress on MicroK8s shows 127.0.0.1: that’s expected; it still listens on the node’s public IP.
+- Grafana access without port-forward: added Ingress at `grafana.chat.canepro.me` with cert-manager TLS in `monitoring-values.yaml`.
+- Cert-manager: confirmed `Certificate` Ready and HTTP→HTTPS redirect worked.
+
+## Ongoing Ops
+- Pull config updates:
+```bash
+cd ~/rocketchat-k8s-deployment && git pull
+```
+- Upgrade monitoring:
+```bash
+helm upgrade prometheus prometheus-community/kube-prometheus-stack -n monitoring -f monitoring-values.yaml
+```
+- Upgrade Rocket.Chat:
+```bash
+helm upgrade rocketchat -n rocketchat -f values-production.yaml rocketchat/rocketchat
+```
+- Access:
+  - https://chat.canepro.me
+  - https://grafana.chat.canepro.me
