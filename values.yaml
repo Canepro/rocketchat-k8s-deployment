@@ -1,0 +1,129 @@
+image:
+  pullPolicy: IfNotPresent
+  repository: registry.rocket.chat/rocketchat/rocket.chat
+  tag: "7.0.0"  # Latest stable version
+
+mongodb:
+  enabled: true
+  auth:
+    passwords:
+      - "rocketchat"
+    rootPassword: "rocketchatroot"
+  architecture: "replicaset"
+  replicaCount: 3
+
+microservices:
+  enabled: false  # Set to false for a monolithic deployment
+
+host: "chat.canepro.me"  # Your Rocket.Chat domain
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "production-cert-issuer"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  tls:
+    - secretName: rocketchat-tls
+      hosts:
+        - "chat.canepro.me"  # Your Rocket.Chat domain
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: "30s"
+    scrapeTimeout: "10s"
+    path: "/metrics"
+    port: "http"
+
+# Prometheus configuration
+prometheus:
+  enabled: true
+  prometheusSpec:
+    retention: "7d"
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: "default"
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+# Grafana configuration
+grafana:
+  enabled: true
+  adminPassword: "admin123"  # Change this to a secure password
+  persistence:
+    enabled: true
+    size: 5Gi
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'rocketchat'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/rocketchat
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  annotations: {}
+
+# Pod configuration
+replicaCount: 2  # For high availability
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Extra environment variables for monitoring
+extraEnv: |
+  - name: PROMETHEUS_METRICS
+    value: "true"
+  - name: MONITORING_ENABLED
+    value: "true"
+
+# Pod disruption budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Security context
+securityContext:
+  runAsUser: 999
+  runAsGroup: 999
+  fsGroup: 999
+
+# Liveness and readiness probes
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
