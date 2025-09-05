@@ -26,11 +26,11 @@
 ## 📋 **Pre-Migration Checklist**
 
 ### **✅ AKS Deployment Requirements**
-- [ ] Official Rocket.Chat deployed successfully
-- [ ] MongoDB replica set running
-- [ ] SSL certificates issued by cert-manager
-- [ ] Rocket.Chat accessible at `http://4.250.169.133`
-- [ ] Grafana accessible via port-forward
+- [x] Official Rocket.Chat deployed successfully
+- [x] MongoDB replica set running
+- [x] SSL certificates issued by cert-manager ✅ **RESOLVED**
+- [x] Rocket.Chat accessible at `https://4.250.169.133` (SSL working)
+- [x] Grafana accessible at `https://grafana.chat.canepro.me` (SSL working)
 - [ ] Data migration completed
 
 ### **✅ DNS Provider Access**

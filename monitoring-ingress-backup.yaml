@@ -1,17 +1,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  annotations:
-    meta.helm.sh/release-name: monitoring
-    meta.helm.sh/release-namespace: monitoring
-  creationTimestamp: "2025-09-04T22:10:56Z"
-  generation: 1
-  labels:
-    app.kubernetes.io/managed-by: Helm
   name: monitoring-ingress
   namespace: monitoring
-  resourceVersion: "888003"
-  uid: 04f2ba82-d380-4c4d-bd7b-19c2d5234495
 spec:
   ingressClassName: nginx
   rules:
@@ -20,11 +11,15 @@ spec:
       paths:
       - backend:
           service:
-            name: grafana-service
+            name: monitoring-grafana
             port:
-              name: grafana
-        path: /grafana
+              number: 80
+        path: /
         pathType: Prefix
+  tls:
+  - hosts:
+    - grafana.chat.canepro.me
+    secretName: grafana-tls
 status:
   loadBalancer:
     ingress:

@@ -449,7 +449,230 @@ kubectl apply -f values-official.yaml  # Re-applies certificate
 - Monitor certificate expiry dates
 - Keep contact email current
 
-### **Issue 5.2: Certificate Expired**
+### **Issue 5.2: Incorrect Ingress Class Configuration** ⭐ **Recently Resolved**
+
+**Symptoms:**
+- Certificate stuck in "ISSUING" status for extended periods (hours)
+- cert-manager logs show "propagation check failed" errors
+- HTTP requests return HTML instead of ACME challenge token
+- Certificate shows "True" for Issuing but "False" for Ready
+
+**Diagnosis:**
+```bash
+# Check certificate status
+kubectl get certificates -n monitoring
+kubectl describe certificate grafana-tls -n monitoring
+
+# Check cert-manager logs for specific errors
+kubectl logs -n cert-manager cert-manager-777f759894-ft8cs --tail=20
+
+# Verify ingress class configuration
+kubectl get ingressclass
+kubectl get clusterissuers
+
+# Check ClusterIssuer configuration
+kubectl describe clusterissuer production-cert-issuer
+```
+
+**Root Cause:**
+- ClusterIssuer configured with wrong ingress class (e.g., `public` instead of `nginx`)
+- ACME solver ingresses created with incorrect ingress class annotation
+- Certificate validation requests routed to application instead of ACME solver pod
+
+**Solutions:**
+
+**Option A: Fix ClusterIssuer Configuration**
+```bash
+# Update clusterissuer.yaml
+vi clusterissuer.yaml
+
+# Change from:
+solvers:
+- http01:
+    ingress:
+      class: public  # ❌ Wrong
+
+# To:
+solvers:
+- http01:
+    ingress:
+      class: nginx   # ✅ Correct
+
+# Apply changes
+kubectl apply -f clusterissuer.yaml
+```
+
+**Option B: Recreate Certificate**
+```bash
+# Delete existing certificate
+kubectl delete certificate grafana-tls -n monitoring
+
+# Recreate certificate (will use corrected ClusterIssuer)
+kubectl apply -f - <<EOF
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: grafana-tls
+  namespace: monitoring
+spec:
+  dnsNames:
+  - grafana.chat.canepro.me
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: production-cert-issuer
+  secretName: grafana-tls
+EOF
+```
+
+**Option C: Verify Ingress Class**
+```bash
+# Confirm available ingress classes
+kubectl get ingressclass
+
+# Expected output:
+# NAME    CONTROLLER             PARAMETERS   AGE
+# nginx   k8s.io/ingress-nginx   <none>       41h
+```
+
+**Prevention:**
+- Always verify ingress class before configuring ClusterIssuer
+- Use `kubectl get ingressclass` to confirm available classes
+- Test certificate issuance in staging environment first
+- Monitor certificate status after deployment
+- Include ingress class validation in deployment checklists
+
+**Expected Resolution Time:** 5-10 minutes after fix
+
+### **Issue 5.3: Ingress Missing After Helm Upgrade**
+
+**Symptoms:**
+- 404 Not Found errors when accessing Grafana/Rocket.Chat
+- `kubectl get ingress -n <namespace>` returns no resources
+- Services are running but not accessible via ingress
+- SSL certificates are READY but application unreachable
+
+**Root Cause:**
+- Helm upgrade removed manually created ingress without creating replacement
+- Service name mismatch between ingress and actual Kubernetes service
+- kube-prometheus-stack chart creates services with different naming convention
+- Ingress configuration conflicts during Helm upgrade process
+
+**Diagnosis:**
+```bash
+# Check ingress status
+kubectl get ingress -n monitoring
+kubectl get ingress -n rocketchat
+
+# Verify services exist and are running
+kubectl get services -n monitoring
+kubectl get pods -n monitoring
+
+# Check service names (common issue)
+kubectl get svc -n monitoring | grep grafana  # Should be: monitoring-grafana
+kubectl get svc -n rocketchat | grep rocketchat  # Should be: rocketchat-rocketchat
+
+# Verify ingress class
+kubectl get ingressclass
+```
+
+**Service Naming Reference:**
+```yaml
+# kube-prometheus-stack services:
+monitoring-grafana                    # Grafana service
+monitoring-kube-prometheus-prometheus # Prometheus service
+monitoring-kube-prometheus-alertmanager # Alertmanager service
+
+# Rocket.Chat services:
+rocketchat-rocketchat                 # Main Rocket.Chat service
+rocketchat-mongodb                    # MongoDB service
+```
+
+**Solutions:**
+
+**Option A: Recreate Ingress Manually**
+```bash
+# Create ingress with correct service names
+cat <<EOF | kubectl apply -f -
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: monitoring-ingress
+  namespace: monitoring
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: grafana.chat.canepro.me
+    http:
+      paths:
+      - backend:
+          service:
+            name: monitoring-grafana  # ✅ Correct service name
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - grafana.chat.canepro.me
+    secretName: grafana-tls
+EOF
+```
+
+**Option B: Fix Helm Values and Redeploy**
+```yaml
+# Ensure values-monitoring.yaml has correct ingress config:
+ingress:
+  enabled: true
+  ingressClassName: "nginx"
+  tls: true
+  grafana:
+    enabled: true
+    host: "grafana.chat.canepro.me"
+    path: "/"
+
+# Redeploy with corrected values
+helm upgrade monitoring prometheus-community/kube-prometheus-stack -f values-monitoring.yaml
+```
+
+**Option C: Restore from Backup**
+```bash
+# If you have a backup, restore it
+kubectl apply -f monitoring-ingress-backup.yaml
+
+# Update service name if needed
+kubectl edit ingress monitoring-ingress -n monitoring
+```
+
+**Prevention Measures:**
+- **Always backup ingress before Helm upgrades:**
+  ```bash
+  kubectl get ingress -n monitoring -o yaml > monitoring-ingress-backup-$(date +%Y%m%d).yaml
+  ```
+- **Document service names** for your specific Helm charts
+- **Use `--dry-run`** to preview Helm upgrade changes:
+  ```bash
+  helm upgrade --dry-run monitoring prometheus-community/kube-prometheus-stack -f values-monitoring.yaml
+  ```
+- **Verify ingress after upgrades:**
+  ```bash
+  kubectl get ingress -n monitoring
+  kubectl describe ingress monitoring-ingress -n monitoring
+  ```
+- **Consider using external ingress management** separate from Helm releases
+
+**Expected Resolution Time:** 5-10 minutes
+
+**Post-Resolution Verification:**
+```bash
+# Test ingress accessibility
+curl -I https://grafana.chat.canepro.me
+
+# Check ingress logs
+kubectl logs -n ingress-nginx deployment/ingress-nginx-controller
+```
+
+### **Issue 5.4: Certificate Expired**
 
 **Symptoms:**
 - Browser shows certificate expired

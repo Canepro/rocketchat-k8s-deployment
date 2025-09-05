@@ -12,7 +12,7 @@ ingress:
 
 # Enhanced Grafana configuration
 grafana:
-  adminPassword: "GrafanaAdmin2024!"  # Change to secure password
+  adminPassword: "NewSecurePassword2025!"  # Updated: September 5, 2025
   persistence:
     enabled: true
     storageClassName: "default"

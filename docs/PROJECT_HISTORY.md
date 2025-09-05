@@ -257,7 +257,101 @@ rocketchat-k8s-deployment/
 ✅ **Clean URLs**: Grafana configured without /grafana path
 ✅ **Microservices Architecture**: Full Rocket.Chat microservices running
 
+### **3.4 SSL Certificate Resolution (September 5, 2025)**
+
+**Issue Identified:**
+- Grafana SSL certificate stuck in "ISSUING" status for 16+ hours
+- cert-manager logs showed "propagation check failed" errors
+- Certificate requests were failing due to incorrect ingress class configuration
+
+**Root Cause Analysis:**
+- ClusterIssuer configured with `ingress.class: public` but AKS uses `nginx` ingress class
+- ACME HTTP-01 solver ingresses were using wrong ingress controller
+- Certificate validation requests were routed to Grafana service instead of ACME solver pod
+
+**Resolution Steps:**
+1. **Updated ClusterIssuer**: Changed `ingress.class` from `public` to `nginx` in `clusterissuer.yaml`
+2. **Applied Configuration**: `kubectl apply -f clusterissuer.yaml`
+3. **Recreated Certificate**: Deleted failing certificate and recreated with corrected configuration
+4. **Verified Success**: Certificate issued successfully within minutes
+
+**Technical Details:**
+```yaml
+# Before (Incorrect)
+solvers:
+- http01:
+    ingress:
+      class: public  # ❌ Wrong ingress class
+
+# After (Correct)
+solvers:
+- http01:
+    ingress:
+      class: nginx   # ✅ Correct ingress class
+```
+
+**Impact:**
+- ✅ Grafana SSL certificate now READY and functional
+- ✅ Both Rocket.Chat and Grafana accessible via HTTPS
+- ✅ Certificate auto-renewal working correctly
+- ✅ No service disruption during fix
+
+**Prevention Measures:**
+- Added ingress class validation to deployment checklists
+- Updated troubleshooting documentation with SSL certificate diagnostics
+- Enhanced monitoring for certificate issuance status
+
+### **3.5 Ingress Disruption During Helm Upgrade (September 5, 2025)**
+
+**Issue Identified:**
+- Grafana became inaccessible with 404 errors after Helm upgrade
+- Ingress resource missing from monitoring namespace
+- Services running but unreachable via configured domain
+
+**Root Cause Analysis:**
+- Helm upgrade removed manually created ingress without replacement
+- Service naming mismatch: backup pointed to `grafana-service`, actual service is `monitoring-grafana`
+- kube-prometheus-stack chart uses different service naming conventions
+- No ingress backup verification before upgrade
+
+**Resolution Steps:**
+1. **Identified Missing Ingress**: Confirmed ingress resource was deleted during upgrade
+2. **Verified Service Names**: Found correct service name `monitoring-grafana` vs backup's `grafana-service`
+3. **Created Correct Ingress**: Applied ingress with proper service reference and TLS configuration
+4. **Verified Functionality**: Confirmed Grafana accessible at `https://grafana.chat.canepro.me`
+
+**Technical Details:**
+```yaml
+# Incorrect backup ingress (old):
+service:
+  name: grafana-service  # ❌ Wrong service name
+
+# Correct ingress (fixed):
+service:
+  name: monitoring-grafana  # ✅ Correct service name
+```
+
+**Key Learnings:**
+- **Service Naming Conventions**: Document actual service names created by Helm charts
+- **Ingress Backup Strategy**: Always backup ingress before Helm operations
+- **Upgrade Verification**: Test ingress accessibility after Helm upgrades
+- **Helm Chart Behavior**: Understand how different charts manage ingress resources
+
+**Impact:**
+- ✅ Grafana restored within 10 minutes
+- ✅ SSL certificate remained functional
+- ✅ No data loss or service disruption beyond accessibility
+- ✅ Comprehensive troubleshooting documentation added
+
+**Prevention Measures Implemented:**
+- Added ingress troubleshooting section to TROUBLESHOOTING_GUIDE.md
+- Documented service naming conventions for kube-prometheus-stack
+- Created backup ingress with correct service references
+- Established pre-upgrade ingress verification checklist
+
 ---
+
+
 
 ## 🎯 Technical Decisions & Reasoning
 
