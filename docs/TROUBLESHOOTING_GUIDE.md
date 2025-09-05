@@ -1733,4 +1733,291 @@ kubectl logs -n ingress-nginx deployment/ingress-nginx-controller --tail=50 | gr
 
 ---
 
-*This troubleshooting guide now includes real-world issues encountered during the September 2025 AKS deployment. Continue updating with new issues and solutions.*
+---
+
+## 📊 **Enhanced Monitoring Troubleshooting**
+
+### **Issue: Azure Monitor Integration Problems**
+
+**Symptoms:**
+- Azure Monitor not collecting AKS metrics
+- Azure Monitor workspace showing no data
+- AKS monitoring addon installation failures
+
+**Diagnosis:**
+```bash
+# Check Azure Monitor addon status
+kubectl get pods -n kube-system | grep ama
+
+# Verify Azure Monitor workspace connection
+az monitor diagnostic-settings list --resource /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.ContainerService/managedClusters/<aks-name>
+
+# Check Azure Monitor agent logs
+kubectl logs -n kube-system deployment/ama-metrics
+```
+
+**Solutions:**
+
+**Option A: Reinstall Azure Monitor Addon**
+```bash
+# Remove and reinstall the monitoring addon
+az aks disable-addons --resource-group <rg> --name <aks-name> --addons monitoring
+az aks enable-addons --resource-group <rg> --name <aks-name> --addons monitoring --workspace-resource-id <workspace-id>
+```
+
+**Option B: Verify Permissions**
+```bash
+# Check Azure CLI authentication
+az account show
+
+# Verify AKS permissions
+az aks show --resource-group <rg> --name <aks-name> --query "identity"
+```
+
+**Prevention:**
+- Ensure Azure CLI is properly authenticated
+- Verify workspace resource ID is correct
+- Check Azure subscription permissions before installation
+
+### **Issue: Loki Stack Deployment Failures**
+
+**Symptoms:**
+- Loki pods failing to start
+- Persistent volume creation errors
+- Grafana datasource connection issues
+
+**Diagnosis:**
+```bash
+# Check Loki pod status
+kubectl get pods -n loki-stack
+
+# Verify persistent volume claims
+kubectl get pvc -n loki-stack
+
+# Check Loki logs
+kubectl logs -n loki-stack deployment/loki
+
+# Test Loki connectivity
+kubectl run test-pod --image=curlimages/curl --rm -i --restart=Never -- curl http://loki.loki-stack.svc.cluster.local:3100/ready
+```
+
+**Solutions:**
+
+**Option A: Fix Storage Issues**
+```yaml
+# Update loki-values.yaml with correct storage class
+loki:
+  persistence:
+    enabled: true
+    storageClass: "azurefile-premium"  # or your available storage class
+    size: 50Gi
+```
+
+**Option B: Resource Constraints**
+```yaml
+# Increase resource limits in loki-values.yaml
+loki:
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+```
+
+**Prevention:**
+- Verify storage class availability before deployment
+- Ensure sufficient cluster resources
+- Test storage provisioning separately
+
+### **Issue: Rocket.Chat Log Collection Issues**
+
+**Symptoms:**
+- No Rocket.Chat logs appearing in Loki/Grafana
+- Promtail pods showing errors
+- Log queries returning empty results
+
+**Diagnosis:**
+```bash
+# Check Promtail pod status
+kubectl get pods -n loki-stack | grep promtail
+
+# Verify Promtail configuration
+kubectl get configmap promtail-config -n loki-stack -o yaml
+
+# Check Promtail logs
+kubectl logs -n loki-stack deployment/promtail
+
+# Test log file access
+kubectl exec -n loki-stack deployment/promtail -- ls -la /var/log/containers/
+```
+
+**Solutions:**
+
+**Option A: Update Promtail Configuration**
+```yaml
+# Fix log path configuration in promtail config
+scrape_configs:
+  - job_name: rocket-chat
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: rocket-chat
+          __path__: /var/log/containers/*rocketchat*.log  # Ensure correct path
+```
+
+**Option B: RBAC Permissions**
+```yaml
+# Create proper RBAC for Promtail
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: promtail-clusterrole
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "nodes/proxy", "services", "endpoints", "pods"]
+  verbs: ["get", "list", "watch"]
+```
+
+**Prevention:**
+- Test log file paths before configuration
+- Ensure Promtail has proper RBAC permissions
+- Verify Loki connectivity before log shipping
+
+### **Issue: Grafana Dashboard Import Failures**
+
+**Symptoms:**
+- Custom dashboards not appearing in Grafana
+- Dashboard JSON import errors
+- Data sources not connecting
+
+**Diagnosis:**
+```bash
+# Check Grafana pod status
+kubectl get pods -n monitoring | grep grafana
+
+# Verify dashboard ConfigMap
+kubectl get configmap -n monitoring -l grafana_dashboard
+
+# Check Grafana logs
+kubectl logs -n monitoring deployment/grafana
+
+# Test data source connectivity
+kubectl run test-pod --image=curlimages/curl --rm -i --restart=Never -- curl http://prometheus.monitoring.svc.cluster.local:9090/api/v1/status/buildinfo
+```
+
+**Solutions:**
+
+**Option A: Fix Dashboard Labels**
+```yaml
+# Ensure ConfigMap has correct labels
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rocket-chat-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"  # Required for auto-import
+data:
+  dashboard.json: |
+    # Dashboard JSON content
+```
+
+**Option B: Data Source Configuration**
+```yaml
+# Verify Prometheus data source
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: monitoring
+  labels:
+    grafana_datasource: "1"
+data:
+  datasource.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus.monitoring.svc.cluster.local:9090
+      access: proxy
+      isDefault: true
+```
+
+**Prevention:**
+- Use correct ConfigMap labels for auto-import
+- Test data source connectivity before dashboard creation
+- Validate JSON syntax before applying
+
+### **Issue: Alerting Configuration Problems**
+
+**Symptoms:**
+- Alerts not firing as expected
+- Notification delivery failures
+- Alertmanager pod errors
+
+**Diagnosis:**
+```bash
+# Check Alertmanager status
+kubectl get pods -n monitoring | grep alertmanager
+
+# Verify alert rules
+kubectl get prometheusrules -n monitoring
+
+# Check Alertmanager configuration
+kubectl get secret alertmanager-main -n monitoring -o yaml
+
+# Test alert delivery
+kubectl port-forward -n monitoring svc/alertmanager-main 9093:9093
+# Then access http://localhost:9093 and check status
+```
+
+**Solutions:**
+
+**Option A: Fix Alert Rules**
+```yaml
+# Correct PrometheusRule syntax
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: rocket-chat-alerts
+  namespace: monitoring
+spec:
+  groups:
+  - name: rocket-chat
+    rules:
+    - alert: RocketChatDown
+      expr: up{job="rocketchat"} == 0
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Rocket.Chat is down"
+        description: "Rocket.Chat has been down for more than 5 minutes"
+```
+
+**Option B: SMTP Configuration**
+```yaml
+# Fix email configuration in alertmanager secret
+alertmanager.yaml: |
+  global:
+    smtp_smarthost: 'smtp.gmail.com:587'
+    smtp_from: 'alerts@yourdomain.com'
+    smtp_auth_username: 'alerts@yourdomain.com'
+    smtp_auth_password: 'your-app-password'
+    smtp_require_tls: true
+```
+
+**Prevention:**
+- Test SMTP configuration before deployment
+- Validate Prometheus rule syntax
+- Use alert grouping to reduce noise
+
+---
+
+**Enhanced Monitoring Documentation Added**: September 5, 2025
+**Next Update**: Post-implementation testing results
+
+*This troubleshooting guide now includes enhanced monitoring setup issues and solutions. Continue updating with implementation results and additional issues discovered during deployment.*
