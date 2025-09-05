@@ -8,11 +8,10 @@ metadata:
 data:
   rocket-chat-dashboard.json: |
     {
-      "dashboard": {
-        "title": "Rocket.Chat Production Monitoring",
-        "tags": ["rocket-chat", "production", "monitoring"],
-        "timezone": "browser",
-        "panels": [
+      "title": "Rocket.Chat Production Monitoring",
+      "tags": ["rocket-chat", "production", "monitoring"],
+      "timezone": "browser",
+      "panels": [
           {
             "title": "Rocket.Chat Service Status",
             "type": "stat",
@@ -118,5 +117,4 @@ data:
         ],
         "time": {"from": "now-1h", "to": "now"},
         "refresh": "30s"
-      }
     }
