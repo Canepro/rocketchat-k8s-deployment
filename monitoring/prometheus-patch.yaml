@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: monitoring-kube-prometheus-prometheus
+  namespace: monitoring
+spec:
+  serviceMonitorNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: rocketchat
+  serviceMonitorSelector:
+    matchLabels:
+      release: monitoring
+  ruleSelector:
+    matchLabels:
+      release: monitoring

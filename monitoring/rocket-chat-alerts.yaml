@@ -1,0 +1,61 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: rocketchat-alerts
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: rocketchat
+    release: monitoring
+spec:
+  groups:
+  - name: rocketchat
+    rules:
+    - alert: RocketChatDown
+      expr: up{job="rocketchat"} == 0
+      for: 5m
+      labels:
+        severity: critical
+        service: rocketchat
+      annotations:
+        summary: "Rocket.Chat is down"
+        description: "Rocket.Chat has been down for more than 5 minutes"
+
+    - alert: RocketChatHighCPU
+      expr: rate(container_cpu_usage_seconds_total{pod=~"rocketchat-.*"}[5m]) > 0.8
+      for: 10m
+      labels:
+        severity: warning
+        service: rocketchat
+      annotations:
+        summary: "Rocket.Chat high CPU usage"
+        description: "Rocket.Chat CPU usage is above 80% for 10 minutes"
+
+    - alert: RocketChatHighMemory
+      expr: container_memory_usage_bytes{pod=~"rocketchat-.*"} / container_spec_memory_limit_bytes > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        service: rocketchat
+      annotations:
+        summary: "Rocket.Chat high memory usage"
+        description: "Rocket.Chat memory usage is above 90%"
+
+    - alert: RocketChatPodRestarting
+      expr: increase(kube_pod_container_status_restarts_total{namespace="rocketchat", pod=~"rocketchat-.*"}[10m]) > 0
+      for: 1m
+      labels:
+        severity: warning
+        service: rocketchat
+      annotations:
+        summary: "Rocket.Chat pod restarting"
+        description: "Rocket.Chat pod has restarted in the last 10 minutes"
+
+    - alert: MongoDBConnectionIssues
+      expr: up{job="rocketchat-mongodb-metrics"} == 0
+      for: 5m
+      labels:
+        severity: critical
+        service: mongodb
+      annotations:
+        summary: "MongoDB connection issues"
+        description: "MongoDB metrics are not available"
