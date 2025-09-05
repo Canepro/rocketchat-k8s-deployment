@@ -44,6 +44,22 @@ ingress:
         - "chat.canepro.me"  # Your Rocket.Chat domain
 
 # Enhanced monitoring configuration (optional additions)
+# Enable Prometheus metrics scraping for Rocket.Chat
+prometheusScraping:
+  enabled: true
+  port: 9458
+  msPort: 9458
+
+# Enable PodMonitor for automated metrics discovery (recommended for v6.25.0+)
+podMonitor:
+  enabled: true
+  interval: 30s
+
+# Legacy ServiceMonitor (keeping for backward compatibility)
+serviceMonitor:
+  enabled: false
+
+# Legacy monitoring configuration (keeping for compatibility)
 monitoring:
   enabled: true
   serviceMonitor:

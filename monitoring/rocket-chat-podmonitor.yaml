@@ -1,0 +1,33 @@
+apiVersion: azmonitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: rocketchat-podmonitor
+  namespace: rocketchat
+  labels:
+    app.kubernetes.io/name: rocketchat
+    app.kubernetes.io/instance: rocketchat
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: rocketchat
+      app.kubernetes.io/name: rocketchat
+  podMetricsEndpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+      targetLabel: service_name
+      replacement: rocketchat
+  - port: ms-metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+      targetLabel: service_name
+      replacement: rocketchat-microservices
