@@ -49,64 +49,76 @@ This document outlines the comprehensive plan for implementing enhanced monitori
 
 ## 📊 **Detailed Implementation Plan**
 
-### **Phase 1: Azure Monitor Integration (Days 1-2)**
+### **Phase 1: Enhanced Prometheus/Grafana Setup ✅ COMPLETED & VERIFIED (September 5, 2025)**
 
-#### **1.1 Azure Monitor Workspace Setup**
-**Objective**: Create and configure Azure Monitor workspace for AKS metrics collection
+#### **1.1 Current Monitoring Assessment**
+**Objective**: Evaluate existing monitoring capabilities and identify enhancement opportunities
 
-**Prerequisites:**
-- Azure CLI installed and authenticated
-- AKS cluster access with admin permissions
-- Resource group with appropriate permissions
+**Current Status:**
+- ✅ **Prometheus**: Running with kube-prometheus-stack
+- ✅ **Grafana**: Basic dashboards configured
+- ✅ **Alertmanager**: Email notifications configured
+- 🔍 **Metrics Collection**: Rocket.Chat metrics partially configured
+- 🔍 **Dashboards**: Basic infrastructure monitoring
 
-**Steps:**
+**Assessment Steps:**
 ```bash
-# 1. Create Azure Monitor workspace
-az monitor diagnostic-settings create \
-  --name "aks-monitoring" \
-  --resource /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.ContainerService/managedClusters/<aks-name> \
-  --logs '[{"category": "kube-apiserver", "enabled": true}, {"category": "kube-controller-manager", "enabled": true}, {"category": "kube-scheduler", "enabled": true}]' \
-  --metrics '[{"category": "AllMetrics", "enabled": true}]' \
-  --workspace /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.OperationalInsights/workspaces/<workspace-name>
+# 1. Check current monitoring status
+kubectl get pods -n monitoring
+kubectl get servicemonitors -n monitoring
+kubectl get prometheusrules -n monitoring
 
-# 2. Enable AKS monitoring
-az aks enable-addons \
-  --resource-group <resource-group> \
-  --name <aks-name> \
-  --addons monitoring \
-  --workspace-resource-id /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.OperationalInsights/workspaces/<workspace-name>
+# 2. Verify Grafana access
+kubectl port-forward -n monitoring svc/monitoring-grafana 3000:80 &
+# Access: http://localhost:3000 (admin/GrafanaAdmin2024!)
+
+# 3. Check existing dashboards
+kubectl get configmap -n monitoring -l grafana_dashboard
 ```
 
-**Expected Outcome:**
-- Azure Monitor workspace created and linked to AKS
-- AKS metrics flowing to Azure Monitor
-- Basic monitoring dashboards available in Azure portal
+#### **1.2 Rocket.Chat Metrics Enhancement**
+**Objective**: Improve Rocket.Chat metrics collection and monitoring
 
-#### **1.2 Azure Monitor Containers Integration**
-**Objective**: Enable detailed container metrics and logs collection
-
-**Steps:**
+**Current Metrics Analysis:**
 ```bash
-# 1. Install Azure Monitor containers addon
-az aks enable-addons \
-  --resource-group <resource-group> \
-  --name <aks-name> \
-  --addons monitoring \
-  --workspace-resource-id <workspace-resource-id>
-
-# 2. Verify addon installation
-kubectl get pods -n kube-system | grep ama
-
-# 3. Check Azure Monitor data collection
-az monitor metrics list \
-  --resource /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.ContainerService/managedClusters/<aks-name> \
-  --metric "node_cpu_usage_percentage" \
-  --output table
+# Check current Rocket.Chat metrics
+kubectl get servicemonitor -n rocketchat
+kubectl port-forward -n rocketchat svc/rocketchat-rocketchat 3000:3000 &
+curl http://localhost:3000/metrics
 ```
 
-**Configuration Files to Create:**
-- `azure-monitor-config.yaml`: Azure Monitor configuration
-- `azure-monitor-values.yaml`: Helm values for Azure Monitor integration
+**Enhancement Steps:**
+```yaml
+# Create ServiceMonitor for Rocket.Chat
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rocketchat-servicemonitor
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: rocketchat
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rocketchat
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+```
+
+**Configuration Files Created & Verified:**
+- ✅ `monitoring/rocket-chat-servicemonitor.yaml`: ServiceMonitor active and collecting metrics
+- ✅ `monitoring/rocket-chat-alerts.yaml`: 5 alerts loaded and functional
+- ✅ `monitoring/rocket-chat-dashboard-configmap.yaml`: Dashboard auto-imported successfully
+- ✅ `monitoring/prometheus-patch.yaml`: Cross-namespace monitoring enabled
+
+**Dashboard Verification Results:**
+- ✅ **8 Panels Active**: All monitoring panels displaying correctly
+- ✅ **Real-time Data**: CPU, memory, pod status updating live
+- ✅ **Alert Integration**: Alert status table functional
+- ✅ **Grafana Access**: `http://4.250.192.85` working perfectly
 
 ### **Phase 2: Loki Stack Deployment (Days 3-4)**
 
