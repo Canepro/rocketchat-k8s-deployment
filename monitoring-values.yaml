@@ -8,11 +8,11 @@ prometheus:
     storageSpec:
       volumeClaimTemplate:
         spec:
-          storageClassName: "microk8s-hostpath"
+          storageClassName: "default"  # Azure Premium SSD (managed)
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
-              storage: 5Gi  # Reduced for B2s VM
+              storage: 10Gi  # Increased for AKS
     resources:
       limits:
         cpu: 300m
@@ -26,7 +26,8 @@ grafana:
   adminPassword: "GrafanaAdmin2024!"  # Production password
   persistence:
     enabled: true
-    size: 2Gi  # Reduced for B2s VM
+    storageClassName: "default"  # Azure Premium SSD
+    size: 5Gi  # Increased for AKS
   resources:
     limits:
       cpu: 200m
@@ -48,7 +49,7 @@ grafana:
             path: /var/lib/grafana/dashboards/rocketchat
   ingress:
     enabled: true
-    ingressClassName: public
+    ingressClassName: nginx  # AKS standard ingress class
     annotations:
       cert-manager.io/cluster-issuer: production-cert-issuer
     hosts:
@@ -67,11 +68,11 @@ alertmanager:
     storage:
       volumeClaimTemplate:
         spec:
-          storageClassName: "microk8s-hostpath"
+          storageClassName: "default"  # Azure Premium SSD
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
-              storage: 1Gi
+              storage: 2Gi  # Increased for AKS
     resources:
       limits:
         cpu: 100m

@@ -13,7 +13,19 @@ mongodb:
   replicaCount: 3
 
 microservices:
-  enabled: false  # Set to false for a monolithic deployment
+  enabled: true  # Enable microservices for better scalability and fault isolation
+  presence:
+    replicas: 2  # Scale presence service for better availability
+  ddpStreamer:
+    replicas: 2  # 1 pod per 500 concurrent users (supports up to 1000 users)
+  account:
+    replicas: 2  # Scale account service for better availability
+  authorization:
+    replicas: 2  # Scale authorization service for better availability
+  streamHub:
+    replicas: 1  # Cannot be scaled beyond 1 pod per deployment
+  nats:
+    replicas: 2  # Scale NATS for high availability messaging
 
 host: "chat.canepro.me"  # Your Rocket.Chat domain
 
@@ -79,8 +91,8 @@ service:
   port: 80
   annotations: {}
 
-# Pod configuration
-replicaCount: 2  # For high availability
+# Pod configuration - Main Rocket.Chat instances (microservices enabled)
+replicaCount: 3  # Scale main instances for high availability with microservices
 
 # Resource limits and requests
 resources:

@@ -10,10 +10,11 @@ mongodb:
       - "RocketChat2024!"  # Production password
     rootPassword: "MongoRoot2024!"  # Production root password
   architecture: "replicaset"
-  replicaCount: 1  # Single-node MicroK8s; replicaset required for Oplog but only 1 member
+  replicaCount: 3  # AKS: Use 3 replicas for high availability
   persistence:
     enabled: true
-    size: 20Gi  # Increased for production demo
+    storageClass: "default"  # Azure Premium SSD
+    size: 50Gi  # Increased for AKS production
   resources:
     limits:
       cpu: 1000m
@@ -29,7 +30,7 @@ host: "chat.canepro.me"  # Your Rocket.Chat domain
 
 ingress:
   enabled: true
-  ingressClassName: public
+  ingressClassName: nginx  # AKS standard ingress class
   annotations:
     cert-manager.io/cluster-issuer: "production-cert-issuer"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
@@ -112,7 +113,8 @@ readinessProbe:
 # Persistence configuration
 persistence:
   enabled: true
-  size: 20Gi  # Increased for app data
+  storageClass: "default"  # Azure Premium SSD
+  size: 30Gi  # Increased for AKS production
 
 # Horizontal Pod Autoscaler (disabled for single-node)
 autoscaling:

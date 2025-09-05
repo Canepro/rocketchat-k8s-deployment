@@ -1,10 +1,21 @@
-# 🚀 Rocket.Chat AKS Migration Project
+# 🚀 Rocket.Chat Kubernetes Deployment
 
-**📂 All documentation moved to [docs/](docs/) folder for clean organization**
+**📁 Repository reorganized with separate MicroK8s and AKS deployments**
+
+## Current Status: 🟢 DEPLOYMENT COMPLETE - SSL Certificate Phase
 
 ## Quick Start
 
-### 1. AKS Connection (Already Working!)
+### 1. Choose Your Deployment Path
+
+#### Option A: Official Rocket.Chat Helm Chart (Recommended)
+```bash
+# Deploy using official Helm chart
+chmod +x deploy-aks-official.sh
+./deploy-aks-official.sh
+```
+
+#### Option B: AKS Interactive Access
 ```bash
 # Test your AKS connection
 kubectl get nodes
@@ -13,45 +24,175 @@ kubectl get nodes
 ./scripts/aks-shell.sh
 ```
 
-### 2. Review Documentation
-📖 **[Complete Documentation](docs/)** - All guides, plans, and instructions
+### 2. Review Documentation Structure
 
-### 3. Key Documents
-- 🏁 **[AKS Setup Guide](docs/AKS_SETUP_GUIDE.md)** - What we achieved & how to use it
-- 📋 **[Master Plan](docs/MASTER_PLANNING.md)** - Complete migration roadmap
-- 🛠️ **[Migration Steps](docs/MIGRATION_PLAN.md)** - Detailed 15-step process
+#### 📖 Current Documentation
+- **[Project Overview](docs/)** - Current status and repository structure
+- **[🔧 Troubleshooting](docs/TROUBLESHOOTING_GUIDE.md)** - Comprehensive issue resolution
+- **[🌐 DNS Migration](docs/DNS_MIGRATION_GUIDE.md)** - Step-by-step DNS procedure
+- **[Future Improvements](docs/FUTURE_IMPROVEMENTS.md)** - Enhancement roadmap
+
+#### 📁 Deployment-Specific Documentation
+- **[AKS Deployment Guide](aks/)** - Official Helm chart migration planning
+- **[MicroK8s Rollback Guide](microk8s/)** - Legacy deployment (currently active)
+
+### 3. Key Files for Official Deployment
+- **`values-official.yaml`** - Official Rocket.Chat Helm chart configuration
+- **`values-monitoring.yaml`** - Grafana monitoring configuration
+- **`deploy-aks-official.sh`** - Official deployment script
+- **`clusterissuer.yaml`** - SSL certificate configuration
 
 ## Project Structure
 
 ```
-├── 📁 docs/          # All documentation and guides
-├── 📁 scripts/       # Helper scripts for AKS access
-├── 📄 *.yaml         # Kubernetes manifests for Rocket.Chat
-└── 📄 *.sh           # Deployment and setup scripts
+rocketchat-k8s-deployment/
+├── 📁 aks/                       # AKS migration planning & docs
+├── 📁 microk8s/                  # Legacy MicroK8s deployment (rollback)
+├── 📁 docs/                      # Current project documentation
+├── 📁 scripts/                   # Helper scripts for AKS access
+├── 📄 values-official.yaml       # Official Rocket.Chat Helm chart config
+├── 📄 values-monitoring.yaml     # Grafana monitoring configuration
+├── 📄 clusterissuer.yaml         # SSL certificate configuration
+├── 📄 deploy-aks-official.sh     # Official deployment script
+├── 📦 mongodb-backup-*.tar.gz    # MongoDB backup (6,986 documents)
+└── 📦 app-config-backup-*.tar.gz # Application config backup
 ```
 
-## Current Status: 🟢 Phase 1 Complete - Ready for AKS Deployment
+## Current Status: 🟡 Planning Phase - Official Helm Chart Migration
 
-**✅ Phase 1: Backup & Assessment** - COMPLETED September 3, 2025
+**✅ Repository Reorganization Complete** - September 4, 2025
 
 ### What We Accomplished:
-- **🔒 Full Backup Created**: MongoDB + Application Config + File Data
-- **✅ Backup Validated**: 6,986 documents, all collections restored successfully
-- **📦 Backup Files**: `mongodb-backup-20250903_231852.tar.gz` (341K) + `app-config-backup-20250903_232521.tar.gz` (150K)
-- **🛠️ AKS Access**: Local machine can control Azure AKS cluster remotely
-- **📚 Documentation**: Complete migration roadmap with detailed procedures
+- **📁 Repository Reorganized**: Separate folders for MicroK8s (rollback) and AKS (new)
+- **📋 Official Documentation Reviewed**: Aligned with Rocket.Chat official Helm chart
+- **🔧 Official Deployment Files Created**: `values-official.yaml`, `values-monitoring.yaml`, `deploy-aks-official.sh`
+- **📚 Documentation Structure Updated**: Clear separation of concerns
+- **🔒 Full Backup Preserved**: MongoDB (6,986 documents) + Application Config + File Data
+- **🛠️ AKS Access Maintained**: Local machine can control Azure AKS cluster remotely
 
-### Backup Verification:
+### Current Deployment Status:
+- **🟢 MicroK8s (Legacy)**: Running and operational at `https://chat.canepro.me`
+- **🟢 AKS (New)**: ✅ **DEPLOYED** - Rocket.Chat and monitoring stack running
+- **🟡 SSL Certificates**: Rocket.Chat ✅ READY, Grafana 🔄 ISSUING
+- **🔄 Migration Strategy**: Zero-downtime with rollback capability
+
+## 🎯 Our Final Plan: Official Rocket.Chat Helm Chart Deployment
+
+### Phase 1: Prerequisites ✅
+- ✅ **Official Documentation**: Reviewed and aligned with Rocket.Chat official docs
+- ✅ **Repository Structure**: Clean separation of MicroK8s (rollback) and AKS (new)
+- ✅ **Backup Data**: 6,986 documents preserved for migration
+- ✅ **AKS Access**: Local machine can control AKS cluster
+- ✅ **Domain Setup**: `chat.canepro.me` and `grafana.chat.canepro.me` configured
+
+### Phase 2: Official Deployment (Ready to Execute)
 ```bash
-# Check your backup files
-ls -lh *.tar.gz
-
-# Verify backup integrity
-tar -tzf mongodb-backup-20250903_231852.tar.gz | head -5
+# One-command deployment using official Helm chart
+chmod +x deploy-aks-official.sh
+./deploy-aks-official.sh
 ```
 
-**Next**: Start Phase 2 - AKS Parallel Deployment. Review `docs/MIGRATION_PLAN.md` for next steps.
+**What this deploys:**
+- ✅ **Official Rocket.Chat Helm Chart** from `rocketchat/rocketchat`
+- ✅ **Official Monitoring Stack** from `rocketchat/monitoring`
+- ✅ **NGINX Ingress Controller** (if not present)
+- ✅ **cert-manager** for SSL certificates
+- ✅ **Microservices Architecture** for scalability
+- ✅ **Production-ready Configuration**
+
+### Phase 3: Data Migration
+- **Source**: MicroK8s MongoDB (6,986 documents)
+- **Target**: AKS MongoDB replica set
+- **Method**: Restore from backup files
+- **Downtime**: Minimal (~10-15 minutes)
+
+### Phase 4: DNS Cutover
+- **Current**: `chat.canepro.me` → `20.68.53.249` (MicroK8s VM)
+- **Target**: `chat.canepro.me` → `[AKS Ingress IP]` (after deployment)
+- **Rollback**: Keep MicroK8s VM for 3-5 days
+
+### Phase 5: Enhanced Monitoring (Optional)
+- **Azure Monitor Integration** for infrastructure metrics
+- **Loki** for centralized logging (Rocket.Chat server logs in Grafana)
+- **APM Capabilities** through Azure Monitor
+- **Custom Dashboards** and alerts
+
+## 🚀 Current Access Information
+
+### ✅ **AKS Deployment Status:**
+- **Rocket.Chat**: `https://chat.canepro.me` ✅ **SSL READY**
+- **Grafana**: `https://grafana.chat.canepro.me` 🔄 **SSL ISSUING**
+
+### 🔐 **Login Credentials:**
+- **Grafana**: Username: `admin` | Password: `GrafanaAdmin2024!`
+- **Rocket.Chat**: Use your existing credentials from MicroK8s deployment
+
+### 📊 **Current Infrastructure:**
+- **AKS Cluster**: 3 nodes running
+- **Rocket.Chat**: Full microservices architecture deployed
+- **MongoDB**: 3-replica set with 50Gi persistent storage
+- **Monitoring**: Prometheus, Grafana, Loki, Alertmanager
+- **Ingress**: NGINX with SSL termination
+
+## 🚀 Ready for DNS Migration?
+
+When you're ready to proceed:
+
+1. **Wait for Grafana SSL**: Certificate should be ready soon
+2. **Test both services**: Verify Rocket.Chat and Grafana work perfectly
+3. **Update DNS**: Point BOTH domains to AKS ingress IP (4.250.169.133)
+4. **Restore data**: Follow data migration instructions
+5. **Monitor costs**: Stay within £100/month Azure credit
+
+## 🌐 **DNS Migration Strategy**
+
+### **Current Setup (Before Migration):**
+```
+chat.canepro.me       → 20.68.53.249 (MicroK8s VM)
+grafana.chat.canepro.me → 20.68.53.249 (MicroK8s VM)
+```
+
+### **Target Setup (After Migration):**
+```
+chat.canepro.me       → 4.250.169.133 (AKS Ingress)
+grafana.chat.canepro.me → 4.250.169.133 (AKS Ingress)
+```
+
+### **⚠️ CRITICAL: DNS Update Timing**
+**AKS deployment is COMPLETE - Ready for DNS migration!**
+
+1. **✅ AKS Deployed**: Rocket.Chat and monitoring stack running
+2. **🟡 Wait for SSL**: Grafana certificate should be ready soon
+3. **Test Both Services**: Verify Rocket.Chat and Grafana work perfectly
+4. **THEN Update DNS**: Change both domains to 4.250.169.133
+5. **Keep MicroK8s**: As 3-5 day rollback insurance
+
+### **SSL Certificate Note:**
+- If you see certificate errors, check Cloudflare proxy settings
+- May need to temporarily set DNS to "DNS only" mode
+- Certificate issuance can take 5-10 minutes after DNS changes
+
+### **Emergency Rollback:**
+- If issues occur, change DNS back to `20.68.53.249`
+- MicroK8s VM stays running for insurance
+
+## 📊 Cost Estimate (Within Your £100/month Azure Credit)
+
+- **AKS Cluster**: ~£50-70/month (3 nodes, standard tier)
+- **Premium SSD Storage**: ~£10-15/month (50Gi MongoDB + 30Gi uploads)
+- **Azure Monitor**: ~£5-10/month (enhanced monitoring)
+- **Total**: ~£65-95/month ✅ (Well within your credit)
+
+## 🛟 Safety Measures
+
+- **Zero Downtime**: Keep MicroK8s running during migration
+- **Rollback Ready**: MicroK8s VM preserved for 3-5 days
+- **Data Backup**: Full backup validated and ready
+- **Domain Continuity**: Same domains throughout migration
+- **Cost Control**: Efficient resource allocation
 
 ---
+
+**Ready for deployment?** Run `./deploy-aks-official.sh` when you're ready to proceed!
 
 *For detailed documentation, see the [docs/](docs/) folder*

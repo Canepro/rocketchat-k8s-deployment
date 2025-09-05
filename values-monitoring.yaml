@@ -1,0 +1,90 @@
+# Official Rocket.Chat Monitoring Configuration
+# Based on: https://docs.rocket.chat/docs/deploy-with-kubernetes
+
+ingress:
+  enabled: true
+  ingressClassName: "nginx"  # Ingress controller in K8s cluster
+  tls: true
+  grafana:
+    enabled: true
+    host: "grafana.chat.canepro.me"  # Your Grafana domain
+    path: "/"
+
+# Enhanced Grafana configuration
+grafana:
+  adminPassword: "GrafanaAdmin2024!"  # Change to secure password
+  persistence:
+    enabled: true
+    storageClassName: "default"
+    size: 5Gi
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  grafana.ini:
+    server:
+      root_url: https://grafana.chat.canepro.me/
+
+# Prometheus configuration
+prometheus:
+  prometheusSpec:
+    retention: "7d"
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: "default"
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+    resources:
+      limits:
+        cpu: 300m
+        memory: 512Mi
+      requests:
+        cpu: 150m
+        memory: 256Mi
+
+# Alertmanager configuration
+alertmanager:
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: "default"
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+# Node Exporter
+nodeExporter:
+  enabled: true
+  resources:
+    limits:
+      cpu: 50m
+      memory: 64Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
+
+# Kube State Metrics
+kubeStateMetrics:
+  enabled: true
+  resources:
+    limits:
+      cpu: 50m
+      memory: 64Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi

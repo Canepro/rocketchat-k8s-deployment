@@ -1,0 +1,124 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-headless
+  namespace: rocketchat
+  labels:
+    app: mongodb
+spec:
+  clusterIP: None
+  selector:
+    app: mongodb
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: rocketchat
+  labels:
+    app: mongodb
+spec:
+  selector:
+    app: mongodb
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: rocketchat
+  labels:
+    app: mongodb
+spec:
+  serviceName: mongodb-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+      - name: mongodb
+        image: mongo:6.0
+        ports:
+        - containerPort: 27017
+          name: mongodb
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: "root"
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: "MongoRoot2024!"
+        - name: MONGO_INITDB_DATABASE
+          value: "rocketchat"
+        command:
+        - mongod
+        args:
+        - --replSet=rs0
+        - --bind_ip_all
+        - --keyFile=/etc/mongodb-keyfile/keyfile
+        volumeMounts:
+        - name: mongodb-data
+          mountPath: /data/db
+        - name: mongodb-keyfile
+          mountPath: /etc/mongodb-keyfile
+          readOnly: true
+        - name: mongodb-init
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+        securityContext:
+          runAsUser: 999
+          runAsGroup: 999
+      volumes:
+      - name: mongodb-keyfile
+        secret:
+          secretName: mongodb-keyfile
+          defaultMode: 0400
+      - name: mongodb-init
+        configMap:
+          name: mongodb-init
+  volumeClaimTemplates:
+  - metadata:
+      name: mongodb-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: default
+      resources:
+        requests:
+          storage: 50Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-init
+  namespace: rocketchat
+data:
+  init-replica.js: |
+    rs.initiate({
+      _id: "rs0",
+      members: [
+        { _id: 0, host: "mongodb-0.mongodb-headless.rocketchat.svc.cluster.local:27017" },
+        { _id: 1, host: "mongodb-1.mongodb-headless.rocketchat.svc.cluster.local:27017" },
+        { _id: 2, host: "mongodb-2.mongodb-headless.rocketchat.svc.cluster.local:27017" }
+      ]
+    });

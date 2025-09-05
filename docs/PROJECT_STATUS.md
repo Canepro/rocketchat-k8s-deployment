@@ -2,63 +2,80 @@
 
 ## 🎯 Current Project Status
 
-**Date**: September 3, 2025
-**Phase**: Phase 1 Complete - Backup & Assessment
-**Status**: ✅ Fully Backed Up & Ready for AKS Deployment
-**Next Milestone**: Phase 2 - AKS Parallel Deployment
+**Date**: September 5, 2025
+**Phase**: ✅ DEPLOYMENT COMPLETE - SSL Certificate Phase
+**Status**: 🟢 AKS Deployed - Rocket.Chat and Monitoring Stack Running
+**Next Milestone**: DNS Migration & Data Restore
 
 ### Completed Achievements
-- ✅ **AKS Remote Access**: Local machine can control AKS cluster
-- ✅ **Repository Cleanup**: Organized file structure with docs/ and scripts/
-- ✅ **Phase 1 Complete**: Full backup and assessment completed
-- ✅ **MongoDB Backup**: 6,986 documents backed up and tested (341K compressed)
-- ✅ **Application Config**: 6 ConfigMaps, 5 Secrets, Helm values captured (150K compressed)
-- ✅ **Persistent Volumes**: File uploads and data backed up (26K+ files)
-- ✅ **Backup Validation**: Full restore testing completed successfully
-- ✅ **Documentation**: Complete migration planning with detailed procedures
-- ✅ **Scripts**: Automated AKS management and backup tools
-- ✅ **Beginner-Friendly**: Step-by-step guides with troubleshooting
+- ✅ **Repository Reorganization**: Clean separation of MicroK8s (rollback) and AKS (new)
+- ✅ **Official Documentation Alignment**: Following Rocket.Chat's official deployment guide
+- ✅ **Official Deployment Files**: Created `values-official.yaml`, `values-monitoring.yaml`, `deploy-aks-official.sh`
+- ✅ **Phase 1 Complete**: Full backup and assessment completed (6,986 documents)
+- ✅ **AKS Access**: Local machine can control AKS cluster remotely
+- ✅ **Backup Validation**: 100% successful restore testing
+- ✅ **Migration Planning**: Comprehensive roadmap with rollback capability
+- ✅ **Cost Optimization**: Deployment within £100/month Azure credit
+- ✅ **Zero Downtime Strategy**: MicroK8s preserved for 3-5 day rollback window
+- ✅ **AKS Deployment**: Rocket.Chat and monitoring stack successfully deployed
+- ✅ **SSL Certificate**: Rocket.Chat SSL certificate issued and working
+- ✅ **Clean URLs**: Grafana configured without /grafana path
+- ✅ **Microservices Architecture**: Full Rocket.Chat microservices running
+
+### Current State Overview
+- 🟢 **MicroK8s (Legacy)**: Running and operational at `https://chat.canepro.me`
+- 🟢 **AKS (New)**: ✅ **DEPLOYED** - Rocket.Chat and monitoring stack running
+- 🟡 **SSL Certificates**: Rocket.Chat ✅ READY, Grafana 🔄 ISSUING
+- ✅ **Data Backup**: 6,986 documents + all configurations safely backed up
+- ✅ **Rollback Ready**: MicroK8s VM preserved for emergency rollback
+- ✅ **Clean URLs**: Grafana accessible at `https://grafana.chat.canepro.me` (no /grafana)
 
 ## 📁 Repository Organization
 
-### Root Directory (Clean & Minimal)
+### Root Directory (AKS Deployment Ready)
 ```
 rocketchat-k8s-deployment/
-├── 📄 README.md                 # Quick navigation guide
-├── 📄 .gitignore               # Security exclusions
-├── 📄 .env.example             # Environment template
-├── 📁 docs/                    # 📚 All documentation
-├── 📁 scripts/                 # 🛠️ Helper scripts
-├── 📄 clusterissuer.yaml       # SSL certificates
-├── 📄 values-production.yaml   # Rocket.Chat production config
-├── 📄 values.yaml              # Rocket.Chat default config
-├── 📄 monitoring-values.yaml   # Grafana/Prometheus config
-├── 📄 servicemonitor-rocketchat.yaml  # Service monitoring
-├── 📄 deploy-rocketchat.sh     # Deployment script
-├── 📄 setup-ubuntu-server.sh   # Server setup script
-├── 📦 mongodb-backup-20250903_231852.tar.gz    # 🗄️ MongoDB backup (341K)
-└── 📦 app-config-backup-20250903_232521.tar.gz # ⚙️ App config backup (150K)
+├── 📄 README.md                    # Main project documentation
+├── 📄 values-official.yaml         # Official Rocket.Chat Helm chart config
+├── 📄 values-monitoring.yaml       # Grafana monitoring configuration
+├── 📄 clusterissuer.yaml           # SSL certificate configuration
+├── 📄 deploy-aks-official.sh       # Official deployment script
+├── 📦 mongodb-backup-*.tar.gz      # MongoDB backup (6,986 documents)
+├── 📦 app-config-backup-*.tar.gz   # Application config backup
+├── 📁 aks/                         # AKS migration planning & docs
+├── 📁 microk8s/                    # Legacy MicroK8s deployment (rollback)
+├── 📁 docs/                        # Current project documentation
+└── 📁 scripts/                     # Helper scripts for AKS access
 ```
 
-### Documentation Folder (`docs/`)
+### Documentation Structure
 ```
-docs/
-├── 📖 AKS_SETUP_GUIDE.md       # 🆕 What we achieved & how to use
-├── 📋 MASTER_PLANNING.md       # Complete 2-week migration plan
-├── 📋 MIGRATION_PLAN.md        # Detailed 15-step process
-├── 🌐 DOMAIN_STRATEGY.md       # DNS/SSL migration planning
-├── 📖 DEPLOYMENT_GUIDE.md      # Current MicroK8s setup
-├── 🚀 FUTURE_IMPROVEMENTS.md   # Enhancement roadmap
-└── 📄 README.md                # Documentation navigation
+docs/                              # Current project documentation
+├── 📄 README.md                  # Project documentation overview
+├── 📚 PROJECT_HISTORY.md         # Comprehensive historical record
+├── 📊 PROJECT_STATUS.md          # Current status & organization
+└── 🚀 FUTURE_IMPROVEMENTS.md     # Enhancement roadmap
+
+aks/                               # AKS migration planning
+├── 📋 MASTER_PLANNING.md         # Complete migration roadmap
+├── 📋 MIGRATION_PLAN.md          # Detailed 15-step process
+├── 🌐 DOMAIN_STRATEGY.md         # DNS/SSL migration planning
+└── 📄 README.md                  # AKS planning overview
+
+microk8s/                         # Legacy deployment (rollback)
+├── 📖 DEPLOYMENT_GUIDE.md        # Current MicroK8s setup
+├── 📋 PHASE1_STATUS.md           # Backup completion status
+├── 📋 PHASE2_STATUS.md           # AKS migration progress
+├── 📄 rocketchat-deployment.yaml # Custom deployment files
+└── 📄 README.md                  # Rollback instructions
 ```
 
-### Scripts Folder (`scripts/`)
-```
-scripts/
-├── 💻 aks-shell.sh             # Interactive AKS shell
-├── 🚀 migrate-to-aks.sh        # Migration orchestrator
-└── 🔧 setup-kubeconfig.sh      # Kubeconfig management
-```
+### Key Files Overview
+- **`values-official.yaml`**: Official Rocket.Chat Helm chart configuration
+- **`values-monitoring.yaml`**: Official Grafana monitoring configuration
+- **`deploy-aks-official.sh`**: One-command deployment script
+- **`clusterissuer.yaml`**: SSL certificate configuration
+- **Backup files**: Complete data backup for migration
 
 ## 🔐 Security & Access
 
@@ -68,43 +85,53 @@ scripts/
 ✅ kubectl: Fully functional
 ✅ Scripts: Tested and working
 ✅ Documentation: Complete and current
+✅ Official Charts: Using Rocket.Chat's official Helm repository
 ```
 
 ### Important Files to Protect
 ```
-🔒 ~/.kube/config              # AKS connection (local machine only)
-🔒 docs/MASTER_PLANNING.md     # Complete migration strategy
-🔒 scripts/                    # All automation scripts
-🔒 values-production.yaml      # Production configuration
+🔒 ~/.kube/config                    # AKS connection (local machine only)
+🔒 aks/MASTER_PLANNING.md           # Complete migration strategy
+🔒 scripts/                         # All automation scripts
+🔒 values-official.yaml             # Official Rocket.Chat configuration
+🔒 clusterissuer.yaml               # SSL certificate configuration
+🔒 *-backup-*.tar.gz                # Complete data backups
 ```
 
-## 📈 Migration Readiness Checklist
+## 📈 Deployment Readiness Checklist
 
-### ✅ Completed (Ready)
-- [x] AKS cluster accessible from local machine
-- [x] Repository organized and documented
-- [x] Migration planning complete
-- [x] Automation scripts created and tested
-- [x] Security considerations addressed
+### ✅ Completed (Deployment Executed)
+- [x] **Repository Reorganization**: Clean separation of legacy and new deployments
+- [x] **Official Documentation Alignment**: Following Rocket.Chat's official deployment guide
+- [x] **Official Deployment Files**: Created and validated configuration files
+- [x] **AKS Access**: Local machine can control AKS cluster remotely
+- [x] **Backup Validation**: 100% successful restore testing (6,986 documents)
+- [x] **Migration Planning**: Comprehensive roadmap with rollback capability
+- [x] **Cost Analysis**: Deployment within £100/month Azure credit
+- [x] **Zero Downtime Strategy**: MicroK8s preserved for 3-5 day rollback
+- [x] **AKS Deployment**: Rocket.Chat and monitoring stack deployed successfully
+- [x] **SSL Configuration**: Rocket.Chat SSL certificate issued and working
+- [x] **Clean URLs**: Grafana configured without /grafana path
 
-### ✅ Phase 1 Complete (Backup & Assessment)
-- [x] **Day 1**: Environment Assessment & Documentation
-  - [x] Cluster health verification completed
-  - [x] Application inventory (10 pods, 6 ConfigMaps, 5 Secrets)
-  - [x] Data assessment (6,986 MongoDB docs, 26K+ files)
-  - [x] Dependency mapping (Rocket.Chat + MongoDB + NATS)
-- [x] **Day 2**: Backup Strategy & Testing
-  - [x] Database backup procedures (mongodump validated)
-  - [x] Application configuration backup (ConfigMaps, Secrets, Helm)
-  - [x] File system backup (uploads, avatars from PVCs)
-  - [x] Backup testing (full restore validation successful)
-- [x] **Day 3**: Target Environment Preparation (Ready)
-  - [ ] AKS cluster validation (node pools, networking, monitoring)
-  - [ ] Storage provisioning (Premium SSD, backup storage)
-  - [ ] Security configuration (RBAC, network policies, Azure AD)
-  - [ ] Networking setup (NGINX ingress, cert-manager, load balancer)
+### ✅ Prerequisites Verified
+- [x] **Domain Configuration**: `chat.canepro.me` and `grafana.chat.canepro.me` ready
+- [x] **SSL Certificates**: Let's Encrypt configuration prepared
+- [x] **Official Helm Repository**: `https://rocketchat.github.io/helm-charts` added
+- [x] **Backup Integrity**: All data safely backed up and tested
+- [x] **Rollback Capability**: MicroK8s VM operational for emergency rollback
 
 ## 🛠️ Quick Commands Reference
+
+### Official Deployment
+```bash
+# Deploy using official Rocket.Chat Helm chart
+chmod +x deploy-aks-official.sh
+./deploy-aks-official.sh
+
+# Check deployment status
+kubectl get pods -n rocketchat
+kubectl get pods -n monitoring
+```
 
 ### AKS Access
 ```bash
@@ -120,20 +147,22 @@ kubectl cluster-info
 
 ### Documentation Access
 ```bash
-# What we achieved
-cat docs/AKS_SETUP_GUIDE.md
+# Project history and current status
+cat docs/PROJECT_HISTORY.md
+cat docs/PROJECT_STATUS.md
 
-# Migration roadmap
-cat docs/MASTER_PLANNING.md
+# AKS migration planning
+cat aks/README.md
+cat aks/MASTER_PLANNING.md
 
-# Next steps
-cat docs/MIGRATION_PLAN.md
+# MicroK8s rollback (if needed)
+cat microk8s/README.md
 ```
 
 ### Backup Verification
 ```bash
 # Check backup file sizes
-ls -lh *.tar.gz
+ls -lh *-backup-*.tar.gz
 
 # Verify MongoDB backup contents
 tar -tzf mongodb-backup-20250903_231852.tar.gz | head -10
@@ -154,58 +183,61 @@ tree -I '.git|*.tmp' --dirsfirst
 ## 📊 Key Metrics
 
 ### Project Progress
-- **Phase 1 Backup**: 100% complete ✅
+- **Repository Reorganization**: 100% complete ✅
+- **Official Documentation Alignment**: 100% complete ✅
+- **Official Deployment Files**: 100% ready ✅
 - **MongoDB Backup**: 6,986 documents validated ✅
 - **Application Config**: All components backed up ✅
-- **Persistent Volumes**: File data secured ✅
 - **Backup Testing**: Full restore validated ✅
-- **Documentation**: 100% complete and current
-- **AKS Access**: 100% working
-- **Migration Planning**: 100% complete
-- **Scripts**: 100% tested and functional
-- **Repository Organization**: 100% clean and documented
+- **AKS Access**: 100% working ✅
+- **Migration Planning**: 100% complete ✅
+- **Scripts**: 100% tested and functional ✅
+- **Cost Optimization**: Within £100/month Azure credit ✅
 
 ### Technical Readiness
 - **Cluster Connection**: ✅ Established
 - **kubectl Access**: ✅ Working
-- **Scripts Functionality**: ✅ Tested
-- **Documentation**: ✅ Beginner-friendly
-- **Security**: ✅ Configured
+- **Official Helm Charts**: ✅ Ready
+- **Documentation**: ✅ Comprehensive and current
+- **Security**: ✅ SSL/TLS configured
 - **Backup Integrity**: ✅ Fully validated
-- **Migration Data**: ✅ Ready for AKS
-- **Rollback Capability**: ✅ Maintained
+- **Migration Data**: ✅ Ready for deployment
+- **Rollback Capability**: ✅ Maintained (3-5 days)
 
 ## 🎯 Immediate Next Actions
 
 ### For You (User)
-1. **Verify** backup integrity: `ls -lh *.tar.gz` - Confirm backup files exist
-2. **Review** `docs/PHASE1_STATUS.md` - See detailed backup completion
-3. **Test** `./scripts/aks-shell.sh` - Verify AKS access still works
-4. **Read** `docs/MIGRATION_PLAN.md` - Review Phase 2 deployment steps
-5. **Decide** when to start Phase 2: AKS Parallel Deployment
+1. **Wait** for Grafana SSL certificate to be issued (~5-10 minutes)
+2. **Test** both Rocket.Chat and Grafana access thoroughly
+3. **Update** DNS records to point to AKS ingress (4.250.169.133)
+4. **Restore** data from backup to AKS MongoDB
+5. **Monitor** costs within Azure credit limits
 
 ### For Repository
-- **Monitor** for any AKS connection issues
-- **Update** documentation as migration progresses
-- **Backup** working configurations regularly
-- **Test** scripts before each major migration step
+- **Monitor** deployment health and performance
+- **Update** documentation post-deployment
+- **Archive** MicroK8s VM after successful testing (3-5 days)
+- **Configure** optional enhanced monitoring (Azure Monitor, Loki)
 
 ## 📞 Support & Resources
 
 ### Quick Help
-- **AKS Connection Issues**: Check `docs/AKS_SETUP_GUIDE.md` troubleshooting
-- **Migration Questions**: Review `docs/MASTER_PLANNING.md`
-- **Script Problems**: Run `./scripts/aks-shell.sh` for interactive help
+- **Deployment Issues**: Check `deploy-aks-official.sh` output
+- **Migration Questions**: Review `aks/README.md` and `aks/MASTER_PLANNING.md`
+- **Rollback Needed**: Follow `microk8s/README.md` instructions
+- **AKS Connection Issues**: Run `./scripts/aks-shell.sh` for troubleshooting
 
-### Key Contacts
-- **Technical Issues**: Check kubectl connectivity first
-- **Documentation**: All guides in `docs/` folder
-- **Scripts**: All automation in `scripts/` folder
+### Key Resources
+- **Official Rocket.Chat Docs**: https://docs.rocket.chat/docs/deploy-with-kubernetes
+- **Helm Charts Repository**: https://github.com/RocketChat/helm-charts
+- **Current Deployment**: `https://chat.canepro.me` (MicroK8s - active)
+- **Backup Files**: Complete data backup in repository root
 
 ---
 
-**Last Updated**: September 3, 2025
-**AKS Status**: ✅ Connected & Ready
-**Migration Status**: 🟢 Phase 1 Complete - Ready for Phase 2
-**Backup Status**: ✅ Fully Validated (491K compressed)
-**Documentation**: ✅ Complete & Beginner-Friendly
+**Last Updated**: September 5, 2025
+**Planning Status**: ✅ Complete - Official Deployment Executed
+**Migration Status**: 🟡 SSL Phase - Ready for DNS Migration
+**Backup Status**: ✅ Fully Validated (6,986 documents)
+**Documentation**: ✅ Comprehensive & Up-to-Date
+**Deployment Status**: 🟢 Rocket.Chat & Monitoring Stack Running
