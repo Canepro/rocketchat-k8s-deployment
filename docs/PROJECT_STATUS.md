@@ -4,17 +4,18 @@
 
 **Date**: September 6, 2025
 **Phase**: ✅ PHASE 2 COMPLETE - Enhanced Monitoring Fully Operational
-**Status**: 🟢 PRODUCTION READY - All Monitoring Issues Resolved
+**Status**: 🟢 PRODUCTION READY - Repository Cleaned and Organized
 **Next Milestone**: Optional Enhancements (Azure Monitor, Alerting)
 
 ### Recently Completed (September 6, 2025) ✅
-- ✅ **PodMonitor Configuration Fixed**: Resolved duplicate endpoints and incorrect port references
-- ✅ **ServiceMonitor Disabled**: Eliminated conflicts by using PodMonitor instead
-- ✅ **Loki Persistence Enabled**: Fixed log storage to prevent data loss (50Gi storage)
-- ✅ **Promtail Connection Fixed**: Resolved service name resolution (loki-stack:3100)
-- ✅ **Log Collection Verified**: Promtail successfully collecting Rocket.Chat application logs
-- ✅ **Loki Processing Confirmed**: Server receiving and processing log data normally
-- ✅ **Grafana Integration Complete**: Datasource configured, ready for log queries
+- ✅ **Repository Reorganization**: Major cleanup from 25+ scattered files to 10 organized directories
+- ✅ **Professional Directory Structure**: Logical separation with config/, deployment/, docs/, monitoring/
+- ✅ **File Organization**: All configurations centralized, unnecessary scripts removed
+- ✅ **Path Updates**: Deployment scripts updated for new directory structure
+- ✅ **Documentation Updates**: Comprehensive documentation reflecting new organization
+- ✅ **Grafana Loki Data Source**: Fixed ConfigMap labels and service connectivity
+- ✅ **Promtail Position Tracking**: Resolved read-only file system issues
+- ✅ **Log Collection Verified**: Complete log pipeline working end-to-end
 
 ### Completed Achievements
 - ✅ **Repository Reorganization**: Clean separation of MicroK8s (rollback) and AKS (new)
@@ -51,20 +52,48 @@
 
 ## 📁 Repository Organization
 
-### Root Directory (AKS Deployment Ready)
-```
+### Root Directory (Clean and Organized)
+```text
 rocketchat-k8s-deployment/
 ├── 📄 README.md                    # Main project documentation
-├── 📄 values-official.yaml         # Official Rocket.Chat Helm chart config
-├── 📄 values-monitoring.yaml       # Grafana monitoring configuration
-├── 📄 clusterissuer.yaml           # SSL certificate configuration
-├── 📄 deploy-aks-official.sh       # Official deployment script
-├── 📦 mongodb-backup-*.tar.gz      # MongoDB backup (6,986 documents)
-├── 📦 app-config-backup-*.tar.gz   # Application config backup
-├── 📁 aks/                         # AKS migration planning & docs
-├── 📁 microk8s/                    # Legacy MicroK8s deployment (rollback)
-├── 📁 docs/                        # Current project documentation
-└── 📁 scripts/                     # Helper scripts for AKS access
+├── 📄 STRUCTURE.md                 # Directory layout documentation  
+├── 📄 CLEANUP_SUMMARY.md           # Repository cleanup record
+├── 📁 config/                      # Configuration files
+│   ├── certificates/               # SSL certificate configurations
+│   │   └── clusterissuer.yaml
+│   └── helm-values/               # Centralized Helm chart values
+│       ├── values-monitoring.yaml
+│       ├── values-official.yaml
+│       ├── values-production.yaml
+│       └── values.yaml
+├── 📁 deployment/                  # Deployment scripts and guides
+│   ├── cleanup-aks.sh
+│   ├── deploy-aks-official.sh
+│   ├── deploy-rocketchat.sh
+│   └── README.md                  # Step-by-step deployment guide
+├── 📁 docs/                       # Comprehensive documentation
+│   ├── DNS_MIGRATION_GUIDE.md
+│   ├── ENHANCED_MONITORING_PLAN.md
+│   ├── FUTURE_IMPROVEMENTS.md
+│   ├── loki-query-guide.md
+│   ├── PROJECT_HISTORY.md
+│   ├── PROJECT_STATUS.md
+│   ├── quick-loki-guide.md
+│   ├── README.md
+│   └── TROUBLESHOOTING_GUIDE.md
+├── 📁 monitoring/                 # Monitoring configurations
+│   ├── grafana-datasource-loki.yaml
+│   ├── grafana-dashboard-rocketchat.yaml
+│   ├── loki-values.yaml
+│   ├── prometheus-current.yaml
+│   ├── rocket-chat-alerts.yaml
+│   └── [other monitoring configs]
+├── 📁 scripts/                   # Utility scripts
+│   ├── aks-shell.sh
+│   ├── migrate-to-aks.sh
+│   └── setup-kubeconfig.sh
+├── 📁 aks/                       # AKS migration planning & docs
+└── 📁 microk8s/                  # Legacy MicroK8s deployment (rollback)
 ```
 
 ### Documentation Structure
@@ -90,11 +119,13 @@ microk8s/                         # Legacy deployment (rollback)
 ```
 
 ### Key Files Overview
-- **`values-official.yaml`**: Official Rocket.Chat Helm chart configuration
-- **`values-monitoring.yaml`**: Official Grafana monitoring configuration
-- **`deploy-aks-official.sh`**: One-command deployment script
-- **`clusterissuer.yaml`**: SSL certificate configuration
-- **Backup files**: Complete data backup for migration
+
+- **`config/helm-values/values-official.yaml`**: Official Rocket.Chat Helm chart configuration
+- **`config/helm-values/values-monitoring.yaml`**: Grafana monitoring configuration  
+- **`config/certificates/clusterissuer.yaml`**: SSL certificate configuration
+- **`deployment/deploy-aks-official.sh`**: Main deployment script (updated paths)
+- **`docs/`**: Comprehensive documentation including troubleshooting and guides
+- **`monitoring/`**: All monitoring configurations and dashboards centralized
 
 ## 🔐 Security & Access
 
@@ -145,9 +176,9 @@ microk8s/                         # Legacy deployment (rollback)
 
 ### Official Deployment
 ```bash
-# Deploy using official Rocket.Chat Helm chart
-chmod +x deploy-aks-official.sh
-./deploy-aks-official.sh
+# Deploy using official Rocket.Chat Helm chart (updated paths)
+chmod +x deployment/deploy-aks-official.sh
+./deployment/deploy-aks-official.sh
 
 # Check deployment status
 kubectl get pods -n rocketchat
@@ -171,6 +202,11 @@ kubectl cluster-info
 # Project history and current status
 cat docs/PROJECT_HISTORY.md
 cat docs/PROJECT_STATUS.md
+cat docs/TROUBLESHOOTING_GUIDE.md
+
+# Loki log query guides
+cat docs/loki-query-guide.md
+cat docs/quick-loki-guide.md
 
 # AKS migration planning
 cat aks/README.md
@@ -258,9 +294,9 @@ tree -I '.git|*.tmp' --dirsfirst
 
 ---
 
-**Last Updated**: September 5, 2025
+**Last Updated**: September 6, 2025
 **Planning Status**: ✅ Complete - Migration Executed Successfully
 **Migration Status**: ✅ DNS Migration Complete - Production Active
-**Backup Status**: ✅ Fully Validated (6,986 documents)
+**Repository Status**: ✅ Professionally Organized and Cleaned
 **Documentation**: ✅ Comprehensive & Up-to-Date
 **Deployment Status**: 🟢 Full Production Migration Complete

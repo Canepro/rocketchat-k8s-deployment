@@ -61,7 +61,7 @@ fi
 
 # Step 4: Apply ClusterIssuer
 print_status "Step 4: Applying ClusterIssuer configuration..."
-kubectl apply -f clusterissuer.yaml
+kubectl apply -f ../config/certificates/clusterissuer.yaml
 
 # Wait for ClusterIssuer to be ready
 print_status "Waiting for ClusterIssuer..."
@@ -71,7 +71,7 @@ print_success "ClusterIssuer configured"
 
 # Step 5: Install monitoring stack
 print_status "Step 5: Installing monitoring stack..."
-helm install monitoring -f values-monitoring.yaml rocketchat/monitoring \
+helm install monitoring -f ../config/helm-values/values-monitoring.yaml rocketchat/monitoring \
   --namespace monitoring \
   --create-namespace \
   --wait \
@@ -80,7 +80,7 @@ print_success "Monitoring stack installed"
 
 # Step 6: Deploy Rocket.Chat
 print_status "Step 6: Deploying Rocket.Chat..."
-helm install rocketchat -f values-official.yaml rocketchat/rocketchat \
+helm install rocketchat -f ../config/helm-values/values-official.yaml rocketchat/rocketchat \
   --namespace rocketchat \
   --create-namespace \
   --wait \
