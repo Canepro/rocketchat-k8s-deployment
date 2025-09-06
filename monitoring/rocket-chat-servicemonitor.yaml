@@ -1,24 +1,31 @@
-apiVersion: azmonitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: rocketchat-servicemonitor
-  namespace: rocketchat
-  labels:
-    app.kubernetes.io/name: rocketchat
-    app.kubernetes.io/instance: rocketchat
-    release: monitoring
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/instance: rocketchat
-      app.kubernetes.io/name: rocketchat
-  endpoints:
-  - port: http
-    path: /metrics
-    interval: 30s
-    scrapeTimeout: 10s
-    honorLabels: true
-    relabelings:
-    - sourceLabels: [__meta_kubernetes_service_label_app_kubernetes_io_name]
-      targetLabel: service_name
-      replacement: rocketchat
+# DISABLED - Using PodMonitor instead of ServiceMonitor
+# This file is kept for reference but should not be applied
+# Use rocket-chat-podmonitor.yaml instead
+
+# apiVersion: monitoring.coreos.com/v1
+# kind: ServiceMonitor
+# metadata:
+#   name: rocketchat-servicemonitor
+#   namespace: monitoring
+#   labels:
+#     app.kubernetes.io/name: rocketchat
+#     app.kubernetes.io/instance: rocketchat
+#     release: monitoring
+# spec:
+#   selector:
+#     matchLabels:
+#       app.kubernetes.io/instance: rocketchat
+#       app.kubernetes.io/name: rocketchat
+#   namespaceSelector:
+#     matchNames:
+#       - rocketchat
+#   endpoints:
+#   - port: "9100"
+#     path: /metrics
+#     interval: 30s
+#     scrapeTimeout: 10s
+#     honorLabels: true
+#     relabelings:
+#     - sourceLabels: [__meta_kubernetes_service_label_app_kubernetes_io_name]
+#       targetLabel: service_name
+#       replacement: rocketchat

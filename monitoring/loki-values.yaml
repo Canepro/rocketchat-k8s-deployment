@@ -1,0 +1,117 @@
+# Loki Stack Configuration for Rocket.Chat Logging
+# Deployed in loki-stack namespace for centralized logging
+
+loki:
+  # Enable persistence for log storage - CRITICAL for production
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClassName: default
+
+  # Loki configuration
+  config:
+    auth_enabled: false
+    server:
+      http_listen_port: 3100
+    ingester:
+      chunk_idle_period: 5m
+      chunk_retain_period: 30s
+    storage_config:
+      boltdb_shipper:
+        active_index_directory: /data/index
+        cache_location: /data/cache
+        cache_ttl: 168h
+        shared_store: filesystem
+    schema_config:
+      configs:
+        - from: 2020-05-15
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+    limits_config:
+      enforce_metric_name: false
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+
+# Promtail configuration for log collection
+promtail:
+  enabled: true
+  config:
+    server:
+      http_listen_port: 9080
+      grpc_listen_port: 0
+    positions:
+      filename: /run/promtail/positions.yaml
+    clients:
+      - url: http://loki.loki-stack.svc.cluster.local:3100/loki/api/v1/push
+    scrape_configs:
+      # Rocket.Chat application logs
+      - job_name: rocketchat-app
+        static_configs:
+          - targets:
+              - localhost
+            labels:
+              job: rocketchat
+              app: rocketchat
+              __path__: /var/log/containers/*rocketchat-rocketchat*.log
+        pipeline_stages:
+          - docker:
+              # Extract Docker container logs
+          - json:
+              expressions:
+                level: level
+                message: message
+                timestamp: timestamp
+                service: service
+          - labels:
+              level:
+              service:
+      # MongoDB logs
+      - job_name: rocketchat-mongodb
+        static_configs:
+          - targets:
+              - localhost
+            labels:
+              job: mongodb
+              app: rocketchat
+              __path__: /var/log/containers/*mongodb*.log
+        pipeline_stages:
+          - docker: {}
+      # NATS logs
+      - job_name: rocketchat-nats
+        static_configs:
+          - targets:
+              - localhost
+            labels:
+              job: nats
+              app: rocketchat
+              __path__: /var/log/containers/*nats*.log
+        pipeline_stages:
+          - docker: {}
+
+# Disable Grafana (we already have it deployed)
+grafana:
+  enabled: false
+
+# Resource limits for Loki components
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 3100
+  annotations: {}
+
+# Node selector and tolerations for AKS
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,37 +1,40 @@
 # Official Rocket.Chat Monitoring Configuration
+# Consolidated and cleaned - single source of truth
 # Based on: https://docs.rocket.chat/docs/deploy-with-kubernetes
 
-ingress:
-  enabled: true
-  ingressClassName: "nginx"  # Ingress controller in K8s cluster
-  tls: true
-  grafana:
-    enabled: true
-    host: "grafana.chat.canepro.me"  # Your Grafana domain
-    path: "/"
-
-# Enhanced Grafana configuration
 grafana:
-  adminPassword: "NewSecurePassword2025!"  # Updated: September 5, 2025
+  adminPassword: "NewSecurePassword2025!"
   persistence:
     enabled: true
     storageClassName: "default"
     size: 5Gi
-  resources:
-    limits:
-      cpu: 200m
-      memory: 256Mi
-    requests:
-      cpu: 100m
-      memory: 128Mi
   grafana.ini:
     server:
       root_url: https://grafana.chat.canepro.me/
+      serve_from_sub_path: false
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'rocketchat'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/rocketchat
 
-# Prometheus configuration
 prometheus:
   prometheusSpec:
-    retention: "7d"
+    retention: 7d
+    resources:
+      limits:
+        cpu: 300m
+        memory: 512Mi
+      requests:
+        cpu: 150m
+        memory: 256Mi
     storageSpec:
       volumeClaimTemplate:
         spec:
@@ -40,15 +43,7 @@ prometheus:
           resources:
             requests:
               storage: 10Gi
-    resources:
-      limits:
-        cpu: 300m
-        memory: 512Mi
-      requests:
-        cpu: 150m
-        memory: 256Mi
 
-# Alertmanager configuration
 alertmanager:
   alertmanagerSpec:
     storage:
@@ -67,7 +62,6 @@ alertmanager:
         cpu: 50m
         memory: 64Mi
 
-# Node Exporter
 nodeExporter:
   enabled: true
   resources:
@@ -78,7 +72,6 @@ nodeExporter:
       cpu: 25m
       memory: 32Mi
 
-# Kube State Metrics
 kubeStateMetrics:
   enabled: true
   resources:
@@ -88,3 +81,12 @@ kubeStateMetrics:
     requests:
       cpu: 25m
       memory: 32Mi
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  tls: true
+  grafana:
+    enabled: true
+    host: grafana.chat.canepro.me
+    path: /

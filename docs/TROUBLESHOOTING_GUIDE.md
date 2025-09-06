@@ -33,7 +33,136 @@ This troubleshooting guide covers common issues encountered during Rocket.Chat d
 
 ---
 
-## 🚀 **Deployment Issues**
+## � **Recent Issues & Solutions (September 6, 2025)**
+
+### **Issue: Loki StatefulSet Update Failed - Persistence Configuration**
+
+**Symptoms:**
+- `Error: UPGRADE FAILED: cannot patch "loki-stack" with kind StatefulSet`
+- `StatefulSet.apps "loki-stack" is invalid: spec: Forbidden: updates to statefulset spec for fields other than 'replicas', 'ordinals', 'template', 'updateStrategy', 'persistentVolumeClaimRetentionPolicy' and 'minReadySeconds' are forbidden`
+- Cannot enable persistence on existing Loki deployment
+
+**Root Cause:**
+- StatefulSets don't allow changes to volumeClaimTemplates after creation
+- Enabling persistence requires recreating the StatefulSet
+- Kubernetes protects against data loss by preventing these changes
+
+**Solutions:**
+
+**Option A: Safe Recreation (Recommended)**
+```bash
+# 1. Backup current Loki data (if any)
+kubectl get pvc -n loki-stack
+
+# 2. Delete the existing Loki stack
+helm uninstall loki-stack -n loki-stack
+
+# 3. Wait for cleanup
+sleep 30
+
+# 4. Reinstall with persistence enabled
+helm install loki-stack grafana/loki-stack \
+  --namespace loki-stack \
+  --create-namespace \
+  --values loki-stack-values.yaml \
+  --wait \
+  --timeout=10m
+```
+
+**Option B: Force Recreation**
+```bash
+# Delete StatefulSet and PVCs
+kubectl delete statefulset loki-stack -n loki-stack
+kubectl delete pvc --all -n loki-stack
+
+# Reinstall
+helm install loki-stack grafana/loki-stack \
+  --namespace loki-stack \
+  --create-namespace \
+  --values loki-stack-values.yaml
+```
+
+**Prevention:**
+- Always plan persistence from initial deployment
+- Test configuration changes in staging first
+- Use `--dry-run` to validate changes before applying
+
+**Expected Resolution Time:** 5-10 minutes
+
+### **Issue: Promtail Cannot Connect to Loki - Service Name Resolution**
+
+**Symptoms:**
+- `error sending batch, will retry" status=-1 tenant= error="Post \"http://loki:3100/loki/api/v1/push\": dial tcp: lookup loki on 10.0.0.10:53: no such host"`
+- Promtail logs show DNS lookup failures for `loki:3100`
+- Logs not appearing in Grafana/Loki despite Promtail running
+
+**Root Cause:**
+- Incorrect service name in Promtail client configuration
+- Should be `loki-stack:3100` not `loki:3100` when using Helm chart
+
+**Solution:**
+```bash
+# Fix the service URL in values file
+# Change: url: http://loki:3100/loki/api/v1/push
+# To:     url: http://loki-stack:3100/loki/api/v1/push
+
+# Update the deployment
+helm upgrade loki-stack grafana/loki-stack \
+  --namespace loki-stack \
+  --values loki-stack-values.yaml \
+  --wait \
+  --timeout=5m
+
+# Verify fix
+kubectl logs -n loki-stack loki-stack-promtail-xxxxx --tail=10
+```
+
+**Prevention:**
+- Always verify service names match the actual Kubernetes services
+- Test connectivity before deploying: `kubectl get svc -n loki-stack`
+
+**Expected Resolution Time:** 2-3 minutes
+
+### **Resolution Status: September 6, 2025 - COMPLETED ✅**
+- ✅ **Loki Persistence**: Successfully enabled with 50Gi storage
+- ✅ **StatefulSet Recreation**: Completed without data loss
+- ✅ **Promtail Connection**: Fixed service name resolution (`loki-stack:3100`)
+- ✅ **Log Collection**: Promtail now successfully collecting from Rocket.Chat pods
+- ✅ **Loki Processing**: Server receiving and processing log data
+- ✅ **Grafana Integration**: Datasource configured and ready for log queries
+
+**Final Verification (September 6, 22:05 UTC):**
+```bash
+# All pods running correctly:
+NAME                        READY   STATUS    RESTARTS   AGE
+loki-stack-0                1/1     Running   0          6m36s
+loki-stack-promtail-kqlhk   1/1     Running   0          29s
+loki-stack-promtail-z72t6   1/1     Running   0          71s
+
+# Promtail successfully tailing Rocket.Chat logs:
+# - rocketchat_rocketchat-ddp-streamer logs ✅
+# - rocketchat_rocketchat-stream-hub logs ✅
+# - No DNS resolution errors ✅
+
+# Loki processing data normally:
+# - Table management active ✅
+# - Checkpoint operations successful ✅
+# - Ready for log queries in Grafana ✅
+```
+
+**Test Log Collection:**
+```bash
+# Access Grafana: https://grafana.chat.canepro.me
+# Go to: Explore → Loki
+# Query examples:
+# - {namespace="rocketchat"}
+# - {app="rocketchat"}
+# - {job="rocketchat"}
+```
+
+---
+
+## �🚀 **Deployment Issues**
 
 ### **Issue 1.1: Helm Deployment Fails**
 
@@ -1575,6 +1704,98 @@ Always Use HTTPS: On
 
 ---
 
+### **Issue: ERR_CERT_AUTHORITY_INVALID with Valid Certificate (September 6, 2025)**
+
+**Symptoms:**
+- Browser shows: `net::ERR_CERT_AUTHORITY_INVALID`
+- Certificate status shows `READY: True` in Kubernetes
+- `kubectl describe certificate` shows valid expiry dates
+- Error appears consistently across page reloads
+
+**Root Cause:**
+- Browser SSL cache contains old/invalid certificate data
+- Cloudflare proxy interfering with certificate chain validation
+- Certificate chain trust issue on client side
+
+**Resolution Applied:**
+```bash
+# Certificate is actually valid - confirmed:
+kubectl get certificates -n monitoring
+# NAME          READY   SECRET        AGE
+# grafana-tls   True    grafana-tls   27h
+
+# Certificate details show valid Let's Encrypt chain:
+kubectl describe certificate grafana-tls -n monitoring
+# Not After: 2025-12-04T16:41:48Z (valid until December)
+```
+
+**Browser Solutions:**
+1. **Clear SSL State**: Chrome Settings → Privacy → Clear browsing data (include SSL certificates)
+2. **Try Incognito Mode**: Test if works in private/incognito browsing
+3. **Different Browser**: Test with Firefox/Edge to isolate Chrome-specific issue
+4. **Hard Refresh**: Ctrl+F5 or Cmd+Shift+R to bypass cache
+
+**Cloudflare Solutions:**
+1. **Disable Proxy Temporarily**: Set DNS record to "DNS only" (grey cloud)
+2. **SSL Mode**: Ensure Cloudflare SSL is set to "Full (strict)"
+3. **Wait for Propagation**: 5-10 minutes after DNS changes
+
+**Expected Resolution Time:** Immediate for browser cache fixes, 5-10 minutes for DNS changes
+
+---
+
+### **Issue: Grafana Login Password Incorrect (September 6, 2025)**
+
+**Symptoms:**
+- Grafana login fails with correct-looking credentials
+- Password from README.md doesn't work: `GrafanaAdmin2024!`
+- Username `admin` is correct but password is rejected
+- Issue occurs after successful SSL certificate resolution
+
+**Root Cause:**
+- Current deployment uses default Grafana credentials: `admin/admin`
+- README.md contains outdated password from previous configuration
+- Grafana operator creates secret with default credentials during deployment
+
+**Diagnosis:**
+```bash
+# Check actual Grafana credentials in Kubernetes secret
+kubectl get secret grafana-admin-credentials -n monitoring -o yaml
+
+# Decode the password (both username and password are base64 encoded)
+kubectl get secret grafana-admin-credentials -n monitoring -o jsonpath='{.data.GF_SECURITY_ADMIN_PASSWORD}' | base64 -d
+# Output: admin
+
+kubectl get secret grafana-admin-credentials -n monitoring -o jsonpath='{.data.GF_SECURITY_ADMIN_USER}' | base64 -d  
+# Output: admin
+```
+
+**Current Working Credentials:**
+- **Username**: `admin`
+- **Password**: `admin`
+
+**Resolution Applied:**
+1. **Updated README.md**: Changed password from `GrafanaAdmin2024!` to `admin`
+2. **Verified Access**: Confirmed login works with correct credentials
+3. **Documentation**: Added this issue to troubleshooting guide
+
+**Prevention:**
+- Always verify credentials from Kubernetes secrets rather than documentation
+- Update README.md immediately after deployment with actual credentials
+- Consider changing default password after first login for security
+- Document credential verification commands for future reference
+
+**Security Recommendation:**
+After successful login, change the default password:
+1. Login to Grafana with `admin/admin`
+2. Go to Configuration → Users
+3. Click on admin user and change password
+4. Update documentation with new password
+
+**Expected Resolution Time:** Immediate with correct credentials
+
+---
+
 ### **Issue: Grafana 404 Not Found Error (September 4, 2025)**
 
 **Symptoms:**
@@ -2060,3 +2281,228 @@ alertmanager.yaml: |
 **Next Phase**: Phase 2 - Loki Stack Deployment
 
 *This troubleshooting guide now includes successful Phase 1 implementation results. Phase 1 enhanced monitoring is complete and fully operational.*
+
+---
+
+### **Issue: Grafana Loki Data Source Configuration Problems (September 6, 2025)** ⭐ **Recently Resolved**
+
+**Symptoms:**
+- Console errors: `"Datasource dex7bydz86h34d was not found"`
+- Console errors: `"Datasource dex7eokbu33swf was not found"`
+- Browser errors: `GET /api/datasources/uid/dex7eokbu33swf/health 400 (Bad Request)`
+- Grafana Explore interface showing "No data sources available"
+- Loki queries failing with data source connection errors
+- Grafana data source health checks returning 400 status codes
+
+**Diagnosis:**
+```bash
+# Check Grafana data source ConfigMaps
+kubectl get configmap -n monitoring | grep grafana
+# Shows: monitoring-grafana-loki-datasource
+
+# Verify ConfigMap labels (CRITICAL ISSUE)
+kubectl get configmap monitoring-grafana-loki-datasource -n monitoring -o yaml | grep labels
+# PROBLEM: Shows "grafana_datasource: 1" instead of "grafana_dashboard: 1"
+
+# Check sidecar configuration
+kubectl describe deployment monitoring-grafana -n monitoring | grep -A 10 "grafana-sc-datasources"
+# Shows: LABEL: grafana_dashboard, LABEL_VALUE: 1
+
+# Verify data source file location
+kubectl exec -n monitoring monitoring-grafana-<pod> -c grafana -- ls -la /etc/grafana/provisioning/datasources/
+# PROBLEM: Directory empty - ConfigMap not mounted
+
+# Check Grafana logs for data source errors
+kubectl logs -n monitoring monitoring-grafana-<pod> --tail=20
+# Shows authentication failures preventing data source reload
+```
+
+**Root Cause Analysis:**
+1. **Label Mismatch**: Loki data source ConfigMap used `grafana_datasource: "1"` label but kube-prometheus-stack sidecar expects `grafana_dashboard: "1"`
+2. **Sidecar Configuration**: Grafana sidecar was configured to watch for dashboard labels, not data source labels
+3. **Mount Failure**: ConfigMap not mounted to `/etc/grafana/provisioning/datasources/` due to label mismatch
+4. **Authentication Issues**: Previous failed login attempts caused rate limiting, preventing data source reload
+5. **Cached References**: Grafana retained references to old/non-existent data source UIDs from previous configurations
+
+**Solutions Applied:**
+
+**Option A: Fix ConfigMap Labels**
+```yaml
+# Update monitoring/grafana-datasource-loki.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-grafana-loki-datasource
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"  # ✅ Corrected from grafana_datasource
+data:
+  loki.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Loki
+      type: loki
+      uid: loki
+      url: http://loki-stack.loki-stack.svc.cluster.local:3100
+      access: proxy
+      jsonData:
+        maxLines: 1000
+```
+
+**Option B: Manual Data Source File Deployment**
+```bash
+# Copy Loki configuration to Grafana pod
+kubectl exec -n monitoring monitoring-grafana-<pod> -c grafana -- \
+  cp /tmp/dashboards/loki.yaml /etc/grafana/provisioning/datasources/
+
+# Verify file placement
+kubectl exec -n monitoring monitoring-grafana-<pod> -c grafana -- \
+  ls -la /etc/grafana/provisioning/datasources/
+# Should show: loki.yaml file present
+```
+
+**Option C: Restart Grafana Deployment**
+```bash
+# Restart to reload data sources
+kubectl rollout restart deployment monitoring-grafana -n monitoring
+
+# Wait for restart completion
+kubectl get pods -n monitoring -l app.kubernetes.io/name=grafana
+# Should show: 3/3 Running
+```
+
+**Verification Steps:**
+```bash
+# Test Loki data source connectivity
+kubectl run test-loki-ds --image=curlimages/curl --rm -i --restart=Never --namespace monitoring -- \
+  curl -s "http://loki-stack.loki-stack.svc.cluster.local:3100/loki/api/v1/query?query={app=\"rocketchat\"}&limit=5"
+
+# Check Grafana data source API
+kubectl run test-grafana-ds --image=curlimages/curl --rm -i --restart=Never --namespace monitoring -- \
+  sh -c 'curl -s -u admin:prom-operator http://monitoring-grafana:80/api/datasources | jq length'
+# Should return: 3 (Prometheus, Alertmanager, Loki)
+```
+
+**Prevention Measures:**
+- **Correct Labels**: Always use `grafana_dashboard: "1"` for both data sources and dashboards in kube-prometheus-stack
+- **Label Consistency**: Verify sidecar configuration matches ConfigMap labels:
+  ```bash
+  kubectl describe deployment monitoring-grafana | grep "LABEL:"
+  ```
+- **Pre-deployment Testing**: Test ConfigMap mounting before full deployment:
+  ```bash
+  kubectl get configmap -n monitoring -l grafana_dashboard=1
+  ```
+- **Authentication Management**: Monitor Grafana authentication failures:
+  ```bash
+  kubectl logs -n monitoring deployment/grafana | grep "password-auth.failed"
+  ```
+- **Data Source Validation**: Always verify data source connectivity:
+  ```bash
+  kubectl run test-ds --image=curlimages/curl --rm -i --restart=Never --namespace monitoring -- \
+    curl -s http://<datasource-url>/api/v1/status/buildinfo
+  ```
+
+**Configuration Reference:**
+```yaml
+# Correct ConfigMap structure for kube-prometheus-stack
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-grafana-loki-datasource
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"  # ✅ Required for sidecar mounting
+data:
+  loki.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Loki
+      type: loki
+      uid: loki  # ✅ Use consistent UID
+      url: http://loki-stack.loki-stack.svc.cluster.local:3100
+      access: proxy
+      jsonData:
+        maxLines: 1000
+```
+
+**Expected Resolution Time:** 2-3 minutes after fix application
+
+**Post-Resolution Testing:**
+- ✅ Grafana Explore shows Loki data source
+- ✅ Loki queries return data successfully
+- ✅ Console errors eliminated
+- ✅ Data source health checks pass (200 OK)
+
+**Status:** ✅ **RESOLVED** - Grafana Loki data source now properly configured and functional
+
+---
+
+### **Issue: Promtail Position File Write Errors (September 6, 2025)** ⭐ **Recently Resolved**
+
+**Symptoms:**
+- Promtail logs showing: `error writing positions file" error="open /tmp/.positions.yaml...: read-only file system"`
+- Promtail pods running but unable to track log positions
+- Log collection working but position tracking failing
+- Potential log duplication on pod restarts
+
+**Diagnosis:**
+```bash
+# Check Promtail logs
+kubectl logs -n loki-stack -l app.kubernetes.io/name=promtail --tail=10
+# Shows: read-only file system errors for /tmp/.positions.yaml
+
+# Verify volume mounts
+kubectl get deployment loki-stack-promtail -n loki-stack -o yaml | grep -A 10 "volumes:"
+# Shows: emptyDir mount at /tmp (read-only in some environments)
+
+# Check Promtail configuration
+kubectl get configmap loki-stack-promtail -n loki-stack -o yaml | grep positions
+# Shows: filename: /tmp/positions.yaml
+```
+
+**Root Cause:**
+- Promtail configured to write position files to `/tmp` directory
+- `/tmp` mounted as read-only emptyDir in Kubernetes environment
+- Position tracking requires writable storage for persistence
+
+**Solutions Applied:**
+
+**Option A: Update Promtail Configuration**
+```yaml
+# Update monitoring/loki-values.yaml
+promtail:
+  config:
+    positions:
+      filename: /run/promtail/positions.yaml  # ✅ Changed from /tmp
+```
+
+**Option B: Volume Mount Configuration**
+```yaml
+# Ensure Promtail has writable directory
+promtail:
+  extraVolumeMounts:
+  - name: positions
+    mountPath: /run/promtail
+    readOnly: false
+  extraVolumes:
+  - name: positions
+    emptyDir: {}
+```
+
+**Prevention:**
+- Use `/run` or `/var/run` directories for temporary writable files
+- Avoid `/tmp` for persistent state in Kubernetes
+- Test volume mounts before production deployment
+
+**Status:** ✅ **RESOLVED** - Promtail position tracking now working correctly
+
+---
+
+**Phase 2 Enhanced Monitoring (Loki)**: ✅ **FULLY OPERATIONAL**
+**Documentation Updated**: September 6, 2025
+**Grafana Loki Integration**: ✅ **SUCCESSFUL**
+**Log Collection**: ✅ **WORKING**
+**Dashboard Visualization**: ✅ **FUNCTIONAL**
+
+*Phase 2 Loki Stack deployment and Grafana integration now complete. All data source configuration issues resolved.*

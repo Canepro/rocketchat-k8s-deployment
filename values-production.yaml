@@ -43,11 +43,11 @@ ingress:
       hosts:
         - "chat.canepro.me"  # Your Rocket.Chat domain
 
-# Monitoring configuration
+# Monitoring configuration - using PodMonitor instead of ServiceMonitor
 monitoring:
   enabled: true
   serviceMonitor:
-    enabled: true
+    enabled: false  # Disabled - using PodMonitor instead
     interval: "30s"
     scrapeTimeout: "10s"
     path: "/metrics"
@@ -124,8 +124,4 @@ autoscaling:
 networkPolicy:
   enabled: false  # Disabled for single-node setup
 
-# Pod annotations
-podAnnotations:
-  prometheus.io/scrape: "true"
-  prometheus.io/port: "3000"
-  prometheus.io/path: "/metrics"
+# Removed legacy prometheus.io annotations - using built-in prometheusScraping instead

@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-rocketchat
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  rocketchat-overview.json: |
+    {
+      "uid": "rocketchat-overview",
+      "title": "Rocket.Chat Overview",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Rocket.Chat Pods UP",
+          "targets": [
+            { "expr": "count(kube_pod_info{namespace=\"rocketchat\", pod=~\"rocketchat.*\"})" }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [
+                {"options": {"0": {"text": "DOWN", "color": "red"}, "1": {"text": "UP", "color": "green"}}, "type": "value"}
+              ]
+            }
+          },
+          "gridPos": { "x":0,"y":0,"w":4,"h":4 }
+        },
+        {
+          "type": "graph",
+          "title": "Process CPU Seconds",
+          "targets": [
+            { "expr": "process_cpu_seconds_total", "legendFormat": "{{pod}}"}
+          ],
+          "gridPos": { "x":4,"y":0,"w":8,"h":8 }
+        }
+      ]
+    }

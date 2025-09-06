@@ -1,10 +1,11 @@
 # 🚀 Enhanced Monitoring Setup Plan: Azure Monitor + Loki Integration
 
 **Created**: September 5, 2025
+**Updated**: September 6, 2025
 **Branch**: `feature/enhanced-monitoring-setup`
-**Status**: Planning Phase
-**Estimated Timeline**: 1-2 weeks
-**Priority**: HIGH (Critical for production reliability)
+**Status**: Phase 2 - Configuration Fixes Applied
+**Estimated Timeline**: 1 week remaining
+**Priority**: HIGH (Critical fixes completed, implementation in progress)
 
 ---
 
@@ -50,6 +51,52 @@ This document outlines the comprehensive plan for implementing enhanced monitori
 ## 📊 **Detailed Implementation Plan**
 
 ### **Phase 1: Enhanced Prometheus/Grafana Setup ✅ COMPLETED & VERIFIED (September 5, 2025)**
+
+### **Phase 2: Configuration Fixes ✅ COMPLETED (September 6, 2025)**
+
+#### **2.1 Critical Monitoring Fixes Applied**
+**Objective**: Fix configuration issues preventing proper metrics collection
+
+**Issues Resolved:**
+- ✅ **PodMonitor Configuration**: Fixed duplicate endpoints and incorrect port references
+- ✅ **ServiceMonitor Conflicts**: Disabled ServiceMonitor to eliminate conflicts with PodMonitor
+- ✅ **Loki Persistence**: Enabled log persistence (50Gi) to prevent data loss on restarts
+- ✅ **Log Collection**: Fixed Loki client URL for proper log ingestion
+- ✅ **Documentation**: Updated all docs to reflect current accurate state
+
+**Configuration Changes Made:**
+```yaml
+# monitoring/rocket-chat-podmonitor.yaml - FIXED
+podMetricsEndpoints:
+- port: http          # Fixed from ms-metrics
+  path: /metrics
+- port: ms-metrics    # Microservices metrics
+  path: /metrics
+
+# values-official.yaml - ServiceMonitor DISABLED
+serviceMonitor:
+  enabled: false      # Using PodMonitor instead
+
+# loki-stack-values.yaml & monitoring/loki-values.yaml - PERSISTENCE ENABLED
+loki:
+  persistence:
+    enabled: true     # Fixed from false
+    size: 50Gi        # Increased from 10Gi
+```
+
+**Testing Required:**
+```bash
+# Apply PodMonitor changes
+kubectl apply -f monitoring/rocket-chat-podmonitor.yaml
+
+# Update Rocket.Chat deployment to disable ServiceMonitor
+helm upgrade rocketchat rocketchat/rocketchat -f values-official.yaml
+
+# Deploy/Update Loki with persistence
+helm upgrade loki-stack grafana/loki-stack -f loki-stack-values.yaml
+```
+
+### **Phase 3: Enhanced Prometheus/Grafana Setup (PREVIOUSLY COMPLETED)**
 
 #### **1.1 Current Monitoring Assessment**
 **Objective**: Evaluate existing monitoring capabilities and identify enhancement opportunities

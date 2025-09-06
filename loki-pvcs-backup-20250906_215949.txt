@@ -1,0 +1,2 @@
+NAME             STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+storage-loki-0   Bound    pvc-cbe94d2d-23b3-4af3-bd16-7bdf87cedb39   50Gi       RWO            default        <unset>                 23h
