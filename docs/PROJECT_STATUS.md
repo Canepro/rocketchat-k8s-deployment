@@ -16,6 +16,9 @@
 - ✅ **Grafana Loki Data Source**: Fixed ConfigMap labels and service connectivity
 - ✅ **Promtail Position Tracking**: Resolved read-only file system issues
 - ✅ **Log Collection Verified**: Complete log pipeline working end-to-end
+- ✅ **Grafana SSL Certificate**: Fixed net::ERR_CERT_AUTHORITY_INVALID error
+- ✅ **Grafana Authentication**: Resolved temporary account lockout issue
+- ✅ **Documentation Updates**: Added SSL and authentication troubleshooting sections
 
 ### Completed Achievements
 - ✅ **Repository Reorganization**: Clean separation of MicroK8s (rollback) and AKS (new)

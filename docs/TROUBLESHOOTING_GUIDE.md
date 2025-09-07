@@ -1421,6 +1421,517 @@ kubectl scale deployment rocketchat -n rocketchat --replicas=1
 
 ---
 
+## 🔒 **SSL Certificate Issues - RESOLVED (September 6, 2025)**
+
+### **Issue: Grafana SSL Certificate Authority Invalid Error**
+
+**Symptoms:**
+- Browser shows: `net::ERR_CERT_AUTHORITY_INVALID` when accessing Grafana
+- Certificate appears valid in Kubernetes (`kubectl get certificates` shows READY)
+- Grafana accessible via HTTP but SSL certificate rejected by browser
+- Error persists across browser restarts and incognito mode
+
+**Diagnosis:**
+```bash
+# Check certificate status
+kubectl get certificates -A
+# Shows: grafana-tls   True    grafana-tls   29h
+
+# Check ingress configuration
+kubectl describe ingress monitoring-ingress -n monitoring
+# May show missing TLS configuration or wrong certificate reference
+
+# Verify certificate secret
+kubectl get secret grafana-tls -n monitoring
+# Should show: kubernetes.io/tls type with 2 data entries
+```
+
+**Root Cause Analysis:**
+1. **Missing TLS Configuration**: Grafana ingress lacked TLS section despite certificate being issued
+2. **Certificate Reference**: Ingress not referencing the correct certificate secret
+3. **Browser Cache**: Browser cached invalid certificate from previous failed attempts
+4. **Cloudflare Interference**: DNS proxy settings interfering with certificate validation
+
+**Solutions Applied:**
+
+**Option A: Add TLS Configuration to Existing Ingress**
+```bash
+# Patch existing ingress to add TLS configuration
+kubectl patch ingress monitoring-ingress -n monitoring --type merge -p '{"spec":{"tls":[{"hosts":["grafana.chat.canepro.me"],"secretName":"grafana-tls"}]}}'
+
+# Add SSL redirect annotations
+kubectl patch ingress monitoring-ingress -n monitoring --type merge -p '{"metadata":{"annotations":{"nginx.ingress.kubernetes.io/ssl-redirect":"true","nginx.ingress.kubernetes.io/force-ssl-redirect":"true"}}}'
+
+# Add cert-manager issuer annotation
+kubectl patch ingress monitoring-ingress -n monitoring --type merge -p '{"metadata":{"annotations":{"cert-manager.io/cluster-issuer":"production-cert-issuer"}}}'
+```
+
+**Option B: Browser Cache Clearing**
+- Clear SSL state in browser settings
+- Try incognito/private browsing mode
+- Use different browser (Chrome vs Firefox vs Edge)
+- Hard refresh with Ctrl+F5
+
+**Option C: Cloudflare DNS Configuration**
+```bash
+# Set DNS record to "DNS only" (grey cloud) during certificate issuance
+# Cloudflare DNS Settings:
+# Type: A
+# Name: grafana.chat.canepro.me
+# Value: 4.250.169.133
+# Proxy Status: DNS only (grey cloud)
+
+# After certificate issues, change back to:
+# Proxy Status: Proxied (orange cloud)
+# SSL: Full (strict)
+# Always Use HTTPS: On
+```
+
+**Verification:**
+```bash
+# Test HTTPS connectivity
+curl -I https://grafana.chat.canepro.me
+# Should return: HTTP/2 200 (not HTTP/2 302 redirect)
+
+# Check ingress TLS configuration
+kubectl get ingress monitoring-ingress -n monitoring
+# Should show: PORTS 80, 443
+```
+
+**Prevention:**
+- Always verify ingress TLS configuration after certificate issuance
+- Test SSL certificate with multiple browsers before production use
+- Monitor certificate expiry and reissue process
+- Temporarily disable Cloudflare proxy during certificate troubleshooting
+- Keep backup certificates ready for emergency rollback
+
+**Expected Resolution Time:** 5-10 minutes after TLS configuration fix
+
+---
+
+## 🔐 **Authentication Issues - RESOLVED (September 6, 2025)**
+
+### **Issue: Grafana Authentication Temporarily Blocked**
+
+**Symptoms:**
+- All passwords fail when logging into Grafana
+- Browser shows "Invalid login credentials" for all attempts
+- Grafana logs show: `[password-auth.failed] too many consecutive incorrect login attempts for user - login for user temporarily blocked`
+- Account becomes completely inaccessible
+- Issue persists across browser sessions and devices
+
+**Diagnosis:**
+```bash
+# Check Grafana pod logs for authentication errors
+kubectl logs grafana-deployment-699c8d585-xxxxx -n monitoring --tail=20
+# Shows: "too many consecutive incorrect login attempts for user - login for user temporarily blocked"
+
+# Verify current admin credentials from Kubernetes secret
+kubectl get secret grafana-admin-credentials -n monitoring -o yaml
+# Decode password: kubectl get secret grafana-admin-credentials -n monitoring -o jsonpath='{.data.GF_SECURITY_ADMIN_PASSWORD}' | base64 -d
+# Should return: admin
+
+# Check if multiple Grafana instances exist
+kubectl get pods -n monitoring | grep grafana
+# May show multiple Grafana pods with different configurations
+```
+
+**Root Cause Analysis:**
+1. **Security Lockout**: Grafana's built-in security feature blocks accounts after multiple failed login attempts
+2. **Multiple Instances**: Two Grafana deployments running simultaneously causing confusion
+3. **Credential Mismatch**: Using incorrect password from documentation vs actual Kubernetes secret
+4. **Browser Cache**: Browser remembering old failed login attempts
+5. **Pod Persistence**: Authentication block stored in persistent volume survives pod restarts
+
+**Solutions Applied:**
+
+**Option A: Clear Authentication Block via Pod Restart + PVC Deletion**
+```bash
+# Delete the Grafana pod (temporary fix)
+kubectl delete pod grafana-deployment-699c8d585-xxxxx -n monitoring
+
+# If block persists, delete the persistent volume claim to clear all authentication state
+kubectl delete pvc grafana-pvc -n monitoring
+
+# Wait for new pod to start with fresh PVC
+kubectl wait --for=condition=ready pod/grafana-deployment-xxxxx -n monitoring --timeout=120s
+```
+
+**Option B: Verify Correct Credentials**
+```bash
+# Get actual admin credentials from Kubernetes secret
+kubectl get secret grafana-admin-credentials -n monitoring -o jsonpath='{.data.GF_SECURITY_ADMIN_USER}' | base64 -d
+# Returns: admin
+
+kubectl get secret grafana-admin-credentials -n monitoring -o jsonpath='{.data.GF_SECURITY_ADMIN_PASSWORD}' | base64 -d
+# Returns: admin
+
+# Login with: admin / admin
+```
+
+**Option C: Check for Multiple Grafana Instances**
+```bash
+# Identify all Grafana deployments
+kubectl get deployments -n monitoring | grep grafana
+# May show: grafana-deployment, monitoring-grafana
+
+# Check which ingress points to which service
+kubectl get ingress -n monitoring -o yaml | grep -A 5 "backend:"
+# Shows which service the ingress routes to
+
+# Verify service configurations
+kubectl get svc -n monitoring | grep grafana
+kubectl describe svc grafana-service -n monitoring
+```
+
+**Verification:**
+```bash
+# Test Grafana accessibility after fix
+curl -I https://grafana.chat.canepro.me
+# Should return: HTTP/2 200
+
+# Check Grafana logs for successful authentication
+kubectl logs grafana-deployment-xxxxx -n monitoring --tail=10
+# Should show successful login: "userId=1 orgId=1 uname=admin"
+```
+
+**Prevention:**
+- **Document Actual Credentials**: Always verify credentials from Kubernetes secrets, not documentation
+- **Single Source of Truth**: Use `kubectl get secret` to check actual admin credentials
+- **Monitor Failed Attempts**: Watch Grafana logs for authentication failures
+- **Update Documentation**: Immediately update README with correct credentials after deployment
+- **Browser Testing**: Test login with incognito mode to avoid cached failures
+- **PVC Management**: Consider PVC deletion as emergency reset option for authentication issues
+
+**Expected Resolution Time:** 2-5 minutes for pod restart, 5-10 minutes for PVC recreation
+
+---
+
+## 📊 **Grafana Dashboard & Loki Integration Issues**
+
+### **Issue: Loki Data Source Not Appearing in Grafana**
+
+**Symptoms:**
+- Loki data source is not available in Grafana Explore
+- "No data sources available" message in Grafana
+- Console errors: `"Datasource dex7bydz86h34d was not found"`
+- Log queries fail with data source connection errors
+- `kubectl get configmap -n monitoring` shows Loki datasource ConfigMap exists
+
+**Diagnosis:**
+```bash
+# Check ConfigMap labels (CRITICAL)
+kubectl get configmap -n monitoring -l grafana_dashboard=1
+# Should show: monitoring-grafana-loki-datasource
+
+# Verify Grafana sidecar configuration
+kubectl describe deployment monitoring-grafana -n monitoring | grep "LABEL:"
+# Should show: LABEL: grafana_dashboard, LABEL_VALUE: 1
+
+# Check Grafana status
+kubectl describe grafana grafana -n monitoring
+# Check Datasources section - should include Loki
+```
+
+**Root Cause Analysis:**
+1. **Incorrect ConfigMap Labels**: Loki datasource ConfigMap uses `grafana_datasource: "1"` instead of `grafana_dashboard: "1"`
+2. **Sidecar Label Mismatch**: kube-prometheus-stack sidecar expects `grafana_dashboard` label but ConfigMap uses different label
+3. **Mount Failure**: ConfigMap not mounted to Grafana pod due to label mismatch
+4. **Service Name Issues**: Promtail configuration may use incorrect Loki service URL
+
+**Solutions Applied:**
+
+**Option A: Fix ConfigMap Labels**
+```yaml
+# Update monitoring/grafana-datasource-loki.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-grafana-loki-datasource
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"  # ✅ Correct label for sidecar
+data:
+  loki.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Loki
+      type: loki
+      uid: loki
+      url: http://loki-stack.loki-stack.svc.cluster.local:3100
+      access: proxy
+      jsonData:
+        maxLines: 1000
+```
+
+**Option B: Fix Promtail Loki URL**
+```yaml
+# Update monitoring/loki-values.yaml
+promtail:
+  config:
+    clients:
+      - url: http://loki-stack.loki-stack.svc.cluster.local:3100/loki/api/v1/push
+        # Changed from: http://loki.loki-stack.svc.cluster.local:3100/loki/api/v1/push
+```
+
+**Option C: Restart Grafana Deployment**
+```bash
+# Apply ConfigMap changes
+kubectl apply -f monitoring/grafana-datasource-loki.yaml
+
+# Restart Grafana to reload data sources
+kubectl rollout restart deployment monitoring-grafana -n monitoring
+
+# Verify Loki appears in Grafana Explore
+# Access: https://grafana.chat.canepro.me/explore
+```
+
+**Verification:**
+```bash
+# Test Loki connectivity from Grafana pod
+kubectl exec -n monitoring monitoring-grafana-xxxxx -c grafana -- \
+  curl -s http://loki-stack.loki-stack.svc.cluster.local:3100/ready
+
+# Check Grafana data sources API
+kubectl run test-grafana-ds --image=curlimages/curl --rm -i --restart=Never --namespace monitoring -- \
+  curl -s -u admin:admin http://monitoring-grafana:80/api/datasources | jq length
+# Should return: 2 (Prometheus + Loki)
+```
+
+**Prevention:**
+- Always use `grafana_dashboard: "1"` for both data sources and dashboards in kube-prometheus-stack
+- Verify sidecar configuration matches ConfigMap labels
+- Test data source connectivity before deploying
+- Use consistent service naming conventions
+- Monitor Grafana logs for data source errors
+
+**Expected Resolution Time:** 2-5 minutes after configuration fixes
+
+---
+
+### **Issue: Rocket.Chat Logs Not Appearing in Loki**
+
+**Symptoms:**
+- No Rocket.Chat application logs in Grafana Explore
+- Promtail pods running but not collecting logs
+- Loki queries return empty results for Rocket.Chat
+- `kubectl logs loki-stack-promtail` shows no Rocket.Chat log entries
+
+**Diagnosis:**
+```bash
+# Check Promtail configuration
+kubectl get configmap -n loki-stack loki-stack -o yaml
+# Verify scrape_configs for Rocket.Chat logs
+
+# Check log file paths
+kubectl exec -n loki-stack loki-stack-promtail-xxxxx -- ls -la /var/log/containers/
+# Should show Rocket.Chat log files
+
+# Test Loki query
+kubectl run test-loki-query --image=curlimages/curl --rm -i --restart=Never --namespace loki-stack -- \
+  curl -G "http://loki-stack:3100/loki/api/v1/query_range" --data-urlencode 'query={app="rocketchat"}' --data-urlencode 'limit=5'
+```
+
+**Root Cause Analysis:**
+1. **Incorrect Log Paths**: Promtail configured for wrong container log paths
+2. **Service Name Mismatch**: Promtail sending logs to wrong Loki service URL
+3. **RBAC Issues**: Promtail lacks permissions to read log files
+4. **Volume Mount Issues**: Promtail cannot access container log directory
+
+**Solutions Applied:**
+
+**Option A: Update Promtail Scrape Configuration**
+```yaml
+# Update monitoring/loki-values.yaml
+promtail:
+  config:
+    scrape_configs:
+      - job_name: rocketchat-app
+        static_configs:
+          - targets: [localhost]
+            labels:
+              job: rocketchat
+              app: rocketchat
+              __path__: /var/log/containers/*rocketchat*.log  # ✅ Correct path
+        pipeline_stages:
+          - docker: {}
+          - json:
+              expressions:
+                level: level
+                message: message
+          - labels:
+              level:
+              service:
+```
+
+**Option B: Verify Log File Access**
+```bash
+# Check Promtail can access log files
+kubectl exec -n loki-stack loki-stack-promtail-xxxxx -- \
+  find /var/log/containers -name "*rocketchat*" -type f | head -5
+
+# Test log parsing
+kubectl exec -n loki-stack loki-stack-promtail-xxxxx -- \
+  tail -n 10 /var/log/containers/*rocketchat*.log
+```
+
+**Option C: RBAC Configuration**
+```yaml
+# Ensure Promtail has proper permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: promtail-clusterrole
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "nodes/proxy", "services", "endpoints", "pods"]
+  verbs: ["get", "list", "watch"]
+```
+
+**Verification:**
+```bash
+# Test log collection
+kubectl logs -n loki-stack loki-stack-promtail-xxxxx | grep rocketchat
+
+# Query logs in Loki
+kubectl run test-loki-logs --image=curlimages/curl --rm -i --restart=Never --namespace loki-stack -- \
+  curl -G "http://loki-stack:3100/loki/api/v1/query_range" \
+    --data-urlencode 'query={app="rocketchat"}' \
+    --data-urlencode 'limit=10'
+
+# Should return Rocket.Chat log entries
+```
+
+**Prevention:**
+- Verify log file paths match actual container log locations
+- Test Promtail configuration before deployment
+- Ensure proper RBAC permissions for log access
+- Use correct Loki service URLs in Promtail configuration
+- Monitor Promtail logs for collection errors
+
+**Expected Resolution Time:** 2-3 minutes after configuration updates
+
+---
+
+### **Issue: Grafana Dashboard Metrics Not Updating**
+
+**Symptoms:**
+- Dashboard panels show "No data" or stale metrics
+- Prometheus queries fail in Grafana
+- Service discovery issues in dashboards
+- Alert rules not firing correctly
+
+**Diagnosis:**
+```bash
+# Check Prometheus service status
+kubectl get svc -n monitoring | grep prometheus
+kubectl describe svc monitoring-kube-prometheus-prometheus -n monitoring
+
+# Test Prometheus query
+kubectl run test-prometheus --image=curlimages/curl --rm -i --restart=Never --namespace monitoring -- \
+  curl -s "http://monitoring-kube-prometheus-prometheus:9090/api/v1/query?query=up"
+
+# Check ServiceMonitor status
+kubectl get servicemonitor -n rocketchat
+kubectl describe servicemonitor rocketchat-servicemonitor -n rocketchat
+
+# Verify Grafana data source
+kubectl describe grafana grafana -n monitoring
+# Check Datasources section
+```
+
+**Root Cause Analysis:**
+1. **Service Discovery Issues**: ServiceMonitor not finding Rocket.Chat pods
+2. **Label Mismatches**: Prometheus selectors don't match pod labels
+3. **Network Policies**: Blocking communication between namespaces
+4. **Resource Limits**: Prometheus hitting memory/CPU limits
+
+**Solutions Applied:**
+
+**Option A: Fix ServiceMonitor Configuration**
+```yaml
+# Ensure correct ServiceMonitor labels
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rocketchat-servicemonitor
+  namespace: rocketchat  # ✅ Must be in same namespace as service
+  labels:
+    release: monitoring  # ✅ Matches Prometheus selector
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: rocketchat  # ✅ Matches service labels
+  namespaceSelector:
+    matchNames:
+      - rocketchat
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+```
+
+**Option B: Update Service Labels**
+```yaml
+# Ensure Rocket.Chat service has correct labels
+apiVersion: v1
+kind: Service
+metadata:
+  name: rocketchat-rocketchat
+  namespace: rocketchat
+  labels:
+    app.kubernetes.io/instance: rocketchat  # ✅ Required for ServiceMonitor
+    app.kubernetes.io/name: rocketchat
+spec:
+  selector:
+    app: rocketchat
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3000
+```
+
+**Option C: Cross-Namespace Monitoring**
+```yaml
+# Configure Prometheus for cross-namespace monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: monitoring-kube-prometheus-prometheus
+  namespace: monitoring
+spec:
+  serviceMonitorNamespaceSelector: {}  # ✅ Monitor all namespaces
+  serviceMonitorSelector:
+    matchLabels:
+      release: monitoring
+  ruleNamespaceSelector: {}
+  ruleSelector:
+    matchLabels:
+      release: monitoring
+```
+
+**Verification:**
+```bash
+# Test Prometheus targets
+kubectl run test-prom-targets --image=curlimages/curl --rm -i --restart=Never --namespace monitoring -- \
+  curl -s "http://monitoring-kube-prometheus-prometheus:9090/api/v1/targets" | jq '.data.activeTargets[] | select(.labels.job=="rocketchat")'
+
+# Check Grafana dashboard
+# Access: https://grafana.chat.canepro.me/d/rocket-chat-metrics
+# Should show: UP status and current metrics
+```
+
+**Prevention:**
+- Ensure ServiceMonitor is in same namespace as monitored service
+- Use consistent labeling across services and ServiceMonitors
+- Configure cross-namespace monitoring when needed
+- Test Prometheus queries before creating dashboards
+- Monitor ServiceMonitor status regularly
+
+**Expected Resolution Time:** 1-2 minutes after configuration fixes
+
+---
+
 ## 📝 **Issue Reporting Template**
 
 When encountering a new issue, use this template:
@@ -1946,9 +2457,9 @@ kubectl logs -n ingress-nginx deployment/ingress-nginx-controller --tail=50 | gr
 
 ---
 
-**Document Version:** 1.1
-**Last Updated:** September 4, 2025
-**Next Review:** September 18, 2025 (post-deployment)
+**Document Version:** 1.2
+**Last Updated:** September 6, 2025
+**Next Review:** September 20, 2025 (post-deployment)
 **Owner:** Vincent Mogah
 **Contact:** mogah.vincent@hotmail.com
 

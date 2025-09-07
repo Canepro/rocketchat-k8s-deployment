@@ -162,3 +162,9 @@ kubectl scale deployment rocketchat -n rocketchat --replicas=3
 4. **Data Backup** - Schedule regular MongoDB backups
 
 *For detailed setup and troubleshooting, see the [docs/](docs/) directory*
+
+## 🔐 **Remote Access**
+**Emergency remote access without Azure CLI or cloud portals:**
+- 📖 **[Remote Access Guide](docs/REMOTE_ACCESS_GUIDE.md)** - Service account token method
+- 📁 **Config File:** `remote-access-config.yaml` (ready to use)
+- ✅ **No additional setup required** - copy and use immediately
