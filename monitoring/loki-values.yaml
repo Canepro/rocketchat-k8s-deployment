@@ -46,7 +46,8 @@ promtail:
     positions:
       filename: /run/promtail/positions.yaml
     clients:
-      - url: http://loki.loki-stack.svc.cluster.local:3100/loki/api/v1/push
+      - url: http://loki-stack.loki-stack.svc.cluster.local:3100/loki/api/v1/push  # Correct service name per troubleshooting guide
+        # future: add basicAuth or bearer token if auth_enabled=true
     scrape_configs:
       # Rocket.Chat application logs
       - job_name: rocketchat-app

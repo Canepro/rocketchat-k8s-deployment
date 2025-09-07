@@ -8,9 +8,14 @@ metadata:
 data:
   rocket-chat-dashboard.json: |
     {
+      "uid": "rocketchat-prod",
       "title": "Rocket.Chat Production Monitoring",
       "tags": ["rocket-chat", "production", "monitoring"],
       "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 2,
+      "refresh": "30s",
+      "time": {"from": "now-2h", "to": "now"},
       "panels": [
           {
             "title": "Rocket.Chat Service Status",
@@ -18,8 +23,8 @@ data:
             "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
             "targets": [
               {
-                "expr": "up{job=\"rocketchat\"}",
-                "legendFormat": "Rocket.Chat Status"
+                "expr": "avg(up{pod=~\"rocketchat-.*\", namespace=\"rocketchat\"})",
+                "legendFormat": "Service Up"
               }
             ],
             "fieldConfig": {
@@ -36,7 +41,7 @@ data:
             "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
             "targets": [
               {
-                "expr": "count(kube_pod_info{namespace=\"rocketchat\", pod=~\"rocketchat-.*\"})",
+                "expr": "count(kube_pod_status_phase{namespace=\"rocketchat\", phase=\"Running\", pod=~\"rocketchat-.*\"})",
                 "legendFormat": "Active Pods"
               }
             ]
@@ -47,18 +52,40 @@ data:
             "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
             "targets": [
               {
-                "expr": "rate(container_cpu_usage_seconds_total{namespace=\"rocketchat\", pod=~\"rocketchat-.*\"}[5m])",
+                "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"rocketchat\", pod=~\"rocketchat-.*\", image!=\"\"}[5m]))",
                 "legendFormat": "{{pod}}"
               }
             ]
           },
           {
-            "title": "Rocket.Chat Memory Usage",
+            "title": "Rocket.Chat Memory Usage (bytes)",
             "type": "graph",
             "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
             "targets": [
               {
-                "expr": "container_memory_usage_bytes{namespace=\"rocketchat\", pod=~\"rocketchat-.*\"}",
+                "expr": "sum by (pod) (container_memory_usage_bytes{namespace=\"rocketchat\", pod=~\"rocketchat-.*\"})",
+                "legendFormat": "{{pod}}"
+              }
+            ]
+          },
+          {
+            "title": "Rocket.Chat CPU Utilization %",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+            "targets": [
+              {
+                "expr": "100 * sum by(pod) (rate(container_cpu_usage_seconds_total{namespace=\"rocketchat\", pod=~\"rocketchat-.*\", image!=\"\"}[5m])) / sum by(pod) (kube_pod_container_resource_limits{namespace=\"rocketchat\", resource=\"cpu\", unit=\"core\", pod=~\"rocketchat-.*\"})",
+                "legendFormat": "{{pod}}"
+              }
+            ]
+          },
+          {
+            "title": "Rocket.Chat Memory Utilization %",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+            "targets": [
+              {
+                "expr": "100 * sum by(pod) (container_memory_usage_bytes{namespace=\"rocketchat\", pod=~\"rocketchat-.*\"}) / sum by(pod) (kube_pod_container_resource_limits{namespace=\"rocketchat\", resource=\"memory\", pod=~\"rocketchat-.*\"})",
                 "legendFormat": "{{pod}}"
               }
             ]
@@ -66,7 +93,7 @@ data:
           {
             "title": "Rocket.Chat Pod Restarts",
             "type": "graph",
-            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
             "targets": [
               {
                 "expr": "kube_pod_container_status_restarts_total{namespace=\"rocketchat\", pod=~\"rocketchat-.*\"}",
@@ -77,10 +104,10 @@ data:
           {
             "title": "MongoDB Status",
             "type": "stat",
-            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
             "targets": [
               {
-                "expr": "up{job=\"rocketchat-mongodb-metrics\"}",
+                "expr": "avg(up{pod=~\"mongodb-.*\", namespace=\"rocketchat\"})",
                 "legendFormat": "MongoDB Status"
               }
             ],
@@ -93,28 +120,39 @@ data:
             }
           },
           {
-            "title": "Rocket.Chat HTTP Requests",
+            "title": "Rocket.Chat HTTP Requests (per sec)",
             "type": "graph",
-            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24},
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 32},
             "targets": [
               {
-                "expr": "rate(http_requests_total{namespace=\"rocketchat\"}[5m])",
+                "expr": "sum(rate(http_requests_total{namespace=\"rocketchat\"}[5m]))",
                 "legendFormat": "HTTP Requests/sec"
               }
             ]
           },
           {
-            "title": "Rocket.Chat Alerts",
-            "type": "table",
-            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 32},
+            "title": "Rocket.Chat Log Ingest Rate (Loki)",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 40},
             "targets": [
               {
-                "expr": "ALERTS{alertname=~\"RocketChat.*\"}",
+                "expr": "sum(rate({namespace=\"rocketchat\"}|~\".*\"[5m]))",
+                "legendFormat": "Logs/sec"
+              }
+            ],
+            "description": "May need adjustment depending on Loki label set."
+          },
+          {
+            "title": "Rocket.Chat Alerts",
+            "type": "table",
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 48},
+            "targets": [
+              {
+                "expr": "ALERTS{service=\"rocketchat\", alertstate=\"firing\"}",
                 "legendFormat": "{{alertname}}"
               }
             ]
           }
         ],
-        "time": {"from": "now-1h", "to": "now"},
-        "refresh": "30s"
+        "templating": {"list": []}
     }
