@@ -1,9 +1,34 @@
 # 🧹 Repository Cleanup Summary
 
-**Last Updated:** September 7, 2025
-**Latest Changes:** Final removal of lingering legacy scripts, duplicate docs, redundant Helm value files, and deprecated monitoring manifests to match stated structure.
+**Last Updated:** September 18, 2025
+**Latest Changes:** Complete reorganization to separate AKS and MicroK8s resources into distinct directories for clearer environment separation.
 
-## Completed Cleanup Tasks
+## Latest Reorganization (September 18, 2025)
+
+### ✅ Complete Environment Separation
+
+**Objective:** Clear separation between AKS and MicroK8s resources
+
+**Changes Made:**
+1. **Created AKS-specific structure** (`aks/`)
+   - Moved all AKS configs, scripts, monitoring, and docs to `aks/` subdirectories
+   - Organized as: `aks/config/`, `aks/deployment/`, `aks/monitoring/`, `aks/scripts/`, `aks/docs/`
+   
+2. **Reorganized MicroK8s directory** (`microk8s/`)
+   - Created parallel structure: `microk8s/config/`, `microk8s/monitoring/`, `microk8s/scripts/`, `microk8s/docs/`
+   - Renamed confusing files (removed "-aks" from filenames in MicroK8s directory)
+   
+3. **Maintained common documentation** (`docs/`)
+   - Kept general project docs at root level
+   - Preserved project status, history, and general troubleshooting guides
+
+**Benefits:**
+- No more confusion between environments
+- Easy to find all resources for a specific platform
+- Simplified maintenance and updates
+- Clear rollback path preserved
+
+## Previous Cleanup Tasks (September 7, 2025)
 
 ### ✅ Directory Structure Reorganization
 

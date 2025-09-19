@@ -154,8 +154,8 @@ After: Clear separation of concerns
 - Align with community standards
 
 **Official Approach Adopted:**
-- **Repository**: `https://rocketchat.github.io/helm-charts`
-- **Charts**: `rocketchat/rocketchat` and `rocketchat/monitoring`
+ - **Repository**: `https://rocketchat.github.io/helm-charts`
+ - **Charts**: `rocketchat/rocketchat` and `prometheus-community/kube-prometheus-stack`
 - **Prerequisites**: NGINX ingress, cert-manager, ClusterIssuer
 - **Microservices**: Enabled for scalability
 
@@ -186,11 +186,11 @@ After: Clear separation of concerns
 - **Resource Optimization**: Configured within £100/month Azure credit limits
 
 **Deployment Results:**
-- **Rocket.Chat**: ✅ Successfully deployed with SSL certificate
-- **Grafana**: ✅ Deployed, SSL certificate in progress
-- **MongoDB**: ✅ 3-replica set with persistent storage (50Gi)
-- **Monitoring**: ✅ Full stack with Prometheus, Grafana, Loki
-- **Microservices**: ✅ 7 microservices running (accounts, authorization, ddp-streamer, etc.)
+ - **Rocket.Chat**: ✅ Successfully deployed with SSL certificate
+ - **Grafana**: ✅ Deployed, SSL certificate in progress
+ - **MongoDB**: ✅ 3-replica set with persistent storage (50Gi)
+ - **Monitoring**: ✅ kube-prometheus-stack (Prometheus, Grafana, Alertmanager)
+ - **Microservices**: ✅ 7 microservices running (accounts, authorization, ddp-streamer, etc.)
 - **SSL**: ✅ Rocket.Chat certificate issued, Grafana certificate pending
 
 **Technical Implementation:**

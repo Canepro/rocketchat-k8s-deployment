@@ -1,0 +1,98 @@
+# Loki Stack Configuration for Rocket.Chat Logging
+# Deployed in loki-stack namespace for centralized logging
+
+loki:
+  # Enable persistence for log storage - CRITICAL for production
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClassName: default
+
+  # Loki configuration
+  config:
+    auth_enabled: false
+    server:
+      http_listen_port: 3100
+    ingester:
+      chunk_idle_period: 5m
+      chunk_retain_period: 30s
+    storage_config:
+      boltdb_shipper:
+        active_index_directory: /data/index
+        cache_location: /data/cache
+        cache_ttl: 168h
+        shared_store: filesystem
+    schema_config:
+      configs:
+        - from: 2020-05-15
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+    limits_config:
+      enforce_metric_name: false
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+
+# Promtail configuration for log collection
+promtail:
+  enabled: true
+  config:
+    server:
+      http_listen_port: 9080
+      grpc_listen_port: 0
+    positions:
+      filename: /run/promtail/positions.yaml
+    clients:
+      - url: http://loki-stack.loki-stack.svc.cluster.local:3100/loki/api/v1/push  # Correct service name per troubleshooting guide
+        # future: add basicAuth or bearer token if auth_enabled=true
+    scrape_configs:
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        pipeline_stages:
+          - cri: {}
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - action: replace
+            source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - action: replace
+            source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - action: replace
+            source_labels: [__meta_kubernetes_pod_container_name]
+            target_label: container
+          - action: replace
+            source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
+            separator: "/"
+            regex: (.*)/(.*)
+            replacement: /var/log/pods/*$1/*$2/*.log
+            target_label: __path__
+
+# Disable Grafana (we already have it deployed)
+grafana:
+  enabled: false
+
+# Resource limits for Loki components
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 3100
+  annotations: {}
+
+# Node selector and tolerations for AKS
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -9,6 +9,11 @@ Welcome to the comprehensive documentation for the Rocket.Chat Kubernetes deploy
 - **[Repository Structure](../STRUCTURE.md)** - Complete directory layout
 - **[Deployment Guide](../deployment/README.md)** - Step-by-step deployment instructions
 
+### ⚠️ Bitnami MongoDB Brownout (Sept 17–19, 2025)
+If MongoDB images fail to pull (ImagePullBackOff), use the standalone MongoDB deployment and external DB configuration:
+- See: [Troubleshooting: Bitnami MongoDB Brownout](TROUBLESHOOTING_GUIDE.md#issue-bitnami-mongodb-brownout---images-unavailable-september-17-19-2025)
+- Files: `aks/config/mongodb-standalone.yaml`, `aks/scripts/deploy-mongodb-standalone.sh`
+
 ### 📊 Current Status
 - **[Project Status](PROJECT_STATUS.md)** - Current deployment status and progress
 - **[Project History](PROJECT_HISTORY.md)** - Development timeline and decisions

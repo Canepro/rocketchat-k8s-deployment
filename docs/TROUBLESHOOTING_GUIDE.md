@@ -1,11 +1,19 @@
 # 🔧 Rocket.Chat AKS Deployment Troubleshooting Guide
 
 **Created**: September 4, 2025
-**Last Updated**: September 5, 2025
+**Last Updated**: September 19, 2025
 **Purpose**: Comprehensive troubleshooting guide for Rocket.Chat deployment on Azure Kubernetes Service
 **Scope**: Official Helm chart deployment with enhanced monitoring
 **Status**: Living document - updated as issues are encountered and resolved
-**Current Status**: SSL Certificate issues resolved - AKS deployment complete
+**Current Status**: All major issues resolved - Rocket.Chat deployment fully operational with monitoring (Updated: September 19, 2025)
+
+**✅ Successfully Resolved Issues:**
+- PVC deadlock causing pod scheduling failures
+- Rocket.Chat EE license causing DDP streamer crashes
+- Grafana 404 errors due to missing ingress
+- Grafana authentication issues (credentials resolved)
+- MongoDB connection string conflicts
+- Environment variable configuration issues
 
 ---
 
@@ -33,7 +41,347 @@ This troubleshooting guide covers common issues encountered during Rocket.Chat d
 
 ---
 
-## � **Recent Issues & Solutions (September 6, 2025)**
+## � **Recent Issues & Solutions (September 19, 2025)**
+
+### **Issue: Rocket.Chat Pods Stuck in Pending - PVC Terminating Deadlock**
+
+**Symptoms:**
+- Rocket.Chat pods in `Pending` status indefinitely
+- `kubectl describe pod` shows: `0/2 nodes are available: persistentvolumeclaim "rocketchat-rocketchat" is being deleted`
+- PVC shows `Terminating` status for extended periods (hours)
+- `FailedScheduling` events mentioning PVC deletion
+- Cluster autoscaler messages: `pod didn't trigger scale-up: 1 persistentvolumeclaim "rocketchat-rocketchat" is being deleted`
+- Existing Rocket.Chat pods may be in `CrashLoopBackOff` due to missing MONGO_URL
+
+**Root Cause:**
+- PVC stuck in `Terminating` status due to `kubernetes.io/pvc-protection` finalizer
+- Deadlock scenario: Pods can't start because PVC is terminating, but PVC can't delete because pods reference it
+- Environment variable conflicts between direct values and secret references for MONGO_URL
+- Often occurs after failed Helm upgrades or pod deletions during configuration changes
+
+**Solutions:**
+
+**Option A: Force Delete Stuck PVC (Recommended)**
+```bash
+# 1. Check PVC status
+kubectl get pvc -n rocketchat
+kubectl describe pvc rocketchat-rocketchat -n rocketchat
+
+# 2. Remove PVC protection finalizer
+kubectl patch pvc rocketchat-rocketchat -n rocketchat -p '{"metadata":{"finalizers":null}}'
+
+# 3. Force delete the PVC
+kubectl delete pvc rocketchat-rocketchat -n rocketchat --force --grace-period=0
+
+# 4. Wait for cleanup and monitor new PVC creation
+sleep 30
+kubectl get pvc -n rocketchat
+kubectl get pods -n rocketchat -w
+```
+
+**Option B: Fix Environment Variable Conflicts**
+```bash
+# If helm upgrade fails with patch order errors:
+# Error: UPGRADE FAILED: failed to create patch: The order in patch list doesn't match
+
+# 1. Update the secret with correct MongoDB URLs
+kubectl patch secret rocketchat-rocketchat -n rocketchat \
+  --type merge \
+  -p '{"data":{"mongo-uri":"bW9uZ29kYjovL21vbmdvZGItZWFkeWxvYWRpbmctbW9uZ29kYi0wLm1vbmdvZGItZWFkeWxvYWRpbmctbW9uZ29kYi5zdmMuY2x1c3Rlci5sb2NhbDo1NDAwMy9yb2NrZXRjaGF0P3JlcGxpY2FTZXQ9cnMwJnJlYWRQcmVmZXJlbmNlPXByaW1hcnkg","mongo-oplog-uri":"bW9uZ29kYjovL21vbmdvZGItZWFkeWxvYWRpbmctbW9uZ29kYi0wLm1vbmdvZGItZWFkeWxvYWRpbmctbW9uZ29kYi5zdmMuY2x1c3Rlci5sb2NhbDo1NDAwMy9sb2NhbD9yZXBsaWNhU2V0PXJzMCZyZWFkUHJlZmVyZW5jZT1wcmltYXJ5"}}'
+
+# 2. Remove conflicting extraEnv entries from values-official.yaml
+# Comment out or remove MONGO_URL and MONGO_OPLOG_URL from extraEnv section
+
+# 3. Apply the helm upgrade
+helm upgrade rocketchat rocketchat/rocketchat -f config/helm-values/values-official.yaml -n rocketchat --wait --timeout=300s
+```
+
+**Prevention:**
+- Avoid manual PVC deletions during pod restarts
+- Use proper Helm upgrade procedures instead of manual pod management
+- Monitor PVC status during deployments: `kubectl get pvc -n rocketchat`
+- Don't mix direct environment variables with secret references in Helm charts
+- Use `kubectl get events -n rocketchat --sort-by=.metadata.creationTimestamp` to monitor for scheduling issues
+
+**Expected Resolution Time:** 2-5 minutes after PVC deletion
+
+**Advanced Troubleshooting:**
+```bash
+# If PVC recreation fails, manually create it:
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rocketchat-rocketchat
+  namespace: rocketchat
+  labels:
+    app.kubernetes.io/instance: rocketchat
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: rocketchat
+    helm.sh/chart: rocketchat-6.25.3
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: default
+  resources:
+    requests:
+      storage: 30Gi
+EOF
+
+# If environment variables still fail after PVC fix:
+kubectl set env deployment/rocketchat-rocketchat -n rocketchat \
+  MONGO_URL=mongodb://mongodb-headless.rocketchat.svc.cluster.local:27017/rocketchat \
+  MONGO_OPLOG_URL=mongodb://mongodb-headless.rocketchat.svc.cluster.local:27017/local \
+  NODE_ENV=production
+```
+
+**Related Issues:**
+- **DDP Streamer Crash**: Apply same MONGO_URL fix to `rocketchat-ddp-streamer` deployment
+- **Storage Class Issues**: Use `managed` instead of `default` for immediate PVC binding
+- **Helm Chart Conflicts**: Direct `kubectl set env` bypasses Helm environment variable issues
+- **EE License Issues**: See "Rocket.Chat EE License Causing Service Crashes" section below
+
+**Success Indicators:**
+- ✅ PVC status changes from `Terminating` to `Bound`
+- ✅ Pod status changes from `Pending` to `Running`
+- ✅ No `MONGO_URL must be set in environment` errors
+- ✅ Rocket.Chat accessible at configured domain
+
+**Verification:**
+```bash
+# Check all components are running
+kubectl get pods -n rocketchat
+kubectl get pvc -n rocketchat
+
+# Verify Rocket.Chat access
+curl -k https://chat.canepro.me/health
+
+# Check application logs
+kubectl logs -n rocketchat deployment/rocketchat-rocketchat
+```
+
+---
+
+### **Issue: Rocket.Chat EE License Causing Service Crashes**
+
+**Symptoms:**
+- DDP Streamer pods show: `"Enterprise license not found. Shutting down..."`
+- Services crash in CrashLoopBackOff despite MongoDB connectivity being fine
+- Rocket.Chat functions but microservices fail due to license issues
+- Logs show repeated license validation failures
+
+**Root Cause:**
+- Invalid or expired EE license in MongoDB cloud settings
+- License synchronization issues between workspace and cloud
+- Cloud registration token expired or workspace deregistered
+- Manual removal of cloud settings without proper re-registration
+
+**Solutions:**
+
+**Option A: Reset Cloud Settings and Re-register (Recommended)**
+```bash
+# 1. Remove cloud settings from MongoDB (use correct mongosh command)
+kubectl exec -n rocketchat mongodb-0 -- \
+  mongosh "mongodb://127.0.0.1:27017/rocketchat" --eval '
+    const r = db.rocketchat_settings.deleteMany({ _id: { $regex: /^Cloud_Workspace/ } });
+    printjson(r);
+    print("Cloud settings removed");
+  '
+
+# 2. Restart Rocket.Chat services
+kubectl rollout restart deployment rocketchat-rocketchat -n rocketchat
+kubectl rollout restart deployment rocketchat-ddp-streamer -n rocketchat
+kubectl rollout restart deployment rocketchat-account -n rocketchat
+kubectl rollout restart deployment rocketchat-authorization -n rocketchat
+
+# 3. Re-register workspace via web UI:
+# - Go to https://chat.canepro.me
+# - Administration > Workspace > Register workspace
+# - Paste your registration token
+# - Administration > Subscription > Sync license update
+```
+
+**Option B: Manual License Update via Database**
+```bash
+# Direct database license update (if you have license key)
+kubectl exec -n rocketchat mongodb-0 -- \
+  mongosh "mongodb://127.0.0.1:27017/rocketchat" --eval '
+    db.rocketchat_settings.updateOne(
+      { _id: "Enterprise_License" },
+      { $set: { value: "YOUR_LICENSE_KEY_HERE" } },
+      { upsert: true }
+    );
+    print("License updated");
+  '
+```
+
+**Prevention:**
+- Regularly verify license status in Administration > Subscription
+- Set up alerts for license expiration (EE feature)
+- Keep cloud registration token secure and up-to-date
+- Don't manually remove cloud settings without re-registration
+- Monitor license validation in pod logs
+
+**Expected Resolution Time:** 5-10 minutes after re-registration
+
+**Success Indicators:**
+- ✅ DDP Streamer runs without `"Enterprise license not found"` errors
+- ✅ All microservices function with proper EE features
+- ✅ License shows as active in Administration > Subscription
+- ✅ No more CrashLoopBackOff on license-dependent services
+
+**Verification:**
+```bash
+# Check all pods are stable
+kubectl get pods -n rocketchat
+
+# Check ddp-streamer logs for license messages
+kubectl logs -n rocketchat deployment/rocketchat-ddp-streamer --tail=20
+
+# Verify license status via API
+curl -k https://chat.canepro.me/api/v1/licenses.info
+```
+
+**Related Issues:**
+- **PVC Deadlock**: Can occur simultaneously with license issues
+- **MongoDB Connectivity**: License issues can mask connectivity problems
+- **Helm Environment Variables**: Ensure MONGO_URL is properly configured
+
+---
+
+### **Issue: Grafana Returns 404 Not Found**
+
+**Symptoms:**
+- `GET https://grafana.chat.canepro.me/ 404 (Not Found)`
+- Grafana pod is running but not accessible via browser
+- `kubectl get ingress -n monitoring` returns no resources
+- Grafana service exists but no ingress routes traffic to it
+
+**Root Cause:**
+- Missing ingress resource for Grafana in the monitoring namespace
+- Grafana service is running but not exposed externally
+- Ingress configuration was not created during initial deployment
+- Traffic cannot reach Grafana due to missing routing rules
+
+**Solutions:**
+
+**Option A: Create Grafana Ingress (Recommended)**
+```bash
+# Create ingress resource for Grafana
+kubectl apply -f - <<EOF
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: monitoring-ingress
+  namespace: monitoring
+  annotations:
+    cert-manager.io/cluster-issuer: "production-cert-issuer"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - grafana.chat.canepro.me
+    secretName: grafana-tls
+  rules:
+  - host: grafana.chat.canepro.me
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: monitoring-grafana
+            port:
+              number: 80
+EOF
+```
+
+**Option B: Port Forward for Temporary Access**
+```bash
+# Temporary access via port forwarding
+kubectl port-forward -n monitoring svc/monitoring-grafana 3000:80
+
+# Access at: http://localhost:3000
+```
+
+**Prevention:**
+- Always verify ingress resources after deployment: `kubectl get ingress --all-namespaces`
+- Include Grafana ingress in initial deployment scripts
+- Monitor ingress resources: `kubectl get ingress -n monitoring`
+- Check service availability: `kubectl get svc -n monitoring`
+- Use consistent naming conventions for ingress resources
+
+**Expected Resolution Time:** 1-2 minutes after ingress creation
+
+**Success Indicators:**
+- ✅ Grafana accessible at `https://grafana.chat.canepro.me`
+- ✅ SSL certificate issued for grafana.chat.canepro.me
+- ✅ Login page loads successfully
+- ✅ Ingress shows proper external IP and ports
+
+**Verification:**
+```bash
+# Check ingress creation
+kubectl get ingress -n monitoring
+
+# Check certificate status
+kubectl get certificate -n monitoring
+
+# Test access
+curl -k https://grafana.chat.canepro.me
+
+# Check ingress controller logs
+kubectl logs -n ingress-nginx deployment/ingress-nginx-controller --tail=20
+```
+
+**Related Issues:**
+- **Missing Services**: Ensure Grafana service exists before creating ingress
+- **SSL Certificate Issues**: Certificate may take time to issue
+- **DNS Configuration**: Ensure DNS points to correct ingress IP
+- **Ingress Class**: Verify nginx ingress controller is running
+- **Grafana Password**: Retrieve from `kubectl get secret grafana-admin -n monitoring`
+
+**Grafana Credentials:**
+```bash
+# Check what credentials Grafana is actually using
+kubectl exec deployment/monitoring-grafana -n monitoring -- env | grep GF_SECURITY_ADMIN
+
+# Retrieve Grafana admin username from secret
+kubectl get secret grafana-admin -n monitoring -o jsonpath='{.data.GF_SECURITY_ADMIN_USER}' | base64 -d
+
+# Retrieve Grafana admin password from secret
+kubectl get secret grafana-admin -n monitoring -o jsonpath='{.data.GF_SECURITY_ADMIN_PASSWORD}' | base64 -d
+
+# Alternative: Get complete secret
+kubectl get secret grafana-admin -n monitoring -o yaml
+```
+
+**Grafana Authentication Troubleshooting:**
+```bash
+# Test login API directly
+curl -k -X POST "https://grafana.chat.canepro.me/login" \
+  -H "Content-Type: application/json" \
+  -d '{"user":"admin","password":"prom-operator"}'
+
+# Check for authentication logs
+kubectl logs -n monitoring deployment/monitoring-grafana | grep -i login
+
+# Reset admin password (SOLUTION: This fixed the 401 error!)
+kubectl exec deployment/monitoring-grafana -n monitoring -- \
+  grafana-cli admin reset-admin-password prom-operator
+
+# Verify login works after reset
+curl -k -X POST "https://grafana.chat.canepro.me/login" \
+  -H "Content-Type: application/json" \
+  -d '{"user":"admin","password":"prom-operator"}' \
+  -s -o /dev/null -w "%{http_code}"
+# Should return: 200 (success)
+```
+
+**⚠️ Note**: Grafana may use different credentials than stored in the secret. Check the actual environment variables in the pod using the first command above.
+
+---
 
 ### **Issue: Loki StatefulSet Update Failed - Persistence Configuration**
 
@@ -413,6 +761,89 @@ helm install rocketchat rocketchat/rocketchat \
 - Use YAML validators
 - Test values files with `helm lint`
 - Use `--dry-run` for validation before actual deployment
+
+---
+
+### Issue 3.3: kube-prometheus-stack install/upgrade taking too long
+
+Symptoms:
+- `helm upgrade --install monitoring prometheus-community/kube-prometheus-stack --wait` hangs for many minutes
+- Install feels stuck or times out, or was cancelled and re-run
+
+Likely causes:
+- Large chart pulling multiple container images for the first time (Prometheus, Operator, Grafana, Alertmanager)
+- Prometheus Operator CRDs/webhooks initializing (normal first install delay)
+- Pending PVCs due to storageClass mismatch
+- Slow image pulls or registry rate limiting
+
+Quick diagnosis:
+```bash
+kubectl -n monitoring get pods -w | cat
+kubectl -n monitoring get events --sort-by=.lastTimestamp | tail -n 80 | cat
+kubectl get crds | grep monitoring.coreos | cat
+kubectl get storageclass | cat
+helm status monitoring -n monitoring | cat
+```
+
+Common resolutions:
+1) Give it more time and set a longer timeout:
+```bash
+helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+  -n monitoring --create-namespace \
+  -f aks/config/helm-values/values-monitoring.yaml \
+  --timeout 20m --wait
+```
+
+2) If you cancelled (`context canceled`), simply re-run the command; Helm is idempotent.
+
+3) PVC pending (no default storage class):
+```bash
+kubectl get pvc -n monitoring | cat
+kubectl get storageclass | cat   # ensure a `(default)` storage class exists
+# If needed, set your default or update values to an available storageClassName
+```
+
+4) Watch for webhook readiness (first install):
+```bash
+kubectl -n monitoring logs deploy/monitoring-kube-prometheus-operator --tail=50 | cat
+```
+
+5) Install without waiting and watch manually:
+```bash
+helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+  -n monitoring --create-namespace -f aks/config/helm-values/values-monitoring.yaml
+kubectl -n monitoring get pods -w | cat
+```
+
+Verification:
+```bash
+kubectl -n monitoring get pods
+kubectl -n monitoring get svc | grep grafana
+kubectl -n monitoring get prometheus
+```
+
+Prevention:
+- Use a higher `--timeout` on first installs
+- Ensure a valid default StorageClass exists or set `storageClassName` explicitly in values
+- Avoid interrupting long first-time image pulls
+
+Grafana Multi-Attach (RWO) during upgrade:
+- Symptom: New Grafana pod in Init/Pending with event `Multi-Attach error ... volume is already used by pod ...`
+- Cause: RollingUpdate tries to run two pods while PVC is ReadWriteOnce.
+- Fix: Set Grafana to single replica and Recreate strategy, then re-run upgrade:
+```yaml
+grafana:
+  replicas: 1
+  deploymentStrategy:
+    type: Recreate
+```
+Apply and restart:
+```bash
+helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+  -n monitoring -f aks/config/helm-values/values-monitoring.yaml --timeout 20m --wait
+# If still stuck once, delete the new pending pod to let Recreate happen cleanly
+kubectl -n monitoring delete pod -l app.kubernetes.io/name=grafana --field-selector=status.phase=Pending
+```
 
 ---
 
@@ -1507,6 +1938,31 @@ kubectl get ingress monitoring-ingress -n monitoring
 
 **Expected Resolution Time:** 5-10 minutes after TLS configuration fix
 
+### Issue: Prometheus Not Discovering Rocket.Chat After Patch (September 18, 2025)
+
+Symptoms:
+- Prometheus UI shows no targets for Rocket.Chat
+- PodMonitor exists but targets list is empty
+
+Diagnosis:
+```bash
+kubectl get podmonitor -A | grep rocketchat
+kubectl -n monitoring get prometheus monitoring-kube-prometheus-prometheus -o yaml | grep -A6 serviceMonitorNamespaceSelector
+```
+
+Root Cause:
+- Namespace selectors limited to a single namespace; fixed to include both `monitoring` and `rocketchat` via matchExpressions.
+
+Resolution:
+```bash
+kubectl apply -f aks/monitoring/prometheus-patch.yaml
+kubectl -n monitoring rollout restart statefulset/monitoring-kube-prometheus-prometheus
+```
+
+Prevention:
+- Prefer `matchExpressions` + In operator for cross-namespace scraping.
+- Keep `release: monitoring` label consistent on PodMonitor/PrometheusRule.
+
 ---
 
 ## 🔐 **Authentication Issues - RESOLVED (September 6, 2025)**
@@ -1810,6 +2266,139 @@ kubectl run test-loki-logs --image=curlimages/curl --rm -i --restart=Never --nam
 - Monitor Promtail logs for collection errors
 
 **Expected Resolution Time:** 2-3 minutes after configuration updates
+
+---
+
+### Issue: Bitnami MongoDB Brownout - Images Unavailable (September 17-19, 2025)
+
+**Date:** September 18, 2025
+**Severity:** Critical
+**Component:** MongoDB (Bitnami subchart)
+
+#### **Symptoms**
+- MongoDB pods showing `ImagePullBackOff` or `ErrImagePull`
+- Events show errors like:
+  - `ghcr.io/bitnami/mongodb:6.0: not found`
+  - `docker.io/bitnami/mongodb:6.0.10-debian-11-r4: not found`
+  - `docker.io/bitnami/mongodb:6.0.18: not found`
+  - `docker.io/bitnami/mongodb:latest: not found`
+- All Rocket.Chat services in `CrashLoopBackOff` due to MongoDB unavailable
+
+#### **Root Cause**
+- **Bitnami Brownout Period**: September 17-19, 2025, MongoDB images temporarily unavailable
+- Part of Bitnami's transition to Bitnami Secure Images (BSI)
+- MongoDB is one of 24 images affected in Brownout 3
+- During brownout, only `latest` tag available for community-tier images, but even that may fail
+
+#### **Solutions**
+
+**Solution 1: Deploy Standalone MongoDB with Official Image**
+```bash
+# 1. Apply standalone MongoDB deployment
+kubectl apply -f aks/config/mongodb-standalone.yaml
+
+# 2. Update Rocket.Chat values to use external MongoDB
+# In values-official.yaml:
+mongodb:
+  enabled: false  # Disable Bitnami subchart
+  auth:
+    # Required by Helm chart even when disabled
+    passwords:
+      - "rocketchat"
+    rootPassword: "rocketchatroot"
+    database: "rocketchat"
+
+extraEnv:
+  - name: MONGO_URL
+    value: "mongodb://mongodb-0.mongodb-headless:27017,mongodb-1.mongodb-headless:27017,mongodb-2.mongodb-headless:27017/rocketchat?replicaSet=rs0"
+  - name: MONGO_OPLOG_URL
+    value: "mongodb://mongodb-0.mongodb-headless:27017,mongodb-1.mongodb-headless:27017,mongodb-2.mongodb-headless:27017/local?replicaSet=rs0"
+
+# 3. Upgrade Rocket.Chat release
+helm upgrade rocketchat rocketchat/rocketchat -f values-official.yaml --namespace rocketchat
+```
+
+**Solution 2: Use Bitnami Legacy Repository (if available)**
+```yaml
+# Note: May not have all versions
+mongodb:
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/mongodb
+    tag: "8.0.13"  # Only 8.0 versions available
+```
+
+**Solution 3: Wait Until Brownout Ends**
+- Brownout ends: September 19, 2025 at 08:00 UTC
+- Images will be restored after this time
+
+#### **Prevention**
+- **Long-term**: Consider migrating to:
+  - Bitnami Secure Images (commercial)
+  - Official MongoDB Kubernetes Operator
+  - MongoDB Atlas (managed service)
+- **Monitor**: Check [Bitnami announcements](https://github.com/bitnami/containers/issues/83267)
+- **Plan**: Have external MongoDB deployment ready as backup
+
+#### **Verification**
+```bash
+# Check MongoDB pods status
+kubectl get pods -n rocketchat -l app=mongodb
+
+# Verify MongoDB connectivity
+kubectl exec -n rocketchat mongodb-0 -- mongosh --eval "db.adminCommand('ping')"
+
+# Check Rocket.Chat connection
+kubectl logs -n rocketchat -l app.kubernetes.io/name=rocketchat --tail=20
+```
+
+#### **Files Created**
+- `aks/config/mongodb-standalone.yaml` - Standalone MongoDB deployment
+- `aks/scripts/deploy-mongodb-standalone.sh` - Deployment automation script
+- `aks/config/helm-values/mongodb-values.yaml` - Alternative values for external MongoDB
+
+---
+
+### Issue: MongoDB Pod Init ImagePullBackOff (bitnami/os-shell) (September 18, 2025)
+
+Symptoms:
+- `Init:ImagePullBackOff` on `rocketchat-mongodb-0` init container `volume-permissions`
+- Events show `docker.io/bitnami/os-shell:11-debian-11-r72: not found`
+
+Root Cause:
+- The Bitnami `os-shell` tag used by the init `volumePermissions` container is unavailable.
+
+Resolutions:
+1) Disable volumePermissions in Helm values (preferred):
+```yaml
+mongodb:
+  volumePermissions:
+    enabled: false
+```
+Apply via:
+```bash
+helm upgrade --install rocketchat rocketchat/rocketchat -n rocketchat -f aks/config/helm-values/values-official.yaml
+```
+
+2) Alternatively, override init image (if permissions are needed):
+```yaml
+mongodb:
+  volumePermissions:
+    enabled: true
+    image:
+      registry: docker.io
+      repository: bitnami/bitnami-shell
+      tag: 11-debian-11-r110
+```
+
+Verification:
+```bash
+kubectl describe pod -n rocketchat rocketchat-mongodb-0 | sed -n '1,120p'
+kubectl get pods -n rocketchat
+```
+
+Prevention:
+- Pin supported Bitnami init image tags or keep volumePermissions disabled when not required.
 
 ---
 

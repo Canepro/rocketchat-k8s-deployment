@@ -28,27 +28,50 @@
 
 ## 🎯 Quick Deployment
 
-### Single Command Deployment
+### AKS Deployment (Production)
 
 ```bash
-cd deployment
+cd aks/deployment
 chmod +x deploy-aks-official.sh
 ./deploy-aks-official.sh
 ```
 
-### Manual Configuration
+### ⚠️ If MongoDB images fail to pull (Bitnami brownout)
 
-All configuration files are now organized in `config/`:
-- **Helm Values**: `config/helm-values/`
-- **SSL Certificates**: `config/certificates/`
-- **Monitoring**: `monitoring/`
+Bitnami temporarily browned out MongoDB images (Sept 17–19, 2025). If you see ImagePullBackOff for MongoDB:
+
+1) Deploy the standalone MongoDB (official image) and initialize the replica set
+```bash
+kubectl apply -f aks/config/mongodb-standalone.yaml
+```
+
+2) Install/upgrade Rocket.Chat with `aks/config/helm-values/values-official.yaml` (Mongo subchart disabled; external MongoDB URLs provided)
+
+3) Optional helper script
+```bash
+chmod +x aks/scripts/deploy-mongodb-standalone.sh
+aks/scripts/deploy-mongodb-standalone.sh
+```
+
+See the troubleshooting entry for details and verification steps:
+docs/TROUBLESHOOTING_GUIDE.md#issue-bitnami-mongodb-brownout---images-unavailable-september-17-19-2025
+
+### MicroK8s Deployment (Legacy/Rollback)
+
+See `microk8s/docs/` for MicroK8s deployment instructions.
+
+### Configuration Files
+
+Files are organized by environment:
+- **AKS**: `aks/config/`, `aks/monitoring/`, `aks/scripts/`
+- **MicroK8s**: `microk8s/config/`, `microk8s/monitoring/`, `microk8s/scripts/`
 
 ### 2. Access Your Services
 
 - **Rocket.Chat**: `https://chat.canepro.me`
 - **Grafana**: `https://grafana.chat.canepro.me`
-  - Username: `admin` 
-  - Password: `admin`
+  - Username: `admin`
+  - Password: `prom-operator`
 
 ### 3. Check Logs with Loki
 
@@ -62,25 +85,25 @@ In Grafana, go to **Explore** and use these LogQL queries:
 ## Repository Structure
 
 ```
-📁 config/                    # All configuration files
-├── 📁 certificates/          # SSL certificate configs
-└── 📁 helm-values/           # Helm chart configurations
+📁 aks/                       # Azure Kubernetes Service (Production)
+├── 📁 config/                # AKS configuration files
+│   ├── certificates/         # SSL certificate configs
+│   └── helm-values/          # Helm chart values
+├── 📁 deployment/            # AKS deployment scripts
+├── 📁 monitoring/            # AKS monitoring configs
+├── 📁 scripts/               # AKS utility scripts
+└── 📁 docs/                  # AKS documentation
 
-📁 deployment/                # Deployment scripts
-└── deploy-aks-official.sh    # Main deployment script
+📁 microk8s/                  # MicroK8s (Legacy/Rollback)
+├── 📁 config/                # MicroK8s configurations
+├── 📁 monitoring/            # MicroK8s monitoring
+├── 📁 scripts/               # MicroK8s scripts
+└── 📁 docs/                  # MicroK8s documentation
 
-📁 docs/                      # Documentation
-├── TROUBLESHOOTING_GUIDE.md  # Issue resolution
-├── loki-query-guide.md       # Log query examples
-└── [other guides]            # Comprehensive docs
-
-📁 monitoring/                # Monitoring configurations
-├── grafana-*.yaml            # Grafana configs
-├── rocket-chat-*.yaml        # Monitoring rules
-└── prometheus-*.yaml         # Prometheus settings
-
-� scripts/                   # Utility scripts
-└── aks-shell.sh              # Quick AKS access
+📁 docs/                      # Common documentation
+├── TROUBLESHOOTING_GUIDE.md  # General troubleshooting
+├── PROJECT_STATUS.md         # Overall project status
+└── [other guides]            # Shared documentation
 ```
 
 *See [STRUCTURE.md](STRUCTURE.md) for complete directory details*
@@ -96,7 +119,7 @@ In Grafana, go to **Explore** and use these LogQL queries:
 - **Ingress**: NGINX Ingress Controller with LoadBalancer
 
 **🔐 Login Credentials:**
-- **Grafana**: Username: `admin` | Password: `admin`
+- **Grafana**: Username: `admin` | Password: `prom-operator`
 - **Rocket.Chat**: Use your existing credentials from backup
 
 **📊 Monitoring Features:**

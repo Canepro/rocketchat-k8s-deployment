@@ -57,7 +57,13 @@ items:
     logFormat: logfmt
     logLevel: info
     paused: false
-    podMonitorNamespaceSelector: {}
+    podMonitorNamespaceSelector:
+      matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values:
+        - monitoring
+        - rocketchat
     podMonitorSelector:
       matchLabels:
         release: monitoring

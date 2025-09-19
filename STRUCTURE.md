@@ -1,111 +1,141 @@
 # 📁 Repository Structure
 
 ## Overview
-This repository contains a production-ready Rocket.Chat deployment on Azure Kubernetes Service (AKS) with comprehensive monitoring, logging, and observability features.
+This repository contains a production-ready Rocket.Chat deployment with support for both Azure Kubernetes Service (AKS) and MicroK8s environments. The structure clearly separates resources by deployment platform.
 
 ## Directory Structure
 
 ```
 rocketchat-k8s-deployment/
-├── 📁 config/                    # Configuration files
-│   ├── 📁 certificates/          # SSL certificate configurations
-│   │   └── clusterissuer.yaml    # Let's Encrypt cluster issuer
-│   └── 📁 helm-values/           # Helm chart value files
-│       ├── values-official.yaml  # Main Rocket.Chat configuration
-│       ├── values-monitoring.yaml # Monitoring stack configuration
-│       ├── values-production.yaml # Production settings
-│       ├── values.yaml           # Base configuration
-│       ├── loki-stack-values.yaml # Loki logging configuration
-│       └── monitoring-values.yaml # Additional monitoring settings
+├── 📁 aks/                                # Azure Kubernetes Service (Production)
+│   ├── 📁 config/                         # AKS configuration files
+│   │   ├── 📁 certificates/               # SSL certificate configurations
+│   │   │   └── clusterissuer.yaml        # Let's Encrypt cluster issuer
+│   │   └── 📁 helm-values/               # Helm chart value files
+│   │       ├── values-official.yaml      # Main Rocket.Chat configuration
+│   │       ├── values-monitoring.yaml    # Monitoring stack configuration
+│   │       ├── values-production.yaml    # Production settings
+│   │       ├── values.yaml               # Base configuration
+│   │       ├── loki-stack-values.yaml    # Loki logging configuration
+│   │       └── monitoring-values.yaml    # Additional monitoring settings
+│   │
+│   ├── 📁 deployment/                     # AKS deployment scripts
+│   │   ├── deploy-aks-official.sh        # Main AKS deployment script
+│   │   └── README.md                      # AKS deployment guide
+│   │
+│   ├── 📁 docs/                           # AKS-specific documentation
+│   │   ├── README.md                      # AKS documentation index
+│   │   ├── AKS_SETUP_GUIDE.md            # Detailed AKS setup instructions
+│   │   ├── DOMAIN_STRATEGY.md            # Domain configuration strategy
+│   │   ├── MASTER_PLANNING.md            # Architecture planning
+│   │   ├── MIGRATION_PLAN.md             # Migration from MicroK8s to AKS
+│   │   ├── DNS_MIGRATION_GUIDE.md        # DNS migration procedures
+│   │   ├── REMOTE_ACCESS_GUIDE.md        # Remote AKS cluster access
+│   │   ├── ENHANCED_MONITORING_PLAN.md   # Monitoring implementation
+│   │   ├── loki-query-guide.md           # Loki LogQL query examples
+│   │   └── quick-loki-guide.md           # Quick start guide for Loki
+│   │
+│   ├── 📁 monitoring/                     # AKS monitoring configurations
+│   │   ├── grafana-datasource-loki.yaml  # Loki data source configuration
+│   │   ├── prometheus-current.yaml       # Prometheus configuration
+│   │   ├── prometheus-patch.yaml         # Prometheus patches
+│   │   ├── rocket-chat-alerts.yaml       # Alert configurations
+│   │   ├── rocket-chat-dashboard-configmap.yaml # Dashboard ConfigMap
+│   │   ├── rocket-chat-podmonitor.yaml   # Pod monitoring configuration
+│   │   ├── rocket-chat-servicemonitor.yaml # Service monitoring
+│   │   └── loki-values.yaml              # Loki-specific values
+│   │
+│   └── 📁 scripts/                        # AKS utility scripts
+│       ├── aks-shell.sh                  # AKS cluster access script
+│       ├── migrate-to-aks.sh             # Migration utilities
+│       ├── setup-kubeconfig.sh           # Kubernetes configuration setup
+│       ├── deploy-mongodb-standalone.sh  # Brownout workaround deployment
+│       └── fix-mongodb-image.sh          # Helper script (image repo fixes)
 │
-├── 📁 deployment/                # Deployment scripts and tools
-│   └── deploy-aks-official.sh    # Main deployment script
+├── 📁 microk8s/                           # MicroK8s (Legacy/Rollback)
+│   ├── 📁 config/                         # MicroK8s configurations
+│   │   ├── mongodb.yaml                  # MongoDB deployment
+│   │   ├── mongodb-statefulset.yaml      # MongoDB StatefulSet
+│   │   └── rocketchat-deployment.yaml    # Rocket.Chat deployment
+│   │
+│   ├── 📁 docs/                           # MicroK8s documentation
+│   │   ├── README.md                      # MicroK8s documentation index
+│   │   ├── DEPLOYMENT_GUIDE.md           # MicroK8s deployment guide
+│   │   ├── MICROK8S_SETUP.md             # MicroK8s setup instructions
+│   │   ├── PHASE1_STATUS.md              # Phase 1 completion status
+│   │   └── PHASE2_STATUS.md              # Phase 2 completion status
+│   │
+│   ├── 📁 monitoring/                     # MicroK8s monitoring
+│   │   └── monitoring.yaml                # Monitoring configuration
+│   │
+│   └── 📁 scripts/                        # MicroK8s scripts
+│       └── setup-ubuntu-server.sh        # Ubuntu server setup script
 │
-├── 📁 docs/                      # Documentation
-│   ├── README.md                 # Documentation index
-│   ├── PROJECT_STATUS.md         # Current project status
-│   ├── PROJECT_HISTORY.md        # Project development history
-│   ├── TROUBLESHOOTING_GUIDE.md  # Common issues and solutions
-│   ├── DNS_MIGRATION_GUIDE.md    # DNS migration procedures
-│   ├── ENHANCED_MONITORING_PLAN.md # Monitoring implementation plan
-│   ├── FUTURE_IMPROVEMENTS.md    # Planned enhancements
-│   ├── loki-query-guide.md       # Loki LogQL query examples
-│   └── quick-loki-guide.md       # Quick start guide for Loki
+├── 📁 docs/                               # Common/General documentation
+│   ├── README.md                          # Documentation index
+│   ├── PROJECT_STATUS.md                 # Overall project status
+│   ├── PROJECT_HISTORY.md                # Project development history
+│   ├── TROUBLESHOOTING_GUIDE.md          # General troubleshooting
+│   └── FUTURE_IMPROVEMENTS.md            # Planned enhancements
 │
-├── 📁 monitoring/                # Monitoring and observability
-│   ├── grafana-datasource-loki.yaml # Loki data source configuration
-│   ├── grafana-dashboard-rocketchat.yaml # Custom Rocket.Chat dashboard
-│   ├── prometheus-current.yaml   # Prometheus configuration
-│   ├── prometheus-patch.yaml     # Prometheus patches
-│   ├── rocket-chat-alerts.yaml   # Alert configurations
-│   ├── rocket-chat-dashboard-configmap.yaml # Dashboard ConfigMap
-│   ├── rocket-chat-dashboard.json # Dashboard JSON definition
-│   ├── rocket-chat-podmonitor.yaml # Pod monitoring configuration
-│   ├── rocket-chat-servicemonitor.yaml # Service monitoring
-│   └── loki-values.yaml          # Loki-specific values
-│
-├── 📁 scripts/                   # Utility scripts
-│   ├── aks-shell.sh              # AKS cluster access script
-│   ├── migrate-to-aks.sh         # Migration utilities
-│   └── setup-kubeconfig.sh       # Kubernetes configuration setup
-│
-├── 📁 aks/                       # AKS-specific documentation
-│   ├── README.md                 # AKS deployment guide
-│   ├── AKS_SETUP_GUIDE.md        # Detailed AKS setup
-│   ├── DOMAIN_STRATEGY.md        # Domain configuration strategy
-│   ├── MASTER_PLANNING.md        # Architecture planning
-│   └── MIGRATION_PLAN.md         # Migration strategy
-│
-├── 📁 microk8s/                  # Legacy MicroK8s deployment (rollback)
-│   ├── README.md                 # MicroK8s documentation
-│   ├── DEPLOYMENT_GUIDE.md       # Legacy deployment guide
-│   └── [various legacy files]    # Original deployment files
-│
-├── 📄 README.md                  # Main project documentation
-├── 📄 .gitignore                 # Git ignore patterns
-└── 📄 .env.example               # Environment variables template
+├── 📄 README.md                           # Main project documentation
+├── 📄 STRUCTURE.md                        # This file - repository structure
+├── 📄 CLEANUP_SUMMARY.md                 # Repository cleanup history
+├── 📄 .gitignore                          # Git ignore patterns
+└── 📄 .env.example                        # Environment variables template
 ```
 
-## Key Configuration Files
+## Environment Separation
 
-### Deployment
-- **`deployment/deploy-aks-official.sh`** - Main deployment script using official Rocket.Chat Helm charts
-- **`config/helm-values/values-official.yaml`** - Production Rocket.Chat configuration
-- **`config/certificates/clusterissuer.yaml`** - SSL certificate management
+### AKS (Production Environment)
+All production resources are contained within the `aks/` directory:
+- **Configuration**: `aks/config/` - Helm values, certificates
+- **Deployment**: `aks/deployment/` - Deployment scripts
+- **Monitoring**: `aks/monitoring/` - Prometheus, Grafana, Loki configs
+- **Scripts**: `aks/scripts/` - Utility and maintenance scripts
+- **Documentation**: `aks/docs/` - AKS-specific guides
 
-### Monitoring & Observability
-- **`monitoring/grafana-datasource-loki.yaml`** - Loki integration for log aggregation
-- **`monitoring/rocket-chat-podmonitor.yaml`** - Application metrics collection
-- **`monitoring/rocket-chat-dashboard-configmap.yaml`** - Custom Grafana dashboards
+### MicroK8s (Legacy/Rollback Environment)
+Legacy MicroK8s resources are preserved in the `microk8s/` directory:
+- **Configuration**: `microk8s/config/` - YAML manifests
+- **Monitoring**: `microk8s/monitoring/` - Monitoring setup
+- **Scripts**: `microk8s/scripts/` - Setup and deployment scripts
+- **Documentation**: `microk8s/docs/` - MicroK8s guides
 
-### Access Scripts
-- **`scripts/aks-shell.sh`** - Quick AKS cluster access
-- **`scripts/setup-kubeconfig.sh`** - Kubernetes configuration management
+### Common Resources
+Shared documentation and project-wide files remain at the root:
+- **Common Docs**: `docs/` - Project status, history, troubleshooting
+- **Project Files**: Root level - README, .gitignore, .env.example
 
 ## Usage
 
-### Quick Deployment
+### For AKS Deployment (Production)
 ```bash
-cd deployment
-chmod +x deploy-aks-official.sh
+cd aks/deployment
 ./deploy-aks-official.sh
 ```
 
-### Monitoring Stack
-The monitoring stack includes:
-- **Prometheus** - Metrics collection and storage
-- **Grafana** - Visualization and dashboards
-- **Loki** - Log aggregation and analysis
-- **Alertmanager** - Alert management and notifications
+### For MicroK8s Deployment (Legacy)
+```bash
+cd microk8s/scripts
+./setup-ubuntu-server.sh
+```
 
-### Documentation
-Start with `docs/README.md` for comprehensive documentation and troubleshooting guides.
+### Accessing Documentation
+- **AKS Guides**: `aks/docs/`
+- **MicroK8s Guides**: `microk8s/docs/`
+- **General Documentation**: `docs/`
+
+## Key Benefits of This Structure
+
+1. **Clear Separation**: No confusion between AKS and MicroK8s resources
+2. **Easy Navigation**: All related files grouped by environment
+3. **Simplified Maintenance**: Updates to one environment don't affect the other
+4. **Better Version Control**: Clear commit history per environment
+5. **Rollback Ready**: MicroK8s preserved for emergency rollback
 
 ## Status
-- ✅ **Production Active** - AKS deployment running at `https://chat.canepro.me`
-- ✅ **Monitoring Complete** - Full observability stack operational
-- ✅ **SSL Certificates** - Automated certificate management
-- ✅ **Enhanced Logging** - Loki integration for centralized logging
-
-## Support
-Refer to `docs/TROUBLESHOOTING_GUIDE.md` for common issues and solutions.
+- ✅ **AKS**: Production deployment active at `https://chat.canepro.me`
+- ✅ **MicroK8s**: Legacy deployment preserved for rollback
+- ✅ **Documentation**: Comprehensive guides for both environments
+- ✅ **Monitoring**: Full observability stack operational on AKS

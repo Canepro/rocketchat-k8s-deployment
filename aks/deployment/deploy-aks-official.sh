@@ -69,9 +69,11 @@ sleep 30
 kubectl get clusterissuer
 print_success "ClusterIssuer configured"
 
-# Step 5: Install monitoring stack
+# Step 5: Install monitoring stack (kube-prometheus-stack)
 print_status "Step 5: Installing monitoring stack..."
-helm install monitoring -f ../config/helm-values/values-monitoring.yaml rocketchat/monitoring \
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+helm install monitoring -f ../config/helm-values/values-monitoring.yaml prometheus-community/kube-prometheus-stack \
   --namespace monitoring \
   --create-namespace \
   --wait \
@@ -118,11 +120,11 @@ print_success "DEPLOYMENT COMPLETE!"
 echo ""
 echo "🌐 Access URLs (after DNS update):"
 echo "   Rocket.Chat: https://chat.canepro.me"
-echo "   Grafana: https://grafana.chat.canepro.me/grafana"
-echo "   Grafana Admin: admin / GrafanaAdmin2024!"
+echo "   Grafana: https://grafana.chat.canepro.me"
+echo "   Grafana credentials from Secret 'grafana-admin' (see deployment README)"
 echo ""
 echo "📊 Monitoring:"
-echo "   Prometheus: kubectl port-forward svc/prometheus-operated 9090:9090 -n monitoring"
+echo "   Prometheus: kubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090 -n monitoring"
 echo ""
 echo "🔧 Next Steps:"
 echo "1. Update DNS A records to point to: $ROCKETCHAT_IP"

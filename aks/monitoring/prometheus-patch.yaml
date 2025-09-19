@@ -4,9 +4,20 @@ metadata:
   name: monitoring-kube-prometheus-prometheus
   namespace: monitoring
 spec:
+  podMonitorNamespaceSelector:
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: In
+      values:
+      - monitoring
+      - rocketchat
   serviceMonitorNamespaceSelector:
-    matchLabels:
-      kubernetes.io/metadata.name: rocketchat
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: In
+      values:
+      - monitoring
+      - rocketchat
   serviceMonitorSelector:
     matchLabels:
       release: monitoring
