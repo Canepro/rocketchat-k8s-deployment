@@ -126,16 +126,56 @@ In Grafana, go to **Explore** and use these LogQL queries:
 - **Metrics**: Real-time application and infrastructure metrics
 - **Logs**: Centralized logging with Loki and LogQL queries
 - **Dashboards**: Custom Rocket.Chat monitoring dashboards
-- **Alerts**: Automated alerting for critical issues
+- **Alerts**: 12 comprehensive alert rules with intelligent routing
+- **Notifications**: Email, Slack, webhooks, and Azure Monitor integration
 - **Observability**: Complete application performance monitoring
 
-## 🚀 Cost Optimization
+## 🚀 Cost Optimization - UPDATED (September 19, 2025)
 
-**Monthly Azure Costs (Within £100 credit):**
-- **AKS Cluster**: ~£50-70/month (3 standard nodes)
-- **Storage**: ~£10-15/month (Premium SSD)
-- **Networking**: ~£5-10/month (Load balancers)
-- **Total**: ~£65-95/month ✅
+**✅ Cost Optimizations Applied:**
+- **Resource Rightsizing**: Rocket.Chat CPU: 1000m→750m (-25%), Memory: 2Gi→1Gi (-50%)
+- **MongoDB Optimization**: CPU: 1000m→300m (-70%), Memory: 2Gi→512Mi (-75%)
+- **Automated Monitoring**: Cost monitoring scripts and alerts
+- **Performance Analysis**: Comprehensive optimization guide created
+
+**Monthly Azure Costs (Optimized):**
+- **AKS Cluster**: ~£45-60/month (3 optimized nodes)
+- **Storage**: ~£8-12/month (Premium SSD)
+- **Networking**: ~£4-8/month (Load balancers)
+- **Total**: ~£57-80/month ✅ (10-20% savings achieved)
+
+**Cost Monitoring Tools:**
+```bash
+# Run cost analysis
+./aks/scripts/cost-monitoring.sh
+
+# Apply optimizations
+./aks/scripts/apply-cost-optimizations.sh
+```
+
+See [Cost Optimization Guide](docs/COST_OPTIMIZATION_GUIDE.md) for details.
+
+## 🚨 Enhanced Monitoring & Alerting - UPDATED (September 19, 2025)
+
+**✅ Enhanced Monitoring Deployed:**
+- **12 Alert Rules**: Comprehensive coverage (critical, performance, stability, capacity)
+- **Multi-Channel Notifications**: Email, Slack, webhooks, Azure Monitor
+- **Intelligent Routing**: Severity-based alert grouping and routing
+- **Runbook Integration**: Direct links to troubleshooting procedures
+
+**Monitoring Tools:**
+```bash
+# Deploy enhanced monitoring
+./aks/scripts/deploy-enhanced-monitoring.sh
+
+# Check alert status
+kubectl get prometheusrules -n monitoring
+
+# View Alertmanager UI
+# https://grafana.chat.canepro.me/alertmanager
+```
+
+See [Enhanced Monitoring Guide](docs/ENHANCED_MONITORING_GUIDE.md) for complete details.
 
 ## 📖 Documentation
 

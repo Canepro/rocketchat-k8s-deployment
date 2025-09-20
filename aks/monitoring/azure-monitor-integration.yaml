@@ -1,0 +1,241 @@
+# Azure Monitor Integration for AKS
+# Enables comprehensive monitoring and alerting through Azure Monitor
+# Date: September 19, 2025
+
+---
+# Azure Monitor Metrics Publisher
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: azure-monitor-config
+  namespace: monitoring
+  labels:
+    app: azure-monitor-integration
+data:
+  config.json: |
+    {
+      "azureMonitor": {
+        "enabled": true,
+        "workspaceId": "${AZURE_LOG_ANALYTICS_WORKSPACE_ID}",
+        "workspaceKey": "${AZURE_LOG_ANALYTICS_WORKSPACE_KEY}",
+        "resourceId": "${AKS_RESOURCE_ID}",
+        "clusterName": "rocketchat-aks",
+        "region": "uksouth"
+      },
+      "metrics": {
+        "enabled": true,
+        "interval": "60s",
+        "categories": [
+          "container",
+          "node",
+          "pod",
+          "deployment",
+          "service",
+          "ingress",
+          "persistentvolume",
+          "persistentvolumeclaim"
+        ]
+      },
+      "logs": {
+        "enabled": true,
+        "categories": [
+          "kube-apiserver",
+          "kube-controller-manager",
+          "kube-scheduler",
+          "kube-audit",
+          "cluster-autoscaler",
+          "cloud-controller-manager"
+        ],
+        "applications": [
+          "rocketchat",
+          "mongodb",
+          "grafana",
+          "prometheus",
+          "loki"
+        ]
+      },
+      "alerts": {
+        "enabled": true,
+        "webhookUrl": "https://monitoring.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Insights/actionGroups/rocketchat-alerts",
+        "rules": [
+          {
+            "name": "AKS Node Down",
+            "description": "AKS node is not responding",
+            "query": "KubeNodeUnready | where Computer != '' | summarize count() by bin(TimeGenerated, 5m)",
+            "threshold": 0,
+            "severity": "Critical"
+          },
+          {
+            "name": "Pod Crash Loop",
+            "description": "Pods are crashing repeatedly",
+            "query": "KubePodInventory | where PodStatus == 'CrashLoopBackOff' | summarize count() by bin(TimeGenerated, 5m)",
+            "threshold": 0,
+            "severity": "Warning"
+          },
+          {
+            "name": "High CPU Usage",
+            "description": "Container CPU usage above 80%",
+            "query": "Perf | where ObjectName == 'K8SContainer' and CounterName == '% Processor Time' | summarize avg(CounterValue) by bin(TimeGenerated, 5m), Computer, InstanceName | where avg_CounterValue > 80",
+            "threshold": 80,
+            "severity": "Warning"
+          },
+          {
+            "name": "High Memory Usage",
+            "description": "Container memory usage above 90%",
+            "query": "Perf | where ObjectName == 'K8SContainer' and CounterName == '% Used Memory' | summarize avg(CounterValue) by bin(TimeGenerated, 5m), Computer, InstanceName | where avg_CounterValue > 90",
+            "threshold": 90,
+            "severity": "Warning"
+          }
+        ]
+      }
+    }
+
+---
+# Azure Monitor Container Insights DaemonSet
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: azure-monitor-agent
+  namespace: monitoring
+  labels:
+    app: azure-monitor-agent
+    component: container-insights
+spec:
+  selector:
+    matchLabels:
+      app: azure-monitor-agent
+  template:
+    metadata:
+      labels:
+        app: azure-monitor-agent
+        component: container-insights
+    spec:
+      serviceAccountName: azure-monitor-agent
+      containers:
+      - name: azure-monitor-agent
+        image: mcr.microsoft.com/azuremonitor/containerinsights/ciprod:3.1.8
+        env:
+          - name: AZMON_COLLECT_ENV
+            value: "True"
+          - name: AZMON_LOG_LEVEL
+            value: "Info"
+          - name: AZMON_CLUSTER_NAME
+            value: "rocketchat-aks"
+          - name: AZMON_CLUSTER_REGION
+            value: "uksouth"
+          - name: AZMON_PROMETHEUS_SCRAPE
+            value: "True"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 750Mi
+          requests:
+            cpu: 150m
+            memory: 250Mi
+        volumeMounts:
+        - name: azure-monitor-config
+          mountPath: /etc/config
+          readOnly: true
+        - name: varlogcontainers
+          mountPath: /var/log/containers
+          readOnly: true
+        - name: varlogpods
+          mountPath: /var/log/pods
+          readOnly: true
+        - name: varlibdockercontainers
+          mountPath: /var/lib/docker/containers
+          readOnly: true
+        - name: azure-monitor-logs
+          mountPath: /var/log/azure
+      volumes:
+      - name: azure-monitor-config
+        configMap:
+          name: azure-monitor-config
+      - name: varlogcontainers
+        hostPath:
+          path: /var/log/containers
+      - name: varlogpods
+        hostPath:
+          path: /var/log/pods
+      - name: varlibdockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
+      - name: azure-monitor-logs
+        emptyDir: {}
+
+---
+# Service Account for Azure Monitor
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: azure-monitor-agent
+  namespace: monitoring
+  labels:
+    app: azure-monitor-agent
+
+---
+# ClusterRole for Azure Monitor
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: azure-monitor-agent
+  labels:
+    app: azure-monitor-agent
+rules:
+- apiGroups: [""]
+  resources: ["pods", "nodes", "nodes/proxy", "services", "endpoints", "persistentvolumes", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["replicasets", "deployments", "daemonsets", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["clusterroles", "clusterrolebindings", "roles", "rolebindings"]
+  verbs: ["get", "list", "watch"]
+
+---
+# ClusterRoleBinding for Azure Monitor
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: azure-monitor-agent
+  labels:
+    app: azure-monitor-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: azure-monitor-agent
+subjects:
+- kind: ServiceAccount
+  name: azure-monitor-agent
+  namespace: monitoring
+
+---
+# Azure Monitor Action Group (for alerts)
+apiVersion: monitoring.azure.com/v1
+kind: ActionGroup
+metadata:
+  name: rocketchat-alerts
+  namespace: monitoring
+spec:
+  actionGroupName: "rocketchat-alerts"
+  resourceGroup: "rocketchat-rg"  # Replace with your resource group
+  shortName: "RCAlerts"
+  emailReceivers:
+    - name: "admin-email"
+      emailAddress: "admin@yourdomain.com"  # Replace with your email
+      useCommonAlertSchema: true
+  # Uncomment and configure for additional notification channels
+  # smsReceivers:
+  #   - name: "admin-sms"
+  #     countryCode: "44"
+  #     phoneNumber: "07123456789"
+  # webhookReceivers:
+  #   - name: "slack-webhook"
+  #     serviceUri: "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+  #     useCommonAlertSchema: true

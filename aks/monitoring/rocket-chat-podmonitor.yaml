@@ -15,8 +15,8 @@ spec:
     matchNames:
       - rocketchat
   podMetricsEndpoints:
-  # Main Rocket.Chat application metrics
-  - port: http
+  # MongoDB metrics (if available on port 9216)
+  - port: mongodb-metrics
     path: /metrics
     interval: 30s
     scrapeTimeout: 10s
@@ -27,8 +27,3 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_namespace]
       targetLabel: namespace
     metricRelabelings: []
-  - port: ms-metrics
-    path: /metrics
-    interval: 30s
-    scrapeTimeout: 10s
-  # Additional microservices endpoint can be re-added once port 'ms-metrics' confirmed.

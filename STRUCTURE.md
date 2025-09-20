@@ -13,11 +13,13 @@ rocketchat-k8s-deployment/
 │   │   │   └── clusterissuer.yaml        # Let's Encrypt cluster issuer
 │   │   └── 📁 helm-values/               # Helm chart value files
 │   │       ├── values-official.yaml      # Main Rocket.Chat configuration
-│   │       ├── values-monitoring.yaml    # Monitoring stack configuration
 │   │       ├── values-production.yaml    # Production settings
 │   │       ├── values.yaml               # Base configuration
 │   │       ├── loki-stack-values.yaml    # Loki logging configuration
-│   │       └── monitoring-values.yaml    # Additional monitoring settings
+│   │       ├── mongodb-values.yaml       # MongoDB configuration
+│   │       ├── monitoring-values.yaml    # Additional monitoring settings
+│   │       ├── values-official-backup-*.yaml # Configuration backups
+│   │       └── values-monitoring.yaml    # Monitoring stack configuration
 │   │
 │   ├── 📁 deployment/                     # AKS deployment scripts
 │   │   ├── deploy-aks-official.sh        # Main AKS deployment script
@@ -36,21 +38,25 @@ rocketchat-k8s-deployment/
 │   │   └── quick-loki-guide.md           # Quick start guide for Loki
 │   │
 │   ├── 📁 monitoring/                     # AKS monitoring configurations
+│   │   ├── azure-monitor-integration.yaml # Azure Monitor configuration
 │   │   ├── grafana-datasource-loki.yaml  # Loki data source configuration
 │   │   ├── prometheus-current.yaml       # Prometheus configuration
 │   │   ├── prometheus-patch.yaml         # Prometheus patches
-│   │   ├── rocket-chat-alerts.yaml       # Alert configurations
-│   │   ├── rocket-chat-dashboard-configmap.yaml # Dashboard ConfigMap
+│   │   ├── rocket-chat-alerts.yaml       # Alert rules (12 comprehensive alerts)
+│   │   ├── rocket-chat-dashboard-configmap.yaml # Grafana dashboard
 │   │   ├── rocket-chat-podmonitor.yaml   # Pod monitoring configuration
 │   │   ├── rocket-chat-servicemonitor.yaml # Service monitoring
 │   │   └── loki-values.yaml              # Loki-specific values
 │   │
 │   └── 📁 scripts/                        # AKS utility scripts
 │       ├── aks-shell.sh                  # AKS cluster access script
-│       ├── migrate-to-aks.sh             # Migration utilities
-│       ├── setup-kubeconfig.sh           # Kubernetes configuration setup
+│       ├── apply-cost-optimizations.sh   # Cost optimization deployment
+│       ├── cost-monitoring.sh            # Cost monitoring and analysis
+│       ├── deploy-enhanced-monitoring.sh # Enhanced monitoring deployment
 │       ├── deploy-mongodb-standalone.sh  # Brownout workaround deployment
-│       └── fix-mongodb-image.sh          # Helper script (image repo fixes)
+│       ├── fix-mongodb-image.sh          # Helper script (image repo fixes)
+│       ├── migrate-to-aks.sh             # Migration utilities
+│       └── setup-kubeconfig.sh           # Kubernetes configuration setup
 │
 ├── 📁 microk8s/                           # MicroK8s (Legacy/Rollback)
 │   ├── 📁 config/                         # MicroK8s configurations

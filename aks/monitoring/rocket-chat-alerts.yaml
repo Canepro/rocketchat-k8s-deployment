@@ -10,6 +10,7 @@ spec:
   groups:
   - name: rocketchat
     rules:
+    # Critical Service Availability Alerts
     - alert: RocketChatDown
       expr: avg(up{namespace="rocketchat", pod=~"rocketchat-.*"}) == 0
       for: 5m
@@ -17,9 +18,22 @@ spec:
         severity: critical
         service: rocketchat
       annotations:
-        summary: "Rocket.Chat is down"
-        description: "Rocket.Chat has been down for more than 5 minutes"
+        summary: "🚨 Rocket.Chat is down"
+        description: "Rocket.Chat has been down for more than 5 minutes. Immediate action required."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/TROUBLESHOOTING_GUIDE.md"
 
+    - alert: MongoDBConnectionIssues
+      expr: avg(up{namespace="rocketchat", pod=~"mongodb-.*"}) == 0
+      for: 5m
+      labels:
+        severity: critical
+        service: mongodb
+      annotations:
+        summary: "🚨 MongoDB connection issues"
+        description: "MongoDB replica set is down. Rocket.Chat will be unavailable."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/TROUBLESHOOTING_GUIDE.md"
+
+    # Performance Alerts
     - alert: RocketChatHighCPU
       expr: |
         sum by (pod)(rate(container_cpu_usage_seconds_total{namespace="rocketchat", pod=~"rocketchat-.*", image!=""}[5m]))
@@ -30,8 +44,9 @@ spec:
         severity: warning
         service: rocketchat
       annotations:
-        summary: "Rocket.Chat high CPU usage"
-        description: "Rocket.Chat CPU utilization above 80% for 15 minutes"
+        summary: "⚠️ Rocket.Chat high CPU usage"
+        description: "Rocket.Chat CPU utilization above 80% for 15 minutes. Consider scaling or optimization."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/PERFORMANCE_ANALYSIS.md"
 
     - alert: RocketChatHighMemory
       expr: |
@@ -44,9 +59,11 @@ spec:
         severity: warning
         service: rocketchat
       annotations:
-        summary: "Rocket.Chat high memory usage"
-        description: "Rocket.Chat memory usage above 90% of limit for 10 minutes"
+        summary: "⚠️ Rocket.Chat high memory usage"
+        description: "Rocket.Chat memory usage above 90% of limit for 10 minutes."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/PERFORMANCE_ANALYSIS.md"
 
+    # Stability Alerts
     - alert: RocketChatPodRestarting
       expr: increase(kube_pod_container_status_restarts_total{namespace="rocketchat", pod=~"rocketchat-.*"}[10m]) > 2
       for: 5m
@@ -54,15 +71,106 @@ spec:
         severity: warning
         service: rocketchat
       annotations:
-        summary: "Rocket.Chat pod restarting"
-        description: "More than 2 restarts in the last 10 minutes"
+        summary: "⚠️ Rocket.Chat pod restarting frequently"
+        description: "More than 2 restarts in the last 10 minutes. Check logs for issues."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/TROUBLESHOOTING_GUIDE.md"
 
-    - alert: MongoDBConnectionIssues
-      expr: avg(up{namespace="rocketchat", pod=~"mongodb-.*"}) == 0
+    - alert: RocketChatMicroserviceDown
+      expr: avg(up{namespace="rocketchat", pod=~"rocketchat-(account|authorization|ddp-streamer|presence|stream-hub)-.*"}) < 1
+      for: 5m
+      labels:
+        severity: warning
+        service: rocketchat
+      annotations:
+        summary: "⚠️ Rocket.Chat microservice down"
+        description: "One or more Rocket.Chat microservices are not running. May impact functionality."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/TROUBLESHOOTING_GUIDE.md"
+
+    # MongoDB Specific Alerts
+    - alert: MongoDBHighCPU
+      expr: |
+        sum by (pod)(rate(container_cpu_usage_seconds_total{namespace="rocketchat", pod=~"mongodb-.*", image!=""}[5m]))
+          /
+        clamp_min(sum by (pod)(kube_pod_container_resource_limits{namespace="rocketchat", resource="cpu", unit="core", pod=~"mongodb-.*"}), 0.001) > 0.8
+      for: 15m
+      labels:
+        severity: warning
+        service: mongodb
+      annotations:
+        summary: "⚠️ MongoDB high CPU usage"
+        description: "MongoDB CPU utilization above 80% for 15 minutes. Database performance may be impacted."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/PERFORMANCE_ANALYSIS.md"
+
+    - alert: MongoDBHighMemory
+      expr: |
+        sum by(pod)(container_memory_usage_bytes{namespace="rocketchat", pod=~"mongodb-.*"})
+          /
+        clamp_min(sum by(pod)(kube_pod_container_resource_limits{namespace="rocketchat", resource="memory", pod=~"mongodb-.*"}), 1)
+          > 0.9
+      for: 10m
+      labels:
+        severity: warning
+        service: mongodb
+      annotations:
+        summary: "⚠️ MongoDB high memory usage"
+        description: "MongoDB memory usage above 90% of limit for 10 minutes."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/PERFORMANCE_ANALYSIS.md"
+
+    # Storage and Capacity Alerts
+    - alert: RocketChatStorageUsageHigh
+      expr: |
+        kubelet_volume_stats_used_bytes{namespace="rocketchat"}
+          /
+        kubelet_volume_stats_capacity_bytes{namespace="rocketchat"} > 0.85
+      for: 15m
+      labels:
+        severity: warning
+        service: storage
+      annotations:
+        summary: "⚠️ Rocket.Chat storage usage high"
+        description: "Persistent volume usage above 85%. Consider cleanup or expansion."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/COST_OPTIMIZATION_GUIDE.md"
+
+    - alert: MongoDBStorageUsageHigh
+      expr: |
+        kubelet_volume_stats_used_bytes{namespace="rocketchat", persistentvolumeclaim=~"mongodb-.*"}
+          /
+        kubelet_volume_stats_capacity_bytes{namespace="rocketchat", persistentvolumeclaim=~"mongodb-.*"} > 0.90
+      for: 15m
+      labels:
+        severity: warning
+        service: mongodb
+      annotations:
+        summary: "⚠️ MongoDB storage usage critical"
+        description: "MongoDB storage usage above 90%. Database may become read-only."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/TROUBLESHOOTING_GUIDE.md"
+
+    # Network and Connectivity Alerts
+    - alert: RocketChatIngressDown
+      expr: |
+        probe_success{namespace="monitoring", service="monitoring-ingress"}
+        or
+        up{namespace="rocketchat", service="rocketchat-rocketchat"} == 0
       for: 5m
       labels:
         severity: critical
-        service: mongodb
+        service: ingress
       annotations:
-        summary: "MongoDB connection issues"
-        description: "MongoDB metrics endpoints down for more than 5 minutes"
+        summary: "🚨 Rocket.Chat ingress unavailable"
+        description: "Rocket.Chat ingress/service is not responding to health checks."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/TROUBLESHOOTING_GUIDE.md"
+
+    # Cost Monitoring Alerts
+    - alert: HighResourceUtilization
+      expr: |
+        avg(rate(container_cpu_usage_seconds_total{namespace="rocketchat"}[5m])) > 0.7
+        or
+        avg(container_memory_usage_bytes{namespace="rocketchat"} / container_spec_memory_limit_bytes{namespace="rocketchat"}) > 0.8
+      for: 30m
+      labels:
+        severity: info
+        service: cost
+      annotations:
+        summary: "💰 High resource utilization detected"
+        description: "Resources running at high utilization. Review for cost optimization opportunities."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/COST_OPTIMIZATION_GUIDE.md"
