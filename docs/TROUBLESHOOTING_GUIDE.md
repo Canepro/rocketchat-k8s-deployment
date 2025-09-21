@@ -1,18 +1,19 @@
 # 🔧 Rocket.Chat AKS Deployment Troubleshooting Guide
 
 **Created**: September 4, 2025
-**Last Updated**: September 19, 2025 (Monitoring Stack Troubleshooting Complete)
+**Last Updated**: September 21, 2025 (Complete Loki & Dashboard Issues Resolution)
 **Purpose**: Comprehensive troubleshooting guide for Rocket.Chat deployment on Azure Kubernetes Service
 **Scope**: Official Helm chart deployment with enhanced monitoring
 **Status**: Living document - updated as issues are encountered and resolved
-**Current Status**: All major issues resolved - Rocket.Chat deployment fully operational with complete monitoring stack (Updated: September 19, 2025)
+**Current Status**: All major issues resolved - Rocket.Chat deployment fully operational with complete monitoring stack including Loki 2.9.0 with volume API support (Updated: September 21, 2025)
 
 ## 🏆 **MONITORING STACK: PRODUCTION READY**
 - ✅ **Rocket.Chat Metrics**: 1238+ series flowing, all dashboards operational
 - ✅ **Prometheus**: ServiceMonitor discovery resolved, all targets UP
-- ✅ **Grafana**: Beautiful real-time dashboards with 7 working panels
-- ✅ **Loki**: Log aggregation and visualization working perfectly
+- ✅ **Grafana**: Beautiful real-time dashboards with corrected panels and proper data
+- ✅ **Loki 2.9.0**: Log aggregation with volume API support for advanced log visualization
 - ✅ **Alertmanager**: Email notifications configured
+- ✅ **Dashboard Panels**: Fixed Pod Restarts panel and added Total vs Active Users panel
 - 📋 **Next**: MongoDB exporter deployment (optional enhancement)
 
 ## 🚨 **Most Common Issues & Quick Fixes**
@@ -43,6 +44,88 @@ kubectl port-forward -n monitoring prometheus-monitoring-kube-prometheus-prometh
 kubectl get servicemonitors.monitoring.coreos.com -n monitoring | grep rocketchat
 kubectl apply -f aks/monitoring/rocketchat-servicemonitors.yaml
 ```
+
+### **Loki Volume API 404 Error**
+**Symptoms:** 
+- Console error: `GET https://grafana.chat.canepro.me/api/datasources/uid/loki/resources/index/volume?end=... 404 (Not Found)`
+- Grafana shows "Log volume has not been configured" message
+- Loki version 2.6.1 doesn't support volume API
+
+**Root Cause:** 
+1. Loki version 2.6.1 doesn't support volume API feature
+2. Grafana datasource pointing to wrong Loki service URL
+
+**Complete Fix:**
+```bash
+# Step 1: Upgrade Loki to version 2.9.0 (supports volume API)
+helm upgrade loki grafana/loki-stack --namespace monitoring --values aks/monitoring/loki-values.yaml --timeout=600s
+
+# Step 2: Fix Grafana datasource URL (if needed)
+kubectl patch configmap grafana-datasource-loki -n monitoring --type='merge' -p='{"data":{"loki.yaml":"# Automatically provisioned Loki datasource\napiVersion: 1\ndatasources:\n  - name: Loki\n    type: loki\n    uid: loki\n    url: http://loki.monitoring.svc.cluster.local:3100\n    access: proxy\n    isDefault: true\n    editable: false\n    jsonData:\n      maxLines: 2000\n      timeout: 60\n      manageAlerts: false\n      derivedFields: []\n      httpHeaderName1: \"X-Scope-OrgID\"\n    secureJsonData: {}\n"}}'
+
+# Step 3: Restart Grafana to pick up datasource changes
+kubectl rollout restart deployment/monitoring-grafana -n monitoring
+kubectl rollout status deployment/monitoring-grafana -n monitoring --timeout=300s
+```
+
+**Configuration Changes:**
+- Upgraded Loki from 2.6.1 → 2.9.0 (supports volume API)
+- Updated Grafana datasource URL from `loki-stack.loki-stack.svc.cluster.local:3100` → `loki.monitoring.svc.cluster.local:3100`
+
+### **Dashboard Panel Shows Wrong Data**
+**Symptoms:**
+- "Rocket.Chat Pod Restarts" panel shows "Total Users" data instead of pod restart metrics
+- Panel title doesn't match the data being displayed
+
+**Root Cause:** Incorrect Prometheus query in dashboard panel configuration
+
+**Quick Fix:** Apply the corrected dashboard:
+```bash
+# Apply the fixed dashboard configuration
+kubectl apply -f aks/monitoring/rocket-chat-dashboard-configmap.yaml -n monitoring
+
+# Restart Grafana to load updated dashboard
+kubectl rollout restart deployment/grafana -n monitoring
+
+# Wait for restart
+kubectl rollout status deployment/grafana -n monitoring --timeout=300s
+```
+
+**Configuration Changes:**
+- Fixed Pod Restarts panel query: `increase(kube_pod_container_status_restarts_total{namespace="rocketchat", pod=~"rocketchat.*"}[5m])`
+- Added proper Total Users vs Active Users panel with separate queries
+
+### **Grafana Loki Datasource Connection Error**
+**Symptoms:**
+- Error: `dial tcp: lookup loki-stack.loki-stack.svc.cluster.local on 10.0.0.10:53: no such host`
+- Grafana Explore page shows DNS lookup failure for Loki
+- Loki queries fail with connection errors
+
+**Root Cause:** Grafana datasource configured with old Loki service URL after Loki migration
+
+**Quick Fix:** Update datasource URL to correct service:
+```bash
+# Update Grafana datasource to point to correct Loki service
+kubectl patch configmap grafana-datasource-loki -n monitoring --type='merge' -p='{"data":{"loki.yaml":"# Automatically provisioned Loki datasource\napiVersion: 1\ndatasources:\n  - name: Loki\n    type: loki\n    uid: loki\n    url: http://loki.monitoring.svc.cluster.local:3100\n    access: proxy\n    isDefault: true\n    editable: false\n    jsonData:\n      maxLines: 2000\n      timeout: 60\n      manageAlerts: false\n      derivedFields: []\n      httpHeaderName1: \"X-Scope-OrgID\"\n    secureJsonData: {}\n"}}'
+
+# Restart Grafana to apply changes
+kubectl rollout restart deployment/monitoring-grafana -n monitoring
+```
+
+**Configuration Change:** Updated datasource URL from `loki-stack.loki-stack.svc.cluster.local:3100` → `loki.monitoring.svc.cluster.local:3100`
+
+### **Automated Fix Script**
+**One-Command Solution:** Use the automated fix script:
+```bash
+# Run the comprehensive fix script
+./aks/scripts/fix-loki-volume-and-dashboard.sh
+```
+
+This script will:
+1. ✅ Enable Loki volume API
+2. ✅ Fix dashboard panel data issues  
+3. ✅ Add proper Total Users vs Active Users panel
+4. ✅ Restart all necessary services
 
 **✅ Successfully Resolved Issues:**
 - PVC deadlock causing pod scheduling failures
@@ -4494,3 +4577,103 @@ kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-prometheus 909
 Notes:
 - Standardize on `monitoring.coreos.com/v1` CRDs; avoid mixing with `azmonitoring.coreos.com/v1` for the same resources.
 - In `aks/config/helm-values/monitoring-values.yaml`, define PodMonitors under `prometheus.additionalPodMonitors` with a `spec:` block so Helm renders them natively.
+
+---
+
+## 🐛 **ReadWriteOnce Multi-Attach Issue (September 21, 2025)**
+
+### **Issue: Rocket.Chat Pod Stuck in ContainerCreating - ReadWriteOnce Multi-Attach**
+
+**Date Added:** September 21, 2025
+
+**Symptoms:**
+- One Rocket.Chat pod runs successfully while another is stuck in `ContainerCreating` status for hours
+- Pod description shows it's scheduled but container never starts
+- `kubectl get pods` shows one pod `Running` and another `0/1 ContainerCreating`
+- Both pods trying to use the same PersistentVolumeClaim (PVC)
+- PVC has `ReadWriteOnce` access mode
+- Pods scheduled on different nodes
+- No recent events visible (events may have expired after hours)
+
+**Example Output:**
+```bash
+$ kubectl get pods -n rocketchat | grep rocketchat-9f5d5c7f6
+rocketchat-rocketchat-9f5d5c7f6-bdzdc      1/1     Running             3 (41h ago)     41h
+rocketchat-rocketchat-9f5d5c7f6-sbrzv      0/1     ContainerCreating   0               10h
+
+$ kubectl describe pvc rocketchat-rocketchat -n rocketchat
+Access Modes:  RWO
+Used By:       rocketchat-rocketchat-9f5d5c7f6-bdzdc
+               rocketchat-rocketchat-9f5d5c7f6-sbrzv
+```
+
+**Root Cause:**
+- Deployment configured for multiple replicas (e.g., `replicas: 2`) but using ReadWriteOnce storage
+- ReadWriteOnce PVCs can only be mounted by pods on the same node
+- Kubernetes scheduler placed pods on different nodes, causing volume attachment conflict
+- First pod successfully attached the PVC, second pod cannot mount the same volume from different node
+
+**Solutions:**
+
+**Option A: Scale to Single Replica (Recommended)**
+```bash
+# Scale deployment to 1 replica
+kubectl scale deployment rocketchat-rocketchat -n rocketchat --replicas=1
+
+# Verify fix
+kubectl get pods -n rocketchat | grep rocketchat
+```
+
+**Option B: Delete Stuck Pod (Temporary)**
+```bash
+# Delete the stuck pod (will be rescheduled, possibly on same node)
+kubectl delete pod <stuck-pod-name> -n rocketchat
+
+# Monitor for rescheduling
+kubectl get pods -n rocketchat -w
+```
+
+**Option C: Change Storage Class (Advanced)**
+```bash
+# Check available storage classes with ReadWriteMany support
+kubectl get storageclass
+
+# Update Helm values to use ReadWriteMany storage (if supported)
+# This requires recreating the PVC and may cause data loss
+```
+
+**Prevention:**
+- For applications requiring persistent storage, use single replica with ReadWriteOnce
+- Use ReadWriteMany storage classes if multiple replicas are needed
+- Monitor deployment replica count vs. storage access modes
+- Consider StatefulSets for applications requiring persistent storage per replica
+
+**Expected Resolution Time:** Immediate (seconds) after scaling to 1 replica
+
+**Advanced Troubleshooting:**
+```bash
+# Check deployment replica configuration
+kubectl get deployment rocketchat-rocketchat -n rocketchat -o jsonpath='{.spec.replicas}'
+
+# Verify PVC access mode
+kubectl get pvc rocketchat-rocketchat -n rocketchat -o jsonpath='{.spec.accessModes[0]}'
+
+# Check which nodes pods are scheduled on
+kubectl get pods -n rocketchat -o wide | grep rocketchat-9f5d5c7f6
+
+# Inspect volume attachments
+kubectl get volumeattachments.storage.k8s.io | grep $(kubectl get pvc rocketchat-rocketchat -n rocketchat -o jsonpath='{.spec.volumeName}')
+```
+
+**Success Indicators:**
+- ✅ Only one Rocket.Chat pod remains in `Running` status
+- ✅ No pods stuck in `ContainerCreating` 
+- ✅ Rocket.Chat accessible at configured URL
+- ✅ Application functions normally with single replica
+
+**Related Issues:**
+- **PVC Terminating Deadlock**: Can occur when trying to delete PVCs while pods are using them
+- **Multi-Attach Errors in Grafana**: Similar RWO issues during rolling updates
+- **MongoDB Replica Set Issues**: Also uses RWO storage, same principles apply
+
+---
