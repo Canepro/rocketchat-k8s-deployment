@@ -444,3 +444,26 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 > 💼 **Portfolio Ready**: This project includes live demo access and comprehensive integration guides for showcasing in professional portfolios. See the [portfolio/](portfolio/) directory for HTML/CSS templates and deployment instructions.
 
 *Last Updated: September 21, 2025 - Production-ready with live portfolio demos, anonymous dashboard access, comprehensive monitoring, and complete documentation*
+---
+
+## 🔐 Security & Privacy Notice
+
+### **Public Repository Information**
+This repository is designed for public sharing and portfolio demonstration. All sensitive information has been:
+
+- ✅ **Externalized**: Secrets stored in Kubernetes secrets, not in code
+- ✅ **Parameterized**: Configuration examples use placeholders
+- ✅ **Sanitized**: Personal information replaced with examples
+- ✅ **Demo-Safe**: Live demos configured for public access
+
+### **Live Demo Domains**
+The following domains are intentionally public for portfolio demonstration:
+- `chat.canepro.me` - Live Rocket.Chat instance with guest access
+- `grafana.chat.canepro.me` - Public monitoring dashboard (anonymous access)
+
+### **Configuration Security**
+- All credentials stored in Kubernetes secrets
+- Configuration files use environment variables and placeholders
+- No hardcoded passwords, API keys, or private information
+- Azure resource names replaced with placeholders for reusability
+

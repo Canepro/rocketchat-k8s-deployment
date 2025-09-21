@@ -19,7 +19,7 @@ data:
         "workspaceId": "${AZURE_LOG_ANALYTICS_WORKSPACE_ID}",
         "workspaceKey": "${AZURE_LOG_ANALYTICS_WORKSPACE_KEY}",
         "resourceId": "${AKS_RESOURCE_ID}",
-        "clusterName": "rocketchat-aks",
+        "clusterName": "<your-aks-cluster>",
         "region": "uksouth"
       },
       "metrics": {
@@ -120,7 +120,7 @@ spec:
           - name: AZMON_LOG_LEVEL
             value: "Info"
           - name: AZMON_CLUSTER_NAME
-            value: "rocketchat-aks"
+            value: "<your-aks-cluster>"
           - name: AZMON_CLUSTER_REGION
             value: "uksouth"
           - name: AZMON_PROMETHEUS_SCRAPE
@@ -224,7 +224,7 @@ metadata:
   namespace: monitoring
 spec:
   actionGroupName: "rocketchat-alerts"
-  resourceGroup: "rocketchat-rg"  # Replace with your resource group
+  resourceGroup: "<your-resource-group>"  # Replace with your resource group
   shortName: "RCAlerts"
   emailReceivers:
     - name: "admin-email"

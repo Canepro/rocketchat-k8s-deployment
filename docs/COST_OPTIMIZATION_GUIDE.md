@@ -69,7 +69,7 @@ Optimizations have been successfully implemented:
 # Azure CLI commands for cost monitoring
 az monitor action-group create \
   --name "cost-alerts" \
-  --resource-group "rocketchat-rg" \
+  --resource-group "<your-resource-group>" \
   --short-name "cost" \
   --email-receiver "admin@yourdomain.com"
 ```
@@ -79,7 +79,7 @@ az monitor action-group create \
 # Create monthly budget with alerts
 az consumption budget create \
   --budget-name "monthly-budget" \
-  --resource-group "rocketchat-rg" \
+  --resource-group "<your-resource-group>" \
   --amount 80 \
   --time-grain "Monthly" \
   --start-date "2025-09-01" \

@@ -713,7 +713,7 @@ MongoDB Memory:    2048Mi → 512Mi (-75% reduction)
 **Last Reviewed**: September 19, 2025
 **Next Review Date**: October 19, 2025 (monthly cost review)
 **Document Owner**: Vincent Mogah
-**Contact**: mogah.vincent@hotmail.com
+**Contact**: your-email@example.com
 
 ---
 

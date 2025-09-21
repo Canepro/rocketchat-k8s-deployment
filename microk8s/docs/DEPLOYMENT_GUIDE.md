@@ -7,7 +7,7 @@ This guide will walk you through deploying Rocket.Chat with monitoring on your A
 - ✅ Azure Ubuntu VM (B2s: 2 vCPUs, 4GB RAM)
 - ✅ Public IP: `20.68.53.249`
 - ✅ Domain: `chat.canepro.me` (DNS A record configured)
-- ✅ Email: `mogah.vincent@hotmail.com` (for Let's Encrypt)
+- ✅ Email: `your-email@example.com` (for Let's Encrypt)
 
 ## 🔧 **Step 1: Server Setup**
 

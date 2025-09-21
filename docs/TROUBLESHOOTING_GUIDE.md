@@ -1278,7 +1278,7 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: mogah.vincent@hotmail.com  # Your email
+    email: your-email@example.com  # Your email
     privateKeySecretRef:
       name: cert-manager-secret-production
     solvers:
@@ -4008,7 +4008,7 @@ kubectl logs -n ingress-nginx deployment/ingress-nginx-controller --tail=50 | gr
 **Last Updated:** September 6, 2025
 **Next Review:** September 20, 2025 (post-deployment)
 **Owner:** Vincent Mogah
-**Contact:** mogah.vincent@hotmail.com
+**Contact:** your-email@example.com
 
 ---
 

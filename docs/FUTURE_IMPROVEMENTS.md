@@ -143,4 +143,4 @@ This document tracks potential enhancements for the Rocket.Chat on AKS deploymen
 
 **Next Review**: October 19, 2025 (monthly review)
 **Owner**: Vincent Mogah
-**Contact**: mogah.vincent@hotmail.com
+**Contact**: your-email@example.com

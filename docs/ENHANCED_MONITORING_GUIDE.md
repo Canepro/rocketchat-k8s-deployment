@@ -115,7 +115,7 @@ webhook_configs:
 ```kql
 // Rocket.Chat pod status
 KubePodInventory
-| where ClusterName == "rocketchat-aks"
+| where ClusterName == "<your-aks-cluster>"
 | where Namespace == "rocketchat"
 | where PodName startswith "rocketchat"
 | summarize count() by PodStatus, bin(TimeGenerated, 5m)

@@ -101,7 +101,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
         # Get Azure environment variables
         SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-        RESOURCE_GROUP=$(az aks show --resource-group rocketchat-rg --name rocketchat-aks --query resourceGroup -o tsv 2>/dev/null || echo "rocketchat-rg")
+        RESOURCE_GROUP=$(az aks show --resource-group <your-resource-group> --name <your-aks-cluster> --query resourceGroup -o tsv 2>/dev/null || echo "<your-resource-group>")
 
         print_status "Configuring Azure Monitor integration..."
 
@@ -122,7 +122,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
             # Deploy Azure Monitor integration
             export AZURE_LOG_ANALYTICS_WORKSPACE_ID=$WORKSPACE_ID
             export AZURE_LOG_ANALYTICS_WORKSPACE_KEY=$WORKSPACE_KEY
-            export AKS_RESOURCE_ID=$(az aks show --resource-group $RESOURCE_GROUP --name rocketchat-aks --query id -o tsv 2>/dev/null || echo "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.ContainerService/managedClusters/rocketchat-aks")
+            export AKS_RESOURCE_ID=$(az aks show --resource-group $RESOURCE_GROUP --name <your-aks-cluster> --query id -o tsv 2>/dev/null || echo "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.ContainerService/managedClusters/<your-aks-cluster>")
             export SUBSCRIPTION_ID=$SUBSCRIPTION_ID
 
             # Substitute environment variables in the YAML
