@@ -1,0 +1,120 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-public-config
+  namespace: monitoring
+  labels:
+    grafana_config: "1"
+data:
+  public.ini: |
+    [auth.anonymous]
+    enabled = true
+    org_name = Public
+    org_role = Viewer
+    hide_version = true
+    
+    [security]
+    allow_embedding = true
+    
+    [snapshots]
+    external_enabled = true
+    external_snapshot_url = https://snapshots.raintank.io
+    external_snapshot_name = Publish to snapshots.raintank.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-public-dashboard-config
+  namespace: monitoring
+data:
+  public-dashboard.json: |
+    {
+      "dashboard": {
+        "uid": "public-rocketchat-overview",
+        "title": "Rocket.Chat Production Monitoring (Public View)",
+        "description": "Public view of Rocket.Chat production monitoring with key metrics",
+        "tags": ["public", "rocketchat", "production"],
+        "timezone": "browser",
+        "refresh": "30s",
+        "time": {"from": "now-2h", "to": "now"},
+        "panels": [
+          {
+            "id": 1,
+            "title": "Service Uptime",
+            "type": "stat",
+            "datasource": {"type": "prometheus", "uid": "prometheus"},
+            "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "avg(up{job=~\".*rocketchat.*\"}) * 100",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "yellow", "value": 95},
+                    {"color": "green", "value": 99}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 2,
+            "title": "Active Pods",
+            "type": "stat",
+            "datasource": {"type": "prometheus", "uid": "prometheus"},
+            "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
+            "targets": [
+              {
+                "expr": "count(kube_pod_status_phase{namespace=\"rocketchat\", phase=\"Running\"})",
+                "refId": "A"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "System Health",
+            "type": "stat",
+            "datasource": {"type": "prometheus", "uid": "prometheus"},
+            "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "(count(kube_pod_status_phase{phase=\"Running\"}) / count(kube_pod_status_phase)) * 100",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "yellow", "value": 90},
+                    {"color": "green", "value": 95}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 4,
+            "title": "Infrastructure Overview",
+            "type": "timeseries",
+            "datasource": {"type": "prometheus", "uid": "prometheus"},
+            "gridPos": {"h": 8, "w": 18, "x": 0, "y": 8},
+            "targets": [
+              {
+                "expr": "count by (namespace) (kube_pod_status_phase{phase=\"Running\"})",
+                "legendFormat": "{{namespace}} Pods",
+                "refId": "A"
+              }
+            ]
+          }
+        ]
+      }
+    }

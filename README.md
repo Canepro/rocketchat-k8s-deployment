@@ -38,8 +38,16 @@ This repository contains a **production-ready, enterprise-grade deployment** of 
 |---------|-----|--------|-------------|
 | **Rocket.Chat** | [chat.canepro.me](https://chat.canepro.me) | 🟢 Production | Main chat application |
 | **Grafana** | [grafana.chat.canepro.me](https://grafana.chat.canepro.me) | 🟢 Production | Monitoring dashboards |
+| **Public Dashboard** | [Portfolio View](https://grafana.chat.canepro.me/d/public-rocketchat-overview) | 🟢 Anonymous | Portfolio demonstration |
 | **Prometheus** | Internal | 🟢 Production | Metrics collection |
 | **Loki** | Internal | 🟢 Production | Log aggregation |
+
+### 🎯 **Live Portfolio Demos**
+
+Experience the live production infrastructure:
+
+- **💬 [Try Live Chat](https://chat.canepro.me)** - Interactive Rocket.Chat instance with guest access
+- **📊 [View Live Dashboard](https://grafana.chat.canepro.me/d/public-rocketchat-overview/rocket-chat-production-monitoring-portfolio-view?orgId=1&refresh=30s&kiosk=tv&theme=dark)** - Real-time monitoring with anonymous access
 
 ## 🏗️ Architecture
 
@@ -93,10 +101,11 @@ graph TB
 
 ### 📊 **Monitoring & Observability**
 - **Metrics Collection**: 1238+ metric series from Rocket.Chat and infrastructure
-- **Custom Dashboards**: 7 real-time panels for application monitoring
-- **Log Aggregation**: Centralized logging with structured query capabilities
+- **Comprehensive Dashboards**: 28 real-time panels with production monitoring
+- **Kubernetes Monitoring**: Pod status, desired vs actual state, workload health
+- **Log Aggregation**: Centralized logging with structured query capabilities via Loki 2.9.0
 - **Alerting**: 12+ alert rules with intelligent routing and notifications
-- **Performance Monitoring**: CPU, memory, API response times, error rates
+- **Performance Monitoring**: CPU, memory, API response times, error rates, user metrics
 
 ### 🔐 **Security & Compliance**
 - **SSL/TLS Encryption**: Automated certificate management with Let's Encrypt
@@ -149,6 +158,12 @@ helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
 
 # Apply ServiceMonitors for Rocket.Chat metrics
 kubectl apply -f aks/monitoring/rocketchat-servicemonitors.yaml
+
+# Apply comprehensive dashboard (28 panels with pod monitoring)
+kubectl apply -f aks/monitoring/rocket-chat-dashboard-comprehensive-configmap.yaml
+
+# Optional: Deploy public dashboard for portfolio demos
+kubectl apply -f aks/monitoring/grafana-public-dashboard-setup.yaml
 ```
 
 ### 4. Access Services
@@ -163,19 +178,24 @@ kubectl apply -f aks/monitoring/rocketchat-servicemonitors.yaml
 
 ### 🎛️ **Grafana Dashboards**
 
-- **Rocket.Chat Production Monitoring**: Application metrics, service health, performance
-- **Kubernetes Cluster Overview**: Infrastructure monitoring and resource utilization
-- **Loki Logs**: Centralized log analysis and troubleshooting
+- **Rocket.Chat Comprehensive Production Monitoring**: 28 panels with complete observability
+  - Pod status and health monitoring (all 55+ cluster pods)
+  - Desired vs actual state tracking (deployments, StatefulSets, DaemonSets)
+  - Application metrics (users, messages, performance)
+  - Infrastructure health with workload status tables
+- **Kubernetes Cluster Overview**: Infrastructure monitoring and resource utilization  
+- **Loki Logs**: Centralized log analysis and troubleshooting with volume API support
 
 ### 📈 **Key Metrics Monitored**
 
 | Category | Metrics | Purpose |
 |----------|---------|---------|
-| **Application** | `rocketchat_users_total`, `rocketchat_rooms_total` | User engagement |
-| **Performance** | `rocketchat_rest_api_*`, response times | API performance |
-| **Infrastructure** | CPU, memory, disk usage | Resource utilization |
-| **Database** | MongoDB connections, operations | Database health |
-| **Networking** | Request rates, error rates | Service reliability |
+| **Application** | `rocketchat_users_active`, `rocketchat_messages_total` | User engagement & activity |
+| **Performance** | `rocketchat_rest_api_*`, response times, message rates | API & messaging performance |
+| **Kubernetes** | `kube_pod_status_phase`, `kube_deployment_status_replicas` | Workload health & state |
+| **Infrastructure** | CPU, memory, pod restarts, node coverage | Resource utilization & stability |
+| **Database** | MongoDB connections, replica status, operations | Database cluster health |
+| **Networking** | Request rates, error rates, DDP connections | Service reliability |
 
 ### 🔔 **Alerting**
 
@@ -196,8 +216,13 @@ kubectl apply -f aks/monitoring/rocketchat-servicemonitors.yaml
 │   ├── 📁 deployment/               # Deployment scripts
 │   ├── 📁 monitoring/               # Monitoring configurations
 │   │   ├── rocketchat-servicemonitors.yaml
-│   │   ├── rocketchat-dashboard-fixed.json
-│   │   └── rocket-chat-alerts.yaml
+│   │   ├── rocketchat-dashboard-comprehensive.json
+│   │   ├── rocket-chat-dashboard-comprehensive-configmap.yaml
+│   │   ├── rocket-chat-alerts.yaml
+│   │   ├── grafana-public-dashboard-setup.yaml
+│   │   ├── grafana-datasource-loki.yaml
+│   │   ├── loki-values.yaml
+│   │   └── mongodb-servicemonitor.yaml
 │   └── 📁 scripts/                  # Utility scripts
 ├── 🏠 microk8s/                     # MicroK8s (Legacy/Development)
 │   ├── 📁 config/                   # MicroK8s configurations
@@ -208,6 +233,11 @@ kubectl apply -f aks/monitoring/rocketchat-servicemonitors.yaml
 │   ├── MONITORING_SETUP_GUIDE.md    # Monitoring setup guide
 │   ├── COST_OPTIMIZATION_GUIDE.md   # Cost optimization strategies
 │   └── [additional guides]          # Specialized documentation
+├── 🎯 portfolio/                    # Portfolio integration assets
+│   ├── portfolio-integration-guide.md
+│   ├── portfolio-demo-access.md
+│   ├── portfolio-demo-styles.css
+│   └── setup-portfolio-demo.sh
 ├── 📄 README.md                     # This file
 └── 📄 LICENSE                       # MIT License
 ```
@@ -224,10 +254,10 @@ kubectl apply -f aks/monitoring/rocketchat-servicemonitors.yaml
 
 ### Key Configuration Files
 
-- **`monitoring-values.yaml`**: Complete Prometheus, Grafana, Loki configuration
+- **`monitoring-values.yaml`**: Complete Prometheus, Grafana, Loki 2.9.0 configuration
 - **`values-official.yaml`**: Rocket.Chat production settings
 - **`rocketchat-servicemonitors.yaml`**: Metrics collection configuration
-- **`rocketchat-dashboard-fixed.json`**: Working Grafana dashboard
+- **`rocketchat-dashboard-comprehensive.json`**: 28-panel comprehensive Grafana dashboard
 
 ## 📚 Documentation
 
@@ -235,16 +265,22 @@ kubectl apply -f aks/monitoring/rocketchat-servicemonitors.yaml
 
 | Guide | Description | Audience |
 |-------|-------------|----------|
-| **[Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md)** | Complete issue resolution (4400+ lines) | DevOps, SRE |
+| **[Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md)** | Complete issue resolution (5300+ lines) | DevOps, SRE |
 | **[Monitoring Setup Guide](docs/MONITORING_SETUP_GUIDE.md)** | Production monitoring implementation | Platform Engineers |
 | **[Cost Optimization Guide](docs/COST_OPTIMIZATION_GUIDE.md)** | Resource optimization strategies | FinOps, Management |
 
 ### 🎯 **Quick Reference**
 
-- **[Service Access](docs/SERVICE_ACCESS.md)**: URLs, credentials, port-forwarding
-- **[Backup Procedures](docs/BACKUP_GUIDE.md)**: Data protection strategies
-- **[Scaling Guide](docs/SCALING_GUIDE.md)**: Horizontal and vertical scaling
-- **[Security Guide](docs/SECURITY_GUIDE.md)**: Security best practices
+- **[AKS Setup Guide](aks/docs/AKS_SETUP_GUIDE.md)**: Azure Kubernetes Service deployment
+- **[Enhanced Monitoring Plan](aks/docs/ENHANCED_MONITORING_PLAN.md)**: Complete monitoring implementation
+- **[DNS Migration Guide](aks/docs/DNS_MIGRATION_GUIDE.md)**: Domain and DNS configuration
+- **[Remote Access Guide](aks/docs/REMOTE_ACCESS_GUIDE.md)**: Service access and port-forwarding
+
+### 🎯 **Portfolio Integration**
+
+- **[Portfolio Guide](portfolio/portfolio-integration-guide.md)**: Complete portfolio integration with HTML/CSS examples
+- **[Demo Access](portfolio/portfolio-demo-access.md)**: Live demo URLs and access instructions
+- **[Setup Script](portfolio/setup-portfolio-demo.sh)**: Automated public dashboard deployment
 
 ## 🛡️ Security
 
@@ -345,14 +381,16 @@ helm rollback rocketchat -n rocketchat
 
 ## 🎯 **Current Status: PRODUCTION READY** ✅
 
-### ✅ **Achievements (September 19, 2025)**
+### ✅ **Achievements (September 21, 2025)**
 
-- **🚀 Complete Deployment**: Rocket.Chat running on AKS with SSL
-- **📊 Full Monitoring**: 1238+ metric series, 7 working dashboard panels
-- **📝 Comprehensive Logging**: Loki aggregation with structured queries
+- **🚀 Complete Deployment**: Rocket.Chat running on AKS with SSL and high availability
+- **📊 Comprehensive Monitoring**: 1238+ metric series, 28-panel production dashboard
+- **🎯 Advanced Observability**: Desired vs actual state monitoring, pod health tracking
+- **📝 Enhanced Logging**: Loki 2.9.0 with volume API support and structured queries
 - **🔔 Intelligent Alerting**: 12+ alert rules with multi-channel notifications
-- **📚 Complete Documentation**: 4400+ lines of troubleshooting guides
+- **📚 Complete Documentation**: 5300+ lines of troubleshooting guides with JSON syntax error resolution
 - **💰 Cost Optimized**: 15-20% monthly savings through resource optimization
+- **🔧 Production Ready**: Dashboard import issues resolved, comprehensive pod monitoring active
 
 ### 📋 **Next Sprint Tasks**
 
@@ -403,4 +441,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **🎯 Built with ❤️ for production reliability, monitoring excellence, and operational efficiency.**
 
-*Last Updated: September 19, 2025 - Complete monitoring stack implementation verified*
+> 💼 **Portfolio Ready**: This project includes live demo access and comprehensive integration guides for showcasing in professional portfolios. See the [portfolio/](portfolio/) directory for HTML/CSS templates and deployment instructions.
+
+*Last Updated: September 21, 2025 - Production-ready with live portfolio demos, anonymous dashboard access, comprehensive monitoring, and complete documentation*
