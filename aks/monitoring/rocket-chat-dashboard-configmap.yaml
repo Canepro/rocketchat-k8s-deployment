@@ -36,12 +36,12 @@ data:
             }
           },
           {
-            "title": "Active Rocket.Chat Pods",
+            "title": "Active Pods (All Services)",
             "type": "stat",
             "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
             "targets": [
               {
-                "expr": "count(kube_pod_status_phase{namespace=\"rocketchat\", phase=\"Running\", pod=~\"rocketchat-.*\"})",
+                "expr": "count(kube_pod_status_phase{namespace=\"rocketchat\", phase=\"Running\"})",
                 "legendFormat": "Active Pods"
               }
             ]
@@ -107,7 +107,7 @@ data:
             "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
             "targets": [
               {
-                "expr": "avg(up{pod=~\"mongodb-.*\", namespace=\"rocketchat\"})",
+                "expr": "count(kube_pod_status_phase{namespace=\"rocketchat\", pod=~\"mongodb-[0-9]+.*\", phase=\"Running\"})",
                 "legendFormat": "MongoDB Status"
               }
             ],

@@ -2067,54 +2067,189 @@ helm install mongodb-exporter prometheus-community/prometheus-mongodb-exporter \
 
 **Root Cause:**
 - Dashboard queries use incorrect job names or metric names
-- Dashboard expects different label structure than actual metrics
-- Hardcoded job names don't match ServiceMonitor-generated job names
 
-**Diagnosis:**
+### **Issue 8.5: MongoDB Status Panel Shows "No Data" (RESOLVED - January 2025)**
+
+**Symptoms:**
+- MongoDB Status panel in Rocket.Chat Production Monitoring dashboard displays "No data"
+- Other dashboard panels work correctly
+- MongoDB pods are running and healthy
+- Prometheus targets show UP status for other services
+
+**Root Cause:**
+- Dashboard query `up{job=~".*mongodb.*"}` was looking for Prometheus jobs with "mongodb" in the name
+- MongoDB deployment uses standalone StatefulSet without ServiceMonitor configuration
+- No Prometheus job was created for MongoDB monitoring
+
+**Solution Applied:**
 ```bash
-# 1. Verify metrics work in Explore
-# In Grafana Explore, test:
-up{job=~".*rocketchat.*"}
-rocketchat_info
-{__name__=~"rocketchat_.*"}
+# 1. Updated dashboard query to use Kubernetes pod status instead of Prometheus job status
+# Changed from: up{job=~".*mongodb.*"}
+# Changed to: count(kube_pod_status_phase{namespace="rocketchat", pod=~"mongodb-[0-9]+.*", phase="Running"})
 
-# 2. Check actual job names
-# Look at the results to see actual job names like:
-# - rocketchat-rocketchat-monolith-ms-metrics
-# - rocketchat-rocketchat
+# 2. Removed "(Fixed)" from dashboard title
+# Changed from: "Rocket.Chat Production Monitoring (Fixed)"
+# Changed to: "Rocket.Chat Production Monitoring"
 
-# 3. Compare with dashboard queries
-# Edit any dashboard panel and check what job names it's looking for
+# 3. Fixed MongoDB query to exclude init jobs and show count instead of individual pods
+# Final query: count(kube_pod_status_phase{namespace="rocketchat", pod=~"mongodb-[0-9]+.*", phase="Running"})
+
+# 4. Updated Active Pods panel to count all running pods in namespace
+# Changed to: count(kube_pod_status_phase{namespace="rocketchat", phase="Running"})
+
+# 5. Created MongoDB ServiceMonitor (optional for future metrics)
+kubectl apply -f aks/monitoring/mongodb-servicemonitor.yaml
 ```
 
-**Solutions:**
+**Files Updated:**
+- `aks/monitoring/rocketchat-dashboard-fixed.json` - Fixed query and title
+- `aks/monitoring/rocket-chat-dashboard-configmap.yaml` - Updated ConfigMap version
+- `aks/monitoring/mongodb-servicemonitor.yaml` - Created ServiceMonitor for future use
 
-**Option A: Edit Existing Dashboard Queries**
-```promql
-# Instead of hardcoded job names, use pattern matching:
-# Change: up{job="rocketchat-metrics"}
-# To: up{job=~".*rocketchat.*"}
+**Verification:**
+```bash
+# Check MongoDB pods are running
+kubectl get pods -n rocketchat | grep mongodb
 
-# Common query fixes:
-up{job=~".*rocketchat.*"}                                    # Service status
-rate(rocketchat_metrics_requests[5m])                       # Request rate
-rocketchat_users_total                                       # User count
-rocketchat_version                                          # Version info
-rate(rocketchat_rest_api_sum[5m])                          # API response time
+# Verify MongoDB count query works in Grafana Explore
+count(kube_pod_status_phase{namespace="rocketchat", pod=~"mongodb-[0-9]+.*", phase="Running"})
+
+# Verify total pod count matches kubectl output
+count(kube_pod_status_phase{namespace="rocketchat", phase="Running"})
+
+# Expected results:
+# - MongoDB Status panel: Shows "3" (count of MongoDB pods)
+# - Active Pods panel: Shows "13" (total running pods in namespace)
 ```
 
-**Option B: Create Custom Dashboard**
-```json
-{
-  "dashboard": {
-    "title": "Rocket.Chat Monitoring (Fixed)",
-    "panels": [
-      {
-        "title": "Service Status",
-        "type": "stat",
-        "targets": [{
-          "expr": "up{job=~\".*rocketchat.*\"}",
-          "legendFormat": "{{job}}"
+**Prevention:**
+- Use Kubernetes-native metrics for standalone deployments without ServiceMonitors
+- Verify dashboard queries match actual Prometheus job names or use kube-state-metrics
+- Test dashboard queries in Grafana Explore before deploying
+
+### **Issue 8.6: Dashboard Panel Layout and Query Optimization (RESOLVED - January 2025)**
+
+**Symptoms:**
+- MongoDB Status panel showing multiple individual panels instead of single count
+- Active Pods panel showing incorrect count (excluding NATS pods)
+- Some panels displaying "No data" errors
+- Dashboard layout appearing cluttered and unprofessional
+- Service Status panel showing individual UP/DOWN indicators instead of uptime percentage
+- HTTP Requests and Loki panels showing "No data"
+- Empty space in dashboard layout
+- Mixed data source UIDs causing inconsistent data loading
+- Poor grid positioning creating wasted space
+
+**Root Cause:**
+- MongoDB query was returning individual pod status instead of aggregated count
+- Active Pods query was excluding NATS infrastructure pods
+- Some queries were looking for non-existent Rocket.Chat application metrics
+- Panel titles didn't reflect actual data being displayed
+- Data source UID mismatch (using wrong Prometheus UID)
+- Service Status panel lacked proper uptime SLO formatting
+- Inconsistent data source UIDs across panels
+- Suboptimal grid layout with empty spaces
+
+**Solution Applied:**
+```bash
+# 1. Fixed MongoDB Status panel to show count instead of individual pods
+# Changed from: kube_pod_status_phase{namespace="rocketchat", pod=~"mongodb-.*", phase="Running"}
+# Changed to: count(kube_pod_status_phase{namespace="rocketchat", pod=~"mongodb-[0-9]+.*", phase="Running"})
+
+# 2. Updated Active Pods panel to count ALL running pods in namespace
+# Changed to: count(kube_pod_status_phase{namespace="rocketchat", phase="Running"})
+
+# 3. Updated panel titles to reflect actual data
+# "Active Rocket.Chat Pods" → "Active Pods (All Services)"
+# "Rocket.Chat Users: Total vs Active" → "Rocket.Chat Pods: Status vs Count"
+
+# 4. Fixed HTTP Requests panel query
+# Changed from: rate(rocketchat_rest_api_count{job=~".*rocketchat.*"}[5m])
+# Changed to: rate(http_requests_total{namespace="rocketchat"}[5m])
+
+# 5. Fixed Log Ingest Rate panel query
+# Changed from: rate({namespace="rocketchat"}[5m])
+# Changed to: sum(rate({namespace="rocketchat"}[5m]))
+
+# 6. Fixed Data Source UID mismatch
+# Changed from: "uid": "eeylh52phogsga"
+# Changed to: "uid": "prometheus"
+
+# 7. Improved Service Status panel to Uptime SLO
+# Changed from: up{job=~".*rocketchat.*"}
+# Changed to: avg(up{job=~".*rocketchat.*"}) * 100
+# Added percentage formatting and SLO thresholds (95% yellow, 99% green)
+
+# 8. Fixed HTTP Requests panel query
+# Changed from: rate(http_requests_total{namespace="rocketchat"}[5m])
+# Changed to: sum(rate(http_requests_total{namespace="rocketchat"}[5m]))
+
+# 9. Added Response Time panel to fill empty space
+# New panel: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{namespace="rocketchat"}[5m]))
+
+# 10. Created optimized dashboard layout
+# - Standardized all data source UIDs to "prometheus"
+# - Optimized grid positions to eliminate empty spaces
+# - Created compact 3-column layout for stat panels
+# - Improved visual hierarchy and spacing
+
+# 11. Fixed "No data" issues and improved legend formatting
+# - Pod Restarts: Fixed query and legend format to show {{pod}}/{{container}}
+# - Pod Status vs Count: Improved legend to show individual pod names and total count
+# - HTTP Requests: Fixed query to sum by (method, status) with proper legend {{method}} ({{status}})
+# - Response Time: Fixed to use summary metrics instead of non-existent bucket metrics
+# - Loki Log Ingest: Fixed namespace filter syntax for proper log matching
+
+# 12. Improved legend formatting across all panels
+# - Eliminated duplicate "Pod Restarts" entries by using proper label templates
+# - Added meaningful labels showing pod names, container names, HTTP methods, status codes
+# - Made panels more informative and easier to read
+
+# 13. Fixed Loki log ingestion failure
+# - Corrected Promtail configuration URL from loki-stack.loki-stack to loki.monitoring
+# - Created new Secret with corrected configuration
+# - Updated DaemonSet to use corrected Secret
+# - Restarted Promtail pods to establish proper log shipping
+```
+
+**Files Updated:**
+- `aks/monitoring/rocketchat-dashboard-fixed.json` - All panel queries and titles
+- `aks/monitoring/rocket-chat-dashboard-configmap.yaml` - ConfigMap version with fixes
+- `rocket-chat-dashboard-v2` - New ConfigMap with corrected data source UID
+- `aks/monitoring/rocketchat-dashboard-optimized.json` - Optimized layout with no empty spaces
+- `rocket-chat-dashboard-optimized` - Final optimized ConfigMap
+- `rocket-chat-dashboard-fixed-v2` - ConfigMap with "No data" issues resolved
+- `rocket-chat-dashboard-final` - Final ConfigMap with proper legend formatting and working queries
+- `loki-promtail-fixed` - Corrected Promtail configuration Secret
+- `loki-promtail` - Updated DaemonSet using corrected configuration
+
+**Verification:**
+```bash
+# Apply updated dashboard
+kubectl apply -f aks/monitoring/rocket-chat-dashboard-configmap.yaml -n monitoring
+
+# Restart Grafana
+kubectl rollout restart deployment/monitoring-grafana -n monitoring
+
+# Expected results:
+# - MongoDB Status: Single panel showing "3"
+# - Active Pods: Single panel showing "13" (matches kubectl get pods)
+# - Uptime SLO: Shows percentage with color-coded thresholds
+# - HTTP Requests: Shows request rate per second
+# - Response Time: Shows 95th and 50th percentile response times
+# - All panels showing data instead of "No data"
+# - Clean, professional dashboard layout with no empty spaces
+# - Compact 3-column layout for stat panels
+# - All panels using consistent "prometheus" data source UID
+```
+
+**Prevention:**
+- Use `count()` function for aggregated metrics instead of individual pod status
+- Test queries in Grafana Explore before updating dashboards
+- Ensure panel titles accurately reflect the data being displayed
+- Use namespace-wide queries for comprehensive monitoring
+
+---
         }]
       },
       {

@@ -1,0 +1,31 @@
+# MongoDB ServiceMonitor for Prometheus
+# This enables MongoDB monitoring in the Rocket.Chat production dashboard
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mongodb-servicemonitor
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: mongodb
+    app.kubernetes.io/instance: rocketchat
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  namespaceSelector:
+    matchNames:
+      - rocketchat
+  endpoints:
+  - port: mongodb
+    interval: 30s
+    path: /metrics
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_label_app]
+      targetLabel: service_name
+      replacement: mongodb
+    - sourceLabels: [__meta_kubernetes_pod_namespace]
+      targetLabel: namespace
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod
