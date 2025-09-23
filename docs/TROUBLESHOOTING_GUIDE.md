@@ -1,20 +1,101 @@
 # 🔧 Rocket.Chat AKS Deployment Troubleshooting Guide
 
 **Created**: September 4, 2025
-**Last Updated**: September 21, 2025 (Complete Loki & Dashboard Issues Resolution + Dashboard Import Label Fix + JSON Syntax Error Resolution)
+**Last Updated**: September 22, 2025 (Enhanced CPU/Memory Monitoring Integration + Comprehensive Resource Analytics)
 **Purpose**: Comprehensive troubleshooting guide for Rocket.Chat deployment on Azure Kubernetes Service
 **Scope**: Official Helm chart deployment with enhanced monitoring
 **Status**: Living document - updated as issues are encountered and resolved
-**Current Status**: All major issues resolved - Rocket.Chat deployment fully operational with complete monitoring stack including Loki 2.9.0 with volume API support (Updated: September 21, 2025)
+**Current Status**: Security hardening completed - Exposed credentials removed, local secrets management implemented. Ready for final alerts testing and GitHub deployment (Updated: September 23, 2025)
 
-## 🏆 **MONITORING STACK: PRODUCTION READY**
+## 🏆 **MONITORING STACK: SECURITY HARDENED & PRODUCTION READY**
 - ✅ **Rocket.Chat Metrics**: 1238+ series flowing, all dashboards operational
 - ✅ **Prometheus**: ServiceMonitor discovery resolved, all targets UP
 - ✅ **Grafana**: Beautiful real-time dashboards with corrected panels and proper data
 - ✅ **Loki 2.9.0**: Log aggregation with volume API support for advanced log visualization
-- ✅ **Alertmanager**: Email notifications configured
+- ✅ **Alertmanager**: Email notifications configured with secure webhook integration
 - ✅ **Dashboard Panels**: Fixed Pod Restarts panel and added Total vs Active Users panel
-- 📋 **Next**: MongoDB exporter deployment (optional enhancement)
+- ✅ **🆕 CPU/Memory Analytics**: 6 comprehensive resource monitoring panels with efficiency metrics
+- ✅ **🆕 Resource Efficiency**: Real-time utilization vs limits with optimization insights
+- ✅ **🆕 Node-Level Monitoring**: Cluster-wide resource health visibility
+- ✅ **🆕 Historical Trending**: 24h resource patterns for capacity planning
+- ✅ **🆕 Security Hardening**: Exposed credentials removed, local secrets management implemented
+- 🔄 **Tomorrow's Tasks**: Final alerts testing and webhook validation
+
+## 🔐 **SECURITY IMPROVEMENTS: LOCAL SECRETS MANAGEMENT**
+
+### **Issue Addressed: Exposed Credentials in Repository**
+**Problem:** Gmail credentials and Rocket.Chat webhook tokens were hardcoded in Kubernetes manifests, creating security vulnerabilities.
+
+**Solution Implemented:**
+- ✅ **Removed hardcoded credentials** from `alertmanager-configmap.yaml`
+- ✅ **Created local `.env` file** for real credentials (ignored by Git)
+- ✅ **Implemented `apply-secrets.sh` script** for secure credential deployment
+- ✅ **Added `.env.example` template** for team collaboration
+
+### **New Secure Workflow**
+```bash
+# 1. Copy template (safe for repository)
+cp .env.example .env
+
+# 2. Edit with real credentials
+nano .env  # Your real Gmail app password & webhook token
+
+# 3. Apply to cluster securely
+./scripts/apply-secrets.sh
+```
+
+### **Security Benefits**
+- ✅ **Repository Safe**: Only placeholders committed to Git
+- ✅ **Team Friendly**: Each developer uses their own `.env`
+- ✅ **Audit Clean**: No credential history in Git
+- ✅ **Easy Updates**: One command reapplies all secrets
+
+### **Credentials Now Secured**
+- **Gmail SMTP**: App password stored securely in Kubernetes secret
+- **Rocket.Chat Webhook**: Token applied via AlertmanagerConfig
+- **Alert Emails**: Configured via environment variables
+
+**Status:** ✅ **Security hardening complete - ready for production deployment**
+
+### **📋 TOMORROW'S ALERTS TESTING CHECKLIST**
+
+**Morning Setup (Pre-Testing):**
+- [ ] Verify local `.env` file has correct credentials
+- [ ] Run `./scripts/apply-secrets.sh` to ensure secrets are current
+- [ ] Check AlertmanagerConfig status: `kubectl get alertmanagerconfig -n monitoring`
+
+**Alert Testing Sequence:**
+- [ ] **Email Alerts**: Send test alert and verify Gmail delivery
+- [ ] **Rocket.Chat Alerts**: Trigger alert and verify webhook message in #alerts
+- [ ] **Alert Rules**: Test each alert rule in `rocket-chat-alerts.yaml`
+- [ ] **SMTP Configuration**: Verify Gmail App Password is working
+- [ ] **Webhook Integration**: Confirm Rocket.Chat receives and displays alerts
+
+**Test Commands:**
+```bash
+# Test email alert delivery
+kubectl exec -n monitoring deployment/monitoring-kube-prometheus-alertmanager -- \
+  amtool alert add alertname=TestAlert severity=warning message="Test alert from troubleshooting"
+
+# Check alertmanager logs
+kubectl logs -n monitoring deployment/monitoring-kube-prometheus-alertmanager --tail=10
+
+# Verify webhook delivery (check Rocket.Chat #alerts channel)
+```
+
+**Expected Results:**
+- ✅ Email received within 5 minutes at configured address
+- ✅ Rocket.Chat webhook message appears in #alerts channel
+- ✅ Alertmanager logs show successful delivery
+- ✅ No authentication errors in logs
+
+**If Issues Found:**
+- 🔄 Check Gmail App Password validity
+- 🔄 Regenerate Rocket.Chat webhook token if needed
+- 🔄 Verify email address configuration
+- 🔄 Test SMTP connectivity manually
+
+---
 
 ## 🚨 **Most Common Issues & Quick Fixes**
 
@@ -90,6 +171,138 @@ python3 -m json.tool dashboard.json > /dev/null && kubectl create configmap dash
 
 **Root Cause:** JSON syntax errors (Windows line endings, multi-line string literals) prevent Grafana from parsing dashboard files.
 
+### **Enhanced CPU/Memory Monitoring Issues**
+
+#### **CPU/Memory Panels Show "No Data"**
+**Symptoms:**
+- Panels 15-16, 29-34 (CPU/Memory analytics) display "No data"
+- Node Exporter and cadvisor targets are UP in Prometheus
+- Other dashboard panels work correctly
+
+**Quick Fix:** Check Node Exporter and cAdvisor metrics availability:
+```bash
+# Verify Node Exporter is running
+kubectl get pods -n monitoring -l app.kubernetes.io/name=node-exporter
+
+# Check cAdvisor metrics from kubelet
+kubectl proxy --port=8001 &
+curl "http://127.0.0.1:8001/api/v1/nodes/$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}')/proxy/metrics/cadvisor" | grep container_cpu_usage_seconds_total
+
+# Test resource limit metrics
+kubectl proxy --port=8001 &
+curl -s "http://127.0.0.1:8001/api/v1/namespaces/monitoring/services/monitoring-kube-prometheus-prometheus:9090/proxy/api/v1/query?query=kube_pod_container_resource_limits" | jq '.data.result[] | select(.metric.namespace=="rocketchat")'
+```
+
+**Root Cause:** Missing Node Exporter deployment or kube-state-metrics not collecting resource limit data.
+
+#### **Resource Efficiency Panels Show Invalid Values**
+**Symptoms:**
+- CPU/Memory Efficiency panels (29-30) show 0% or infinity values
+- Resource limits not properly configured for pods
+- Division by zero errors in Prometheus queries
+
+**Quick Fix:** Verify resource limits are set on pods:
+```bash
+# Check if pods have resource limits configured
+kubectl get pods -n rocketchat -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[*].resources}{"\n"}{end}'
+
+# Verify kube-state-metrics is exposing limit data
+kubectl port-forward -n monitoring svc/monitoring-kube-state-metrics 8080:8080 &
+curl http://localhost:8080/metrics | grep "kube_pod_container_resource_limits.*rocketchat"
+
+# Check for missing resource limits
+kubectl describe pods -n rocketchat | grep -A5 -B5 "Limits:"
+```
+
+**Solution:** Add resource limits to pods if missing:
+```yaml
+# In values-official.yaml or deployment spec
+resources:
+  limits:
+    cpu: 500m
+    memory: 1536Mi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+```
+
+#### **Historical Trends Panel (33) Shows Flat Lines**
+**Symptoms:**
+- Resource Usage Trends panel shows constant flat lines
+- No historical variation in CPU/memory usage
+- Time range selector doesn't affect the data
+
+**Quick Fix:** Check Prometheus retention and query time range:
+```bash
+# Verify Prometheus retention period
+kubectl get prometheus -n monitoring monitoring-kube-prometheus-prometheus -o jsonpath='{.spec.retention}'
+
+# Test historical data availability
+kubectl proxy --port=8001 &
+curl -s "http://127.0.0.1:8001/api/v1/namespaces/monitoring/services/monitoring-kube-prometheus-prometheus:9090/proxy/api/v1/query_range?query=rate(container_cpu_usage_seconds_total[5m])&start=$(date -d '1 day ago' -u +%s)&end=$(date -u +%s)&step=300" | jq '.data.result | length'
+
+# Check for consistent metrics collection
+kubectl port-forward -n monitoring prometheus-monitoring-kube-prometheus-prometheus-0 9091:9090 &
+# Visit: http://localhost:9091/graph
+# Query: rate(container_cpu_usage_seconds_total{namespace="rocketchat"}[5m])
+```
+
+**Root Cause:** Insufficient Prometheus retention period or recent deployment without historical data.
+
+#### **MongoDB Resource Panel (34) Shows No MongoDB Data**
+**Symptoms:**
+- Panel 34 (MongoDB Resource Usage) displays no metrics
+- MongoDB pods are running and healthy
+- Other MongoDB-related panels work
+
+**Quick Fix:** Verify MongoDB pod labeling and metrics:
+```bash
+# Check MongoDB pod labels
+kubectl get pods -n rocketchat -l app=mongodb --show-labels
+
+# Verify MongoDB pods match the query pattern
+kubectl get pods -n rocketchat -o name | grep mongodb
+
+# Test MongoDB resource query directly
+kubectl proxy --port=8001 &
+curl -s "http://127.0.0.1:8001/api/v1/namespaces/monitoring/services/monitoring-kube-prometheus-prometheus:9090/proxy/api/v1/query?query=rate(container_cpu_usage_seconds_total{namespace=\"rocketchat\",pod=~\"mongodb-.*\"}[5m])" | jq '.data.result'
+```
+
+**Solution:** Update MongoDB pod selector in dashboard if labels don't match:
+```json
+// Update the query in Panel 34 if MongoDB pods use different naming
+"expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"rocketchat\", pod=~\"<actual-mongodb-pod-pattern>.*\", image!=\"\"}[5m])) * 100"
+```
+
+#### **Node-Level Panels (31-32) Show Cluster Averages Instead of Individual Nodes**
+**Symptoms:**
+- Node CPU/Memory Usage panels show only average values
+- Cannot see per-node resource distribution
+- All nodes appear to have identical usage
+
+**Quick Fix:** Modify queries to show per-node breakdown:
+```bash
+# Test individual node metrics
+kubectl proxy --port=8001 &
+curl -s "http://127.0.0.1:8001/api/v1/namespaces/monitoring/services/monitoring-kube-prometheus-prometheus:9090/proxy/api/v1/query?query=100-(avg(irate(node_cpu_seconds_total{mode=\"idle\"}[5m]))by(instance)*100)" | jq '.data.result'
+
+# Check if multiple nodes are reporting
+kubectl get nodes -o wide
+kubectl port-forward -n monitoring svc/monitoring-prometheus-node-exporter 9100:9100 &
+curl http://localhost:9100/metrics | grep node_cpu_seconds_total | head -5
+```
+
+**Solution:** Update panel queries to show per-instance breakdown:
+```json
+// For per-node CPU usage (modify Panel 31)
+"expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)"
+"legendFormat": "{{instance}}"
+
+// For per-node memory usage (modify Panel 32) 
+"expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100"
+"legendFormat": "{{instance}}"
+```
+
 ### **Loki Volume API 404 Error**
 **Symptoms:** 
 - Console error: `GET https://grafana.chat.canepro.me/api/datasources/uid/loki/resources/index/volume?end=... 404 (Not Found)`
@@ -139,6 +352,387 @@ kubectl rollout status deployment/grafana -n monitoring --timeout=300s
 **Configuration Changes:**
 - Fixed Pod Restarts panel query: `increase(kube_pod_container_status_restarts_total{namespace="rocketchat", pod=~"rocketchat.*"}[5m])`
 - Added proper Total Users vs Active Users panel with separate queries
+
+### **Dashboard Panel Legends Show Duplication or Are Non-Descriptive**
+**Symptoms:**
+- Multiple series in dashboard panels show identical legend labels (e.g., "Average Response Time" appears multiple times)
+- Legends don't distinguish between different pods, methods, or instances
+- Hard to identify which series corresponds to which data source
+- Panels affected: API Response Time, API Request Rate, Meteor Methods Performance, CPU/Memory Utilization, Pod Status, Notifications, Resource Usage Trends, MongoDB Resource Usage
+
+**Root Cause:** Generic `legendFormat` values in dashboard panel configurations don't include distinguishing labels like `{{pod}}`, `{{method}}`, or `{{instance}}`, causing duplicates when multiple series exist.
+
+**Quick Fix:** Apply the updated ConfigMap with improved legend formats:
+```bash
+# Apply the corrected dashboard configuration with improved legends
+kubectl apply -f aks/monitoring/rocket-chat-dashboard-comprehensive-configmap.yaml -n monitoring
+
+# Restart Grafana to load updated dashboard
+kubectl rollout restart deployment/monitoring-grafana -n monitoring
+
+# Wait for restart
+kubectl rollout status deployment/monitoring-grafana -n monitoring --timeout=300s
+```
+
+**Configuration Changes:**
+- **API Response Time (Panel 7)**: Added `{{pod}}` and `{{method}}` to legends for unique identification
+- **API Request Rate (Panel 8)**: Enhanced legends with pod and method context
+- **Meteor Methods Performance (Panel 12)**: Added pod context to method time and rate legends
+- **CPU Utilization (Panel 15)**: Improved legends to show pod-specific CPU usage and limits
+- **Memory Usage (Panel 16)**: Added descriptive labels for memory usage vs limits per pod
+- **Pod Status (Panel 17)**: Maintained pod-specific legends for running status
+- **Pod Restarts (Panel 18)**: Added "Restarts" suffix to distinguish restart metrics
+- **Notifications Sent (Panel 21)**: Added pod context to notification rate legends
+- **Resource Usage Trends (Panel 33)**: Enhanced with descriptive labels for aggregated metrics
+- **MongoDB Resource Usage (Panel 34)**: Improved legends for CPU and memory usage per MongoDB pod
+
+**Verification Steps:**
+1. Refresh the Rocket.Chat dashboard in Grafana
+2. Navigate to affected panels and check legends for uniqueness
+3. Use Query Inspector to verify series count matches legend count
+4. Test with different time ranges to ensure legends remain distinct
+
+### **Dashboard Best Practices Enhancements**
+
+**Recent Dashboard Improvements Applied (September 2025):**
+The Rocket.Chat monitoring dashboard has been enhanced with best practices implementations for improved user experience, performance, and maintainability.
+
+**Enhanced Features:**
+- **Panel Descriptions**: Added hover descriptions to key panels explaining their purpose and what they monitor
+- **Template Variables**: Added namespace filtering capability for multi-environment deployments
+- **Extended Time Ranges**: Added 3h and 3d time range options for better granularity
+- **Query Performance Limits**: Added maxDataPoints limits to prevent performance issues with high-cardinality metrics
+- **Deployment Annotations**: Added Kubernetes deployment event annotations for timeline correlation
+- **Improved Legends**: Enhanced legend formatting for better readability and uniqueness
+
+**Dashboard Structure Enhancements:**
+- **Panel Descriptions**: Critical panels now include detailed explanations (Uptime SLO, API Response Time, CPU Utilization, MongoDB Resources)
+- **Template Variables**: Namespace dropdown for flexible multi-environment monitoring
+- **Time Range Options**: Expanded from 8 to 11 options including 3h and 3d for operational flexibility
+- **Query Optimization**: Added maxDataPoints: 100 to resource monitoring panels (CPU, Memory, MongoDB)
+- **Annotations**: Deployment events marked on timelines with green indicators
+- **Legend Consistency**: Standardized legend formats across all resource monitoring panels
+
+**Performance Improvements:**
+- **Query Limits**: Prevents Grafana performance degradation with large numbers of series
+- **Optimized Aggregation**: Resource panels limited to 100 data points maximum
+- **Efficient Queries**: Maintained optimal Prometheus query patterns with proper aggregation
+
+**User Experience Enhancements:**
+- **Better Tooltips**: Panel descriptions provide context for complex metrics
+- **Improved Navigation**: Template variables enable easier environment switching
+- **Enhanced Time Selection**: More granular time range options for different monitoring scenarios
+- **Clearer Legends**: Consistent formatting makes series identification easier
+
+**Maintenance Benefits:**
+- **Scalable Design**: Template variables support multi-namespace deployments
+- **Performance Safeguards**: Query limits prevent dashboard slowdowns
+- **Event Correlation**: Deployment annotations help correlate metrics with changes
+- **Documentation**: Self-documenting panels reduce learning curve
+
+### **Dashboard Panel Improvements (September 2025)**
+
+**Panel Redesign for Better Information Architecture:**
+
+**Fixed Double Information Issues:**
+- **Messages per Second Panel**: Changed from rate-based timeseries to proper stat panel showing "Total Messages Sent"
+- **Added New Messages per Second Timeseries**: New dedicated timeseries panel showing real-time message rates
+- **Resolved Redundancy**: Eliminated confusion between total messages and rate metrics
+
+**New Advanced Panel Types:**
+- **Table Panel**: "Top Resource Consumers" - Shows top 10 pods by CPU/memory usage with sortable columns
+- **Heatmap Panel**: "Log Levels Heatmap" - Visual representation of log level patterns over time
+- **Enhanced Layout**: Better information hierarchy and reduced visual clutter
+
+**Panel-Specific Improvements:**
+- **Stat Panels**: Active Users, Total Users, Total Messages Sent now show current values instead of rates
+- **Timeseries Panels**: Messages per Second, Message Types Distribution provide complementary rate information
+- **Table Panel**: Sortable by CPU usage, shows both CPU % and Memory MB for top consumers
+- **Heatmap Panel**: Color-coded visualization of log level frequency patterns
+
+**User Experience Enhancements:**
+- **Clearer Information Hierarchy**: Stat panels show current state, timeseries show trends
+- **Advanced Visualizations**: Table and heatmap panels provide deeper insights
+- **Reduced Cognitive Load**: Eliminated redundant information display
+- **Better Resource Monitoring**: Table panel helps identify problematic pods quickly
+
+**Technical Implementation:**
+- **Proper Panel Types**: Stat panels for current values, timeseries for trends
+- **Advanced Visualizations**: Table sorting, heatmap color schemes (Viridis)
+- **Performance Optimized**: Added maxDataPoints limits to new panels
+- **Responsive Design**: Full-width panels for comprehensive views
+
+**Migration Path:**
+- **Backward Compatible**: Existing functionality preserved
+- **Progressive Enhancement**: New panels add value without breaking workflows
+- **Information Architecture**: Clear separation between current state and trending data
+
+### **Template Variables and Multi-Environment Support (September 2025)**
+
+**Expanded Environment Management:**
+
+**Environment Template Variable:**
+- **Variable Name**: `$namespace`
+- **Type**: Custom dropdown selector
+- **Current Options**:
+  - Production (rocketchat) - *Default/Current*
+  - Development (dev-rocketchat)
+  - Staging (staging-rocketchat)
+  - QA (qa-rocketchat)
+
+**Pod Filter Template Variable:**
+- **Variable Name**: `$pod_filter`
+- **Type**: Dynamic query-based selector
+- **Purpose**: Filter specific pods within selected namespace
+- **Query**: `label_values(kube_pod_info{namespace="$namespace"}, pod)`
+
+**Implementation Benefits:**
+- **Namespace-Aware Queries**: All Prometheus and Loki queries automatically update when switching environments
+- **Dynamic Pod Selection**: Pod filter dynamically populates based on selected namespace
+- **URL Persistence**: Environment selection preserved in dashboard URLs for bookmarking/sharing
+
+**How Environment Switching Works:**
+```yaml
+# Template Variable Definition
+"templating": {
+  "list": [
+    {
+      "name": "namespace",
+      "label": "Environment",
+      "options": [
+        {"text": "Production (rocketchat)", "value": "rocketchat"},
+        {"text": "Development (dev-rocketchat)", "value": "dev-rocketchat"},
+        {"text": "Staging (staging-rocketchat)", "value": "staging-rocketchat"},
+        {"text": "QA (qa-rocketchat)", "value": "qa-rocketchat"}
+      ]
+    }
+  ]
+}
+
+# Query Usage Examples
+"expr": "kube_pod_status_phase{namespace=\"$namespace\", phase=\"Running\"}"  # Prometheus
+"expr": "{namespace=\"${namespace}\", app!=\"mongodb\"}"                    # Loki
+```
+
+**Deployment Tracking Enhancement:**
+- **Annotation Query**: `kube_deployment_created{namespace="$namespace"}`
+- **Cross-Environment Correlation**: Deployment markers show in all environments
+- **Multi-Environment Timelines**: Compare deployment impacts across dev/staging/prod
+
+**Best Practices Implementation:**
+- **Scalable Architecture**: Template variables enable unlimited environment expansion
+- **Query Consistency**: All metrics automatically scoped to selected environment
+- **Operational Efficiency**: Single dashboard serves multiple environments
+- **Change Management**: Environment-specific deployment tracking
+
+**Usage Scenarios:**
+1. **Environment Comparison**: Switch between prod/dev to compare performance
+2. **Deployment Validation**: Monitor staging before promoting to production
+3. **Incident Analysis**: Correlate issues across environments
+4. **Capacity Planning**: Analyze resource usage patterns by environment
+
+**Adding New Environments:**
+```bash
+# Create new namespace
+kubectl create namespace new-environment-rocketchat
+
+# Deploy Rocket.Chat
+helm install new-environment-rocketchat rocketchat/rocketchat \
+  --namespace new-environment-rocketchat
+
+# Update dashboard template variables to include new environment
+# Dashboard automatically detects and monitors new environment
+```
+
+### **Dashboard Layout and Display Issues (September 2025)**
+
+**Fixed Layout Overlaps and Blank Spaces:**
+
+**Panel Overlap Issues:**
+- **Top Resource Consumers table** was overlapping with **MongoDB Resource Usage panel**
+- **Pod Status/Pod Restarts panels** were overlapping with **Resource Usage Trends/MongoDB Resource Usage**
+- **MongoDB Status/Log Ingest Rate/Notifications Sent** panels were overlapping with **Pod Status/Pod Restarts**
+
+**Resolution Applied:**
+- Repositioned **MongoDB Resource Usage** from y=60 to y=68 (next to Resource Usage Trends)
+- Moved **Pod Status** and **Pod Restarts** from y=68 to y=76
+- Relocated **MongoDB Status**, **Log Ingest Rate**, and **Notifications Sent** to y=84
+- Adjusted **Rocket.Chat Application Logs** from y=84 to y=96
+- Moved **Log Levels Heatmap** from y=112 to y=108
+
+**Layout Improvements:**
+- Eliminated all panel overlaps causing blank spaces
+- Maintained logical flow: Resource monitoring → Kubernetes health → Logging
+- Optimized use of dashboard real estate
+- Ensured responsive full-width panels for advanced visualizations
+
+**Fixed Stat Panel Duplicate Display:**
+
+**Issue:** Stat panels (Active Users, Total Users, Total Messages Sent) displayed numbers twice (e.g., "4 4", "7 7")
+
+**Root Cause:** Missing `options` configuration in stat panels, causing Grafana to display both value and additional metadata
+
+**Resolution:**
+- Added `"options": {"graphMode": "none", "textMode": "value"}` to all stat panels
+- Ensures clean single-value display
+- Prevents duplicate number rendering
+- Maintains proper threshold coloring
+
+**Livechat Performance Panel Enhancement:**
+
+**Issue:** Livechat metrics may not be available if livechat features are disabled
+
+**Improvements:**
+- Added descriptive panel explanation
+- Enhanced webhook queries with fallback: `or vector(0)`
+- Changed "Webhook Failures" to "Webhook Failure Rate" for clarity
+- Added panel description noting dependency on livechat feature enablement
+
+**Technical Fixes:**
+- **Panel Repositioning**: Resolved grid coordinate conflicts
+- **Stat Panel Options**: Added proper display configuration
+- **Query Fallbacks**: Graceful handling of unavailable metrics
+- **Layout Optimization**: Eliminated visual gaps and overlaps
+
+### **Loki Volume API 404 Error in Logs Tab (RECURRING ISSUE)**
+
+**Symptoms:**
+- Logs tab shows errors when opened
+- Browser console shows: `GET /api/datasources/uid/loki/resources/index/volume 404 (Not Found)`
+- loki-explore-app plugin fails to load volume statistics
+- Error message: `{"message":"not found"}`
+
+**Root Cause:** This issue has recurred despite previous attempts to enable Loki's volume API. The volume API configuration may not be properly applied or supported in the current Loki deployment.
+
+**Historical Context:**
+- **Previously encountered:** Loki 2.6.1 → 2.9.0 upgrade was attempted to fix this
+- **Issue persisted:** Volume API still not functional despite version upgrade
+- **Current status:** Alternative solution applied - volume queries disabled
+
+**Applied Solution (Volume Queries Disabled):**
+```bash
+# Disable volume API calls in Grafana datasource (safe, non-disruptive)
+kubectl patch configmap grafana-datasource-loki -n monitoring --type merge -p '{
+  "data": {
+    "loki.yaml": "apiVersion: 1\ndatasources:\n  - name: Loki\n    type: loki\n    uid: loki\n    url: http://loki.monitoring.svc.cluster.local:3100\n    access: proxy\n    isDefault: true\n    editable: false\n    jsonData:\n      maxLines: 2000\n      timeout: 60\n      manageAlerts: false\n      volumeDisabled: true\n      derivedFields: []\n      httpHeaderName1: \"X-Scope-OrgID\"\n    secureJsonData: {}\n"
+  }
+}'
+
+# Restart Grafana
+kubectl rollout restart deployment/monitoring-grafana -n monitoring
+```
+
+**Impact of Solution:**
+- ✅ **Eliminates 404 errors** - No more volume API failures
+- ✅ **Preserves functionality** - Logs still work, just without volume statistics
+- ✅ **Non-disruptive** - No changes to Loki deployment
+- ✅ **Stable** - Won't break if Loki is upgraded/restarted
+
+**Verification:**
+1. Refresh Grafana and open the logs tab
+2. Check browser console - should see no 404 volume API errors
+3. loki-explore-app loads without volume statistics
+4. All other log functionality remains intact
+
+**Note:** This is a persistent issue with Loki's volume API implementation. Disabling volume queries provides a stable workaround while maintaining full log aggregation capabilities.
+
+### **Rocket.Chat Integration Creation 400 Error**
+
+**Symptoms:**
+- `POST /api/v1/integrations.create 400 (Bad Request)` when creating webhooks
+- Cannot create incoming webhooks for alert notifications
+- Integration creation fails in Rocket.Chat admin panel
+- Error appears when trying to save webhook configuration
+
+**Root Cause:** Insufficient permissions, disabled integrations, or missing admin privileges for webhook creation.
+
+**Quick Diagnosis:**
+```bash
+# Check if you're logged in as admin user
+# Go to: https://chat.canepro.me/admin/users
+# Verify your user has "admin" role assigned
+
+# Check if integrations are enabled globally
+# Admin → Settings → General → Integrations → Should be "True"
+```
+
+**Solutions:**
+
+#### **Option A: Verify Admin Permissions**
+1. **Log in** as the Rocket.Chat admin user (usually the first user created during setup)
+2. **Navigate to**: `https://chat.canepro.me/admin/users`
+3. **Find your user account** and ensure the "admin" role is assigned
+4. **If not admin**: Contact the Rocket.Chat administrator to grant admin privileges
+
+#### **Option B: Enable Integrations Feature**
+1. **Go to**: Admin → Settings → General
+2. **Find**: "Integrations" section
+3. **Set**: "Enable" to "True"
+4. **Save changes** and retry webhook creation
+
+#### **Option C: Create Integration via MongoDB (Advanced)**
+```bash
+# If UI/API fails, create directly in database
+kubectl exec -it deployment/rocketchat-rocketchat -n rocketchat -- mongo rocketchat
+
+# Insert webhook integration
+db.integrations.insert({
+  "type": "webhook-incoming",
+  "name": "Alert Bot",
+  "enabled": true,
+  "username": "alert-bot",
+  "channel": "#alerts",
+  "scriptEnabled": true,
+  "createdAt": new Date(),
+  "createdBy": {
+    "_id": "SYSTEM",
+    "username": "system"
+  },
+  "token": "generate-random-token-here"
+});
+
+# Find the generated webhook URL
+db.integrations.find({"name": "Alert Bot"}, {"_id": 1, "token": 1});
+```
+
+#### **Option D: Use Rocket.Chat REST API**
+```bash
+# Get authentication token first
+curl -X POST "https://chat.canepro.me/api/v1/login" \
+  -H "Content-Type: application/json" \
+  -d '{"user": "admin-username", "password": "admin-password"}'
+
+# Use the returned authToken and userId to create integration
+curl -X POST "https://chat.canepro.me/api/v1/integrations.create" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "X-User-Id: YOUR_USER_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "webhook-incoming",
+    "name": "Alert Bot",
+    "enabled": true,
+    "username": "alert-bot",
+    "channel": "#alerts",
+    "scriptEnabled": true
+  }'
+```
+
+**Verification:**
+1. **Check integrations list**: Admin → Integrations → Should show "Alert Bot"
+2. **Test webhook**: Copy the webhook URL and send a test POST request
+3. **Verify permissions**: User should have admin role in user management
+
+**Webhook URL Format:**
+```
+https://chat.canepro.me/hooks/INTEGRATION_ID/TOKEN
+```
+
+**Common Issues:**
+- **403 Forbidden**: User lacks admin permissions
+- **400 Bad Request**: Missing required fields or invalid channel name
+- **Integration Disabled**: Feature not enabled in Rocket.Chat settings
+
+**Note:** Integration creation requires admin privileges. Ensure you're logged in as an administrator and that integrations are enabled globally.
 
 ### **Grafana Loki Datasource Connection Error**
 **Symptoms:**

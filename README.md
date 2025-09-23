@@ -259,6 +259,42 @@ kubectl apply -f aks/monitoring/grafana-public-dashboard-setup.yaml
 - **`rocketchat-servicemonitors.yaml`**: Metrics collection configuration
 - **`rocketchat-dashboard-comprehensive.json`**: 28-panel comprehensive Grafana dashboard
 
+### 🔐 **Local Secrets Management**
+
+**Never commit real credentials to Git!** Use local environment files for secure credential management.
+
+#### **Setup Local Secrets**
+```bash
+# 1. Copy the example file
+cp .env.example .env
+
+# 2. Edit with your real credentials
+nano .env  # or your preferred editor
+
+# 3. Apply secrets to Kubernetes
+./scripts/apply-secrets.sh
+```
+
+#### **Required Credentials**
+- **Gmail App Password**: Generate at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+- **Rocket.Chat Webhook**: Create in Rocket.Chat Admin → Integrations → New Incoming Webhook
+- **Alert Email**: Your email for receiving monitoring alerts
+
+#### **Environment File Structure**
+```bash
+# .env (local only - never commit!)
+GMAIL_USERNAME=your-email@gmail.com
+GMAIL_APP_PASSWORD=abcd-efgh-ijkl-mnop
+ROCKETCHAT_WEBHOOK_URL=https://your-chat-url/hooks/YOUR_TOKEN
+ALERT_EMAIL_RECIPIENT=your-alert-email@gmail.com
+```
+
+#### **Security Benefits**
+- ✅ **Repository Safe**: Only placeholders in Git
+- ✅ **Local Control**: Real credentials stay on your machine
+- ✅ **Easy Deployment**: One command applies all secrets
+- ✅ **Team Friendly**: Each developer uses their own `.env`
+
 ## 📚 Documentation
 
 ### 📖 **Comprehensive Guides**
