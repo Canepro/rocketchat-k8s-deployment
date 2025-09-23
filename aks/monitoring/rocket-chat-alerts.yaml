@@ -160,6 +160,115 @@ spec:
         description: "Rocket.Chat ingress/service is not responding to health checks."
         runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/TROUBLESHOOTING_GUIDE.md"
 
+    # Application Performance Alerts (Rocket.Chat Specific)
+    - alert: RocketChatHighResponseTime
+      expr: |
+        histogram_quantile(0.95, rate(rocketchat_http_requests_duration_seconds_bucket{namespace="rocketchat"}[5m])) > 5
+      for: 10m
+      labels:
+        severity: warning
+        service: rocketchat
+      annotations:
+        summary: "⚠️ Rocket.Chat high response time"
+        description: "95th percentile response time above 5 seconds for 10 minutes. Users may experience slow performance."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/PERFORMANCE_ANALYSIS.md"
+
+    - alert: RocketChatLowActiveUsers
+      expr: rocketchat_users_active < 1
+      for: 30m
+      labels:
+        severity: warning
+        service: rocketchat
+      annotations:
+        summary: "⚠️ Rocket.Chat low active users"
+        description: "No active users for 30 minutes. May indicate connectivity or application issues."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/TROUBLESHOOTING_GUIDE.md"
+
+    - alert: RocketChatMessageRateLow
+      expr: rate(rocketchat_messages_total[10m]) < 0.1
+      for: 30m
+      labels:
+        severity: info
+        service: rocketchat
+      annotations:
+        summary: "📊 Rocket.Chat low message activity"
+        description: "Message rate below 0.1 messages/minute for 30 minutes. Monitor for reduced engagement."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/MONITORING_SETUP_GUIDE.md"
+
+    # Application Performance Alerts (Rocket.Chat Specific)
+    - alert: RocketChatHighMessageVolume
+      expr: rate(rocketchat_messages_total[5m]) > 20
+      for: 10m
+      labels:
+        severity: info
+        service: rocketchat
+      annotations:
+        summary: "📈 Rocket.Chat high message volume"
+        description: "Message rate above 20 messages/minute for 10 minutes. High user activity detected."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/MONITORING_SETUP_GUIDE.md"
+
+    - alert: RocketChatLowUserEngagement
+      expr: rocketchat_users_active < 2
+      for: 1h
+      labels:
+        severity: info
+        service: rocketchat
+      annotations:
+        summary: "📊 Rocket.Chat low user engagement"
+        description: "Less than 2 active users for 1 hour. Monitor for reduced activity."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/MONITORING_SETUP_GUIDE.md"
+
+    # Error Detection Alerts (Container-based)
+    - alert: RocketChatContainerRestartsHigh
+      expr: increase(kube_pod_container_status_restarts_total{namespace="rocketchat", container=~"rocketchat.*"}[10m]) > 3
+      for: 5m
+      labels:
+        severity: critical
+        service: rocketchat
+      annotations:
+        summary: "🚨 Rocket.Chat container frequent restarts"
+        description: "Rocket.Chat container restarted more than 3 times in 10 minutes. Application instability."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/TROUBLESHOOTING_GUIDE.md"
+
+    - alert: RocketChatOOMKills
+      expr: increase(kube_pod_container_status_last_terminated_reason{namespace="rocketchat", reason="OOMKilled"}[5m]) > 0
+      for: 1m
+      labels:
+        severity: critical
+        service: rocketchat
+      annotations:
+        summary: "🚨 Rocket.Chat OOM kill detected"
+        description: "Rocket.Chat container killed due to out-of-memory. Immediate memory investigation required."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/PERFORMANCE_ANALYSIS.md"
+
+    # Network and Connectivity Alerts
+    - alert: RocketChatNetworkErrors
+      expr: |
+        increase(kube_pod_container_status_last_terminated_reason{namespace="rocketchat", reason=~"Network|DNS|Timeout"}[5m]) > 0
+      for: 5m
+      labels:
+        severity: warning
+        service: rocketchat
+      annotations:
+        summary: "⚠️ Rocket.Chat network connectivity issues"
+        description: "Network or connectivity errors detected in Rocket.Chat containers."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/TROUBLESHOOTING_GUIDE.md"
+
+    # Performance Degradation Alerts
+    - alert: RocketChatSlowResponsePattern
+      expr: |
+        rate(rocketchat_messages_total[5m]) > 5
+        and
+        rate(kube_pod_container_status_restarts_total{namespace="rocketchat"}[5m]) > 0.1
+      for: 15m
+      labels:
+        severity: warning
+        service: rocketchat
+      annotations:
+        summary: "⚠️ Rocket.Chat performance degradation pattern"
+        description: "High message volume with container restarts. Performance bottleneck with instability."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/PERFORMANCE_ANALYSIS.md"
+
     # Cost Monitoring Alerts
     - alert: HighResourceUtilization
       expr: |
