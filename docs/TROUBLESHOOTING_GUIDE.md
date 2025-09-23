@@ -5,12 +5,12 @@
 **Purpose**: Comprehensive troubleshooting guide for Rocket.Chat deployment on Azure Kubernetes Service
 **Scope**: Official Helm chart deployment with enhanced monitoring
 **Status**: Living document - updated as issues are encountered and resolved
-**Current Status**: Security hardening completed - Exposed credentials removed, local secrets management implemented. Currently executing alerts testing and domain migration (grafana.chat.canepro.me → grafana.canepro.me) (Updated: September 23, 2025)
+**Current Status**: Domain migration completed - Grafana successfully migrated from grafana.chat.canepro.me to grafana.canepro.me with SSL. Alerts testing pending Gmail rate limit reset. (Updated: September 23, 2025)
 
 ## 🏆 **MONITORING STACK: SECURITY HARDENED & PRODUCTION READY**
 - ✅ **Rocket.Chat Metrics**: 1238+ series flowing, all dashboards operational
 - ✅ **Prometheus**: ServiceMonitor discovery resolved, all targets UP
-- ✅ **Grafana**: Beautiful real-time dashboards with corrected panels and proper data
+- ✅ **Grafana**: Beautiful real-time dashboards with corrected panels and proper data (now accessible at `grafana.canepro.me`)
 - ✅ **Loki 2.9.0**: Log aggregation with volume API support for advanced log visualization
 - ✅ **Alertmanager**: Email notifications configured with secure webhook integration
 - ✅ **Dashboard Panels**: Fixed Pod Restarts panel and added Total vs Active Users panel
@@ -19,7 +19,7 @@
 - ✅ **🆕 Node-Level Monitoring**: Cluster-wide resource health visibility
 - ✅ **🆕 Historical Trending**: 24h resource patterns for capacity planning
 - ✅ **🆕 Security Hardening**: Exposed credentials removed, local secrets management implemented
-- 🔄 **Today's Progress**: Executing alerts testing and domain migration (grafana.chat.canepro.me → grafana.canepro.me)
+- ✅ **Today's Progress**: Domain migration completed successfully. Alerts testing ready for Gmail rate limit reset.
 
 ## 🔐 **SECURITY IMPROVEMENTS: LOCAL SECRETS MANAGEMENT**
 
@@ -71,16 +71,23 @@ nano .env  # Your real Gmail app password & webhook token
 - [ ] **SMTP Configuration**: Verify Gmail App Password is working
 - [ ] **Webhook Integration**: Confirm Rocket.Chat receives and displays alerts
 
-### **🌐 DOMAIN MIGRATION PROGRESS (grafana.chat.canepro.me → grafana.canepro.me)**
+### **🌐 DOMAIN MIGRATION COMPLETED ✅ (grafana.chat.canepro.me → grafana.canepro.me)**
 
-**✅ DNS Status:** Domain `grafana.canepro.me` already configured and resolving to AKS IP (4.250.169.133)
+**✅ Migration Summary:**
+- **DNS Status:** Domain `grafana.canepro.me` configured and resolving to AKS IP (4.250.169.133)
+- **SSL Certificate:** Let's Encrypt certificate issued and working
+- **Ingress:** New ingress created with SSL redirect enabled
+- **Dashboard Config:** Public dashboard URLs updated to new domain
+- **Domain Switch:** Primary domain successfully switched
+- **Old Domain:** Returns 404 (no longer accessible)
+- **New Domain:** `https://grafana.canepro.me` fully operational
 
-**🔄 Migration Tasks:**
-- [ ] Create new ingress for `grafana.canepro.me` with SSL certificate
-- [ ] Update dashboard configurations to use new domain
-- [ ] Test new domain accessibility and SSL
-- [ ] Switch primary domain (cutover)
-- [ ] Cleanup old domain configuration
+**✅ Completed Tasks:**
+- [x] Create new ingress for `grafana.canepro.me` with SSL certificate
+- [x] Update dashboard configurations to use new domain
+- [x] Test new domain accessibility and SSL (HTTP/2 200 ✅)
+- [x] Switch primary domain (cutover completed)
+- [x] Cleanup old domain configuration (old ingress removed)
 
 **Test Commands:**
 ```bash
