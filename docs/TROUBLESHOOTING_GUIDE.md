@@ -1,11 +1,11 @@
 # 🔧 Rocket.Chat AKS Deployment Troubleshooting Guide
 
 **Created**: September 4, 2025
-**Last Updated**: September 22, 2025 (Enhanced CPU/Memory Monitoring Integration + Comprehensive Resource Analytics)
+**Last Updated**: September 23, 2025 (Security Hardening + Alerts Testing & Domain Migration)
 **Purpose**: Comprehensive troubleshooting guide for Rocket.Chat deployment on Azure Kubernetes Service
 **Scope**: Official Helm chart deployment with enhanced monitoring
 **Status**: Living document - updated as issues are encountered and resolved
-**Current Status**: Security hardening completed - Exposed credentials removed, local secrets management implemented. Ready for final alerts testing and GitHub deployment (Updated: September 23, 2025)
+**Current Status**: Security hardening completed - Exposed credentials removed, local secrets management implemented. Currently executing alerts testing and domain migration (grafana.chat.canepro.me → grafana.canepro.me) (Updated: September 23, 2025)
 
 ## 🏆 **MONITORING STACK: SECURITY HARDENED & PRODUCTION READY**
 - ✅ **Rocket.Chat Metrics**: 1238+ series flowing, all dashboards operational
@@ -19,7 +19,7 @@
 - ✅ **🆕 Node-Level Monitoring**: Cluster-wide resource health visibility
 - ✅ **🆕 Historical Trending**: 24h resource patterns for capacity planning
 - ✅ **🆕 Security Hardening**: Exposed credentials removed, local secrets management implemented
-- 🔄 **Tomorrow's Tasks**: Final alerts testing and webhook validation
+- 🔄 **Today's Progress**: Executing alerts testing and domain migration (grafana.chat.canepro.me → grafana.canepro.me)
 
 ## 🔐 **SECURITY IMPROVEMENTS: LOCAL SECRETS MANAGEMENT**
 
@@ -57,19 +57,30 @@ nano .env  # Your real Gmail app password & webhook token
 
 **Status:** ✅ **Security hardening complete - ready for production deployment**
 
-### **📋 TOMORROW'S ALERTS TESTING CHECKLIST**
+### **📋 CURRENT ALERTS TESTING PROGRESS**
 
-**Morning Setup (Pre-Testing):**
-- [ ] Verify local `.env` file has correct credentials
-- [ ] Run `./scripts/apply-secrets.sh` to ensure secrets are current
-- [ ] Check AlertmanagerConfig status: `kubectl get alertmanagerconfig -n monitoring`
+**✅ Completed Setup:**
+- [x] Verify local `.env` file has correct credentials
+- [x] Run `./scripts/apply-secrets.sh` to ensure secrets are current
+- [x] Check AlertmanagerConfig status: `kubectl get alertmanagerconfig -n monitoring`
 
-**Alert Testing Sequence:**
+**🔄 In Progress - Alert Testing Sequence:**
 - [ ] **Email Alerts**: Send test alert and verify Gmail delivery
 - [ ] **Rocket.Chat Alerts**: Trigger alert and verify webhook message in #alerts
 - [ ] **Alert Rules**: Test each alert rule in `rocket-chat-alerts.yaml`
 - [ ] **SMTP Configuration**: Verify Gmail App Password is working
 - [ ] **Webhook Integration**: Confirm Rocket.Chat receives and displays alerts
+
+### **🌐 DOMAIN MIGRATION PROGRESS (grafana.chat.canepro.me → grafana.canepro.me)**
+
+**✅ DNS Status:** Domain `grafana.canepro.me` already configured and resolving to AKS IP (4.250.169.133)
+
+**🔄 Migration Tasks:**
+- [ ] Create new ingress for `grafana.canepro.me` with SSL certificate
+- [ ] Update dashboard configurations to use new domain
+- [ ] Test new domain accessibility and SSL
+- [ ] Switch primary domain (cutover)
+- [ ] Cleanup old domain configuration
 
 **Test Commands:**
 ```bash
