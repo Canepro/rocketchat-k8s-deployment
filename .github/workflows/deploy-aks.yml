@@ -54,7 +54,7 @@ jobs:
         run: |
           echo "🔍 Validating Kubernetes manifests..."
           find . -name "*.yaml" -o -name "*.yml" | while read file; do
-            if ! python3 -c "import yaml; yaml.safe_load(open('$file'))" 2>/dev/null; then
+            if ! python3 -c "import yaml; list(yaml.safe_load_all(open('$file')))" 2>/dev/null; then
               echo "❌ Invalid YAML in $file"
               exit 1
             fi

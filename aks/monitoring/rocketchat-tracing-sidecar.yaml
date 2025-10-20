@@ -8,14 +8,14 @@ metadata:
   namespace: rocketchat
 data:
   tracing-sidecar.js: |
-    // OpenTelemetry sidecar for Rocket.Chat tracing
+    # OpenTelemetry sidecar for Rocket.Chat tracing
     const { NodeSDK } = require('@opentelemetry/sdk-node');
     const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
     const { OTLPTraceExporter } = require('@opentelemetry/exporter-otlp-http');
     const { Resource } = require('@opentelemetry/resources');
     const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
 
-    // Configure the OpenTelemetry SDK
+    # Configure the OpenTelemetry SDK
     const sdk = new NodeSDK({
       resource: new Resource({
         [SemanticResourceAttributes.SERVICE_NAME]: 'rocket-chat',
@@ -36,7 +36,7 @@ data:
       ],
     });
 
-    // Initialize the SDK
+    # Initialize the SDK
     sdk.start();
     console.log('OpenTelemetry sidecar tracing initialized');
 
