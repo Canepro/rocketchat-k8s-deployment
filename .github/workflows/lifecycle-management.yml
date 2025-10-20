@@ -1,0 +1,208 @@
+name: AKS Lifecycle Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Lifecycle action to perform'
+        required: true
+        default: 'teardown'
+        type: choice
+        options:
+        - teardown
+        - recreate
+        - validate
+      enable_monitoring:
+        description: 'Enable monitoring stack during recreation'
+        required: false
+        default: false
+        type: boolean
+      force_teardown:
+        description: 'Force teardown even if cluster is not in Succeeded state'
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    # Run teardown on day 12 of each month (pre-suspension)
+    - cron: '0 2 12 * *'
+    # Run recreation on day 2 of each month (post-renewal)
+    - cron: '0 2 2 * *'
+
+env:
+  CLUSTER_NAME: rocketchat-aks
+  RESOURCE_GROUP: rocketchat-k8s-rg
+  KEY_VAULT_NAME: rocketchat-kv
+  BACKUP_STORAGE_ACCOUNT: rocketchatbackups
+
+jobs:
+  pre-teardown-backup:
+    if: github.event.inputs.action == 'teardown' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+        
+    - name: Get AKS credentials
+      run: |
+        az aks get-credentials --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --overwrite
+        
+    - name: Backup cluster state
+      run: |
+        chmod +x scripts/backup/backup-cluster-state.sh
+        ./scripts/backup/backup-cluster-state.sh
+        
+    - name: Backup secrets to Key Vault
+      run: |
+        chmod +x scripts/secrets/backup-secrets-to-keyvault.sh
+        ./scripts/secrets/backup-secrets-to-keyvault.sh
+        
+    - name: Create PVC snapshots
+      run: |
+        chmod +x scripts/backup/create-pvc-snapshots.sh
+        ./scripts/backup/create-pvc-snapshots.sh
+        
+    - name: Backup MongoDB data
+      run: |
+        chmod +x scripts/backup/mongodb-backup.sh
+        ./scripts/backup/mongodb-backup.sh
+        
+    - name: Validate backups
+      run: |
+        chmod +x scripts/backup/backup-integrity-check.sh
+        ./scripts/backup/backup-integrity-check.sh
+
+  teardown-cluster:
+    if: github.event.inputs.action == 'teardown' || github.event_name == 'schedule'
+    needs: pre-teardown-backup
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+        
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: '1.0'
+        
+    - name: Get AKS credentials
+      run: |
+        az aks get-credentials --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --overwrite
+        
+    - name: Teardown cluster
+      run: |
+        chmod +x scripts/lifecycle/teardown-cluster.sh
+        FORCE_TEARDOWN=${{ github.event.inputs.force_teardown || 'false' }} ./scripts/lifecycle/teardown-cluster.sh
+        
+    - name: Verify teardown
+      run: |
+        if az aks show --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &> /dev/null; then
+          echo "Cluster still exists after teardown"
+          exit 1
+        else
+          echo "Cluster successfully torn down"
+        fi
+
+  recreate-cluster:
+    if: github.event.inputs.action == 'recreate' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+        
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: '1.0'
+        
+    - name: Recreate cluster
+      run: |
+        chmod +x scripts/lifecycle/recreate-cluster.sh
+        ENABLE_MONITORING=${{ github.event.inputs.enable_monitoring || 'false' }} ./scripts/lifecycle/recreate-cluster.sh
+        
+    - name: Get AKS credentials
+      run: |
+        az aks get-credentials --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --overwrite
+        
+    - name: Validate cluster health
+      run: |
+        chmod +x scripts/lifecycle/validate-cluster-health.sh
+        ./scripts/lifecycle/validate-cluster-health.sh
+
+  validate-deployment:
+    if: github.event.inputs.action == 'validate' || always()
+    needs: [recreate-cluster]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+        
+    - name: Get AKS credentials
+      run: |
+        az aks get-credentials --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --overwrite
+        
+    - name: Validate cluster health
+      run: |
+        chmod +x scripts/lifecycle/validate-cluster-health.sh
+        ./scripts/lifecycle/validate-cluster-health.sh
+        
+    - name: Check Rocket.Chat accessibility
+      run: |
+        CLUSTER_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        if [ -n "$CLUSTER_IP" ]; then
+          echo "Cluster IP: $CLUSTER_IP"
+          echo "Rocket.Chat should be accessible at: https://chat.canepro.me"
+          echo "Grafana should be accessible at: https://grafana.chat.canepro.me"
+        else
+          echo "Cluster IP not available yet"
+        fi
+
+  notify-completion:
+    if: always()
+    needs: [pre-teardown-backup, teardown-cluster, recreate-cluster, validate-deployment]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Notify completion
+      run: |
+        echo "Lifecycle management workflow completed"
+        echo "Action: ${{ github.event.inputs.action || 'scheduled' }}"
+        echo "Status: ${{ job.status }}"

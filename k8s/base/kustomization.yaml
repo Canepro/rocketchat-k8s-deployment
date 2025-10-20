@@ -1,0 +1,33 @@
+# Base kustomization configuration
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Common labels for all resources
+commonLabels:
+  project: rocketchat-k8s
+  environment: production
+  managed-by: kustomize
+
+# Namespace for all resources
+namespace: rocketchat
+
+# Resources to include
+resources:
+- namespace.yaml
+- rocketchat-deployment.yaml
+- mongodb-deployment.yaml
+- ingress.yaml
+
+# Common annotations
+commonAnnotations:
+  backup.rocketchat.io/enabled: "true"
+  lifecycle.rocketchat.io/stage: "active"
+
+# Image transformations
+images:
+- name: registry.rocket.chat/rocketchat/rocket.chat
+  newTag: 7.9.3
+- name: mongo
+  newTag: 6.0
+- name: bitnami/mongodb-exporter
+  newTag: 0.40.0

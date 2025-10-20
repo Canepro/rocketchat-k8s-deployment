@@ -1,0 +1,36 @@
+# PodMonitors for Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: rocketchat-podmonitor
+  namespace: monitoring
+  labels:
+    app: rocketchat
+    component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: rocketchat
+  podMetricsEndpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: mongodb-podmonitor
+  namespace: monitoring
+  labels:
+    app: mongodb
+    component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  podMetricsEndpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s

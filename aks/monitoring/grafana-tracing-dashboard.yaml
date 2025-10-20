@@ -1,0 +1,135 @@
+# Grafana Tracing Dashboard for Rocket.Chat
+# Comprehensive distributed tracing visualization
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-tracing-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  rocket-chat-tracing.json: |
+    {
+      "uid": "rocket-chat-tracing",
+      "title": "🚀 Rocket.Chat Distributed Tracing",
+      "description": "Comprehensive distributed tracing dashboard for Rocket.Chat microservices. Monitor request flows, performance bottlenecks, and error correlation across services.",
+      "tags": ["tracing", "rocket-chat", "distributed", "performance", "observability"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": {"from": "now-1h", "to": "now"},
+      "panels": [
+        {
+          "id": 1,
+          "title": "🔍 Trace Search",
+          "type": "traces",
+          "datasource": {"type": "tempo", "uid": "tempo"},
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
+          "targets": [
+            {
+              "datasource": {"type": "tempo", "uid": "tempo"},
+              "query": "{service.name=\"rocket-chat\"}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "showTraceID": true,
+            "showServiceName": true,
+            "showOperationName": true,
+            "showDuration": true,
+            "showLogs": true
+          }
+        },
+        {
+          "id": 2,
+          "title": "📊 Trace Statistics",
+          "type": "stat",
+          "datasource": {"type": "tempo", "uid": "tempo"},
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 8},
+          "targets": [
+            {
+              "datasource": {"type": "tempo", "uid": "tempo"},
+              "query": "count({service.name=\"rocket-chat\"})",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "color": {"mode": "thresholds"}
+            }
+          }
+        },
+        {
+          "id": 3,
+          "title": "⏱️ Average Duration",
+          "type": "stat",
+          "datasource": {"type": "tempo", "uid": "tempo"},
+          "gridPos": {"h": 6, "w": 6, "x": 6, "y": 8},
+          "targets": [
+            {
+              "datasource": {"type": "tempo", "uid": "tempo"},
+              "query": "avg(duration({service.name=\"rocket-chat\"}))",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "color": {"mode": "thresholds"}
+            }
+          }
+        },
+        {
+          "id": 4,
+          "title": "❌ Error Rate",
+          "type": "stat",
+          "datasource": {"type": "tempo", "uid": "tempo"},
+          "gridPos": {"h": 6, "w": 6, "x": 12, "y": 8},
+          "targets": [
+            {
+              "datasource": {"type": "tempo", "uid": "tempo"},
+              "query": "rate(count({service.name=\"rocket-chat\", status=\"error\"}[5m]))",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "color": {"mode": "thresholds"}
+            }
+          }
+        },
+        {
+          "id": 5,
+          "title": "🎯 Success Rate",
+          "type": "stat",
+          "datasource": {"type": "tempo", "uid": "tempo"},
+          "gridPos": {"h": 6, "w": 6, "x": 18, "y": 8},
+          "targets": [
+            {
+              "datasource": {"type": "tempo", "uid": "tempo"},
+              "query": "rate(count({service.name=\"rocket-chat\", status=\"ok\"}[5m]))",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "color": {"mode": "thresholds"}
+            }
+          }
+        }
+      ],
+      "templating": {"list": []},
+      "annotations": {"list": []},
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "links": [],
+      "liveNow": false,
+      "weekStart": ""
+    }

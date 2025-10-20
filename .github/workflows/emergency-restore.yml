@@ -1,0 +1,149 @@
+name: Emergency Restore
+
+on:
+  workflow_dispatch:
+    inputs:
+      restore_type:
+        description: 'Type of restore to perform'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+        - full
+        - mongodb
+        - cluster-state
+        - snapshots
+      snapshot_timestamp:
+        description: 'Snapshot timestamp to restore from (leave empty for latest)'
+        required: false
+        type: string
+      enable_monitoring:
+        description: 'Enable monitoring stack during restore'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  CLUSTER_NAME: rocketchat-aks
+  RESOURCE_GROUP: rocketchat-k8s-rg
+  KEY_VAULT_NAME: rocketchat-kv
+  BACKUP_STORAGE_ACCOUNT: rocketchatbackups
+
+jobs:
+  restore-from-latest:
+    if: github.event.inputs.restore_type == 'full' || github.event.inputs.restore_type == 'mongodb' || github.event.inputs.restore_type == 'cluster-state' || github.event.inputs.restore_type == 'snapshots'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+        
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: '1.0'
+        
+    - name: Check if cluster exists
+      id: cluster-check
+      run: |
+        if az aks show --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &> /dev/null; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Recreate cluster if needed
+      if: steps.cluster-check.outputs.exists == 'false'
+      run: |
+        chmod +x scripts/lifecycle/recreate-cluster.sh
+        SNAPSHOT_TIMESTAMP=${{ github.event.inputs.snapshot_timestamp }} ENABLE_MONITORING=${{ github.event.inputs.enable_monitoring }} ./scripts/lifecycle/recreate-cluster.sh
+        
+    - name: Get AKS credentials
+      run: |
+        az aks get-credentials --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --overwrite
+        
+    - name: Restore MongoDB data
+      if: github.event.inputs.restore_type == 'full' || github.event.inputs.restore_type == 'mongodb'
+      run: |
+        chmod +x scripts/backup/mongodb-restore.sh
+        BACKUP_NAME=${{ github.event.inputs.snapshot_timestamp }} ./scripts/backup/mongodb-restore.sh
+        
+    - name: Restore cluster state
+      if: github.event.inputs.restore_type == 'full' || github.event.inputs.restore_type == 'cluster-state'
+      run: |
+        # Restore cluster state from backup
+        echo "Cluster state restoration would be implemented here"
+        echo "This would involve restoring Helm values, ConfigMaps, Secrets, etc."
+        
+    - name: Restore from snapshots
+      if: github.event.inputs.restore_type == 'full' || github.event.inputs.restore_type == 'snapshots'
+      run: |
+        chmod +x scripts/backup/restore-from-snapshots.sh
+        SNAPSHOT_TIMESTAMP=${{ github.event.inputs.snapshot_timestamp }} ./scripts/backup/restore-from-snapshots.sh
+
+  validate-data:
+    needs: restore-from-latest
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+        
+    - name: Get AKS credentials
+      run: |
+        az aks get-credentials --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --overwrite
+        
+    - name: Validate cluster health
+      run: |
+        chmod +x scripts/lifecycle/validate-cluster-health.sh
+        ./scripts/lifecycle/validate-cluster-health.sh
+        
+    - name: Validate MongoDB data
+      run: |
+        # Check MongoDB connection and data integrity
+        kubectl exec -it $(kubectl get pod -l app=mongodb -n rocketchat -o jsonpath='{.items[0].metadata.name}') -n rocketchat -- mongosh --eval "db.adminCommand('ping')"
+        
+    - name: Validate Rocket.Chat functionality
+      run: |
+        # Check if Rocket.Chat is accessible
+        kubectl get pods -l app=rocketchat -n rocketchat
+        kubectl get services -n rocketchat
+        kubectl get ingress -n rocketchat
+
+  notify-status:
+    if: always()
+    needs: [restore-from-latest, validate-data]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Notify restore completion
+      run: |
+        echo "Emergency restore workflow completed"
+        echo "Restore type: ${{ github.event.inputs.restore_type }}"
+        echo "Snapshot timestamp: ${{ github.event.inputs.snapshot_timestamp || 'latest' }}"
+        echo "Status: ${{ job.status }}"
+        
+    - name: Send restore notification
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        text: "Emergency restore completed for ${{ github.repository }}"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

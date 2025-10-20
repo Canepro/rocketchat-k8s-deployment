@@ -99,11 +99,20 @@ graph TB
 - **File Storage**: Persistent volume claims with Azure Premium SSD
 - **Database**: MongoDB replica set with automated backups
 
+### 🔄 **Lifecycle Automation**
+- **Automated Cluster Lifecycle**: Complete teardown/recreation automation with snapshot-based recovery
+- **Comprehensive Backup System**: MongoDB dumps, PVC snapshots, and cluster state preservation
+- **Azure DevOps Pipelines**: Automated lifecycle management, backup automation, and subscription monitoring
+- **Secrets Management**: Azure Key Vault integration with automated secret synchronization
+- **Infrastructure as Code**: Complete Terraform configuration for repeatable deployments
+- **Disaster Recovery**: Automated recovery from subscription suspensions and cluster failures
+
 ### 📊 **Monitoring & Observability**
 - **Metrics Collection**: 1238+ metric series from Rocket.Chat and infrastructure
 - **Comprehensive Dashboards**: 28 real-time panels with production monitoring
 - **Kubernetes Monitoring**: Pod status, desired vs actual state, workload health
 - **Log Aggregation**: Centralized logging with structured query capabilities via Loki 2.9.0
+- **Distributed Tracing**: Complete request tracing with Tempo and OpenTelemetry
 - **Alerting**: 12+ alert rules with intelligent routing and notifications
 - **Performance Monitoring**: CPU, memory, API response times, error rates, user metrics
 
@@ -128,6 +137,7 @@ graph TB
 - **kubectl** configured for your AKS cluster
 - **Helm 3.x** installed
 - **Domain name** with DNS management access
+- **GitHub Actions** (optional, for CI/CD)
 
 ### 1. Clone Repository
 
@@ -136,7 +146,7 @@ git clone https://github.com/your-username/rocketchat-k8s-deployment.git
 cd rocketchat-k8s-deployment
 ```
 
-### 2. Deploy Rocket.Chat
+### 2. Deploy Rocket.Chat (Basic)
 
 ```bash
 # Deploy to AKS (Production)
@@ -145,7 +155,16 @@ chmod +x deploy-aks-official.sh
 ./deploy-aks-official.sh
 ```
 
-### 3. Deploy Monitoring Stack
+### 3. Deploy Enhanced Features (Recommended)
+
+```bash
+# Deploy all enhanced features (autoscaling, HA, cost monitoring, health checks)
+cd aks/scripts
+chmod +x deploy-enhanced-features.sh
+./deploy-enhanced-features.sh
+```
+
+### 4. Deploy Monitoring Stack
 
 ```bash
 # Deploy complete monitoring solution
@@ -159,20 +178,44 @@ helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
 # Apply ServiceMonitors for Rocket.Chat metrics
 kubectl apply -f aks/monitoring/rocketchat-servicemonitors.yaml
 
-# Apply comprehensive dashboard (28 panels with pod monitoring)
+# Apply comprehensive dashboard (34 panels with pod monitoring)
 kubectl apply -f aks/monitoring/rocket-chat-dashboard-comprehensive-configmap.yaml
+
+# Deploy cost monitoring dashboard
+kubectl apply -f aks/monitoring/azure-cost-monitoring.yaml
+
+# Deploy autoscaling configuration
+kubectl apply -f aks/monitoring/autoscaling-config.yaml
+
+# Deploy high availability configuration
+kubectl apply -f aks/monitoring/high-availability-config.yaml
+
+# Deploy distributed tracing stack
+cd aks/scripts
+chmod +x deploy-tracing-stack.sh
+./deploy-tracing-stack.sh
 
 # Optional: Deploy public dashboard for portfolio demos
 kubectl apply -f aks/monitoring/grafana-public-dashboard-setup.yaml
 ```
 
-### 4. Access Services
+### 5. Run Health Checks
+
+```bash
+# Run comprehensive health check
+./scripts/health-check.sh
+```
+
+### 6. Access Services
 
 | Service | Access Method | Credentials |
 |---------|---------------|-------------|
-| **Rocket.Chat** | `https://your-domain.com` | Your admin account |
-| **Grafana** | Port-forward: `kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring` | `admin` / `prom-operator` |
+| **Rocket.Chat** | `https://chat.canepro.me` | Your admin account |
+| **Grafana** | `https://grafana.chat.canepro.me` or Port-forward: `kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring` | `admin` / `prom-operator` |
 | **Prometheus** | Port-forward: `kubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090 -n monitoring` | No auth required |
+| **Tracing Dashboard** | `https://grafana.chat.canepro.me/d/rocket-chat-tracing` | Same as Grafana |
+| **Health Check** | `./scripts/health-check.sh` | Automated health monitoring |
+| **Cost Dashboard** | Available in Grafana under "Azure Cost Management" | Same as Grafana |
 
 ## 📊 Monitoring & Observability
 
@@ -183,6 +226,11 @@ kubectl apply -f aks/monitoring/grafana-public-dashboard-setup.yaml
   - Desired vs actual state tracking (deployments, StatefulSets, DaemonSets)
   - Application metrics (users, messages, performance)
   - Infrastructure health with workload status tables
+- **Rocket.Chat Distributed Tracing**: Complete request tracing visualization
+  - Request flow tracking across microservices
+  - Performance bottleneck identification
+  - Error correlation and debugging
+  - End-to-end request visibility
 - **Kubernetes Cluster Overview**: Infrastructure monitoring and resource utilization  
 - **Loki Logs**: Centralized log analysis and troubleshooting with volume API support
 
@@ -196,6 +244,7 @@ kubectl apply -f aks/monitoring/grafana-public-dashboard-setup.yaml
 | **Infrastructure** | CPU, memory, pod restarts, node coverage | Resource utilization & stability |
 | **Database** | MongoDB connections, replica status, operations | Database cluster health |
 | **Networking** | Request rates, error rates, DDP connections | Service reliability |
+| **Tracing** | Request traces, span durations, error correlation | Distributed system visibility |
 
 ### 🔔 **Alerting**
 
@@ -203,6 +252,21 @@ kubectl apply -f aks/monitoring/grafana-public-dashboard-setup.yaml
 - **Warning Alerts**: Performance degradation, capacity planning
 - **Info Alerts**: Deployment events, configuration changes
 - **Notification Channels**: Email, Slack, webhooks, Azure Monitor
+
+### 🔍 **Complete Observability Stack**
+
+This deployment provides the **gold standard** of observability with all three pillars:
+
+- **📊 Metrics**: Prometheus collects 1238+ metric series from Rocket.Chat and infrastructure
+- **📝 Logs**: Loki 2.9.0 aggregates and indexes all application and system logs
+- **🔍 Traces**: Tempo provides distributed tracing for end-to-end request visibility
+- **📈 Visualization**: Grafana unifies all three pillars in comprehensive dashboards
+
+**Key Benefits**:
+- **Complete Visibility**: Track requests from user action to database query
+- **Performance Optimization**: Identify bottlenecks across the entire stack
+- **Faster Debugging**: Correlate metrics, logs, and traces for rapid issue resolution
+- **Proactive Monitoring**: Detect issues before they impact users
 
 ## 📁 Repository Structure
 
@@ -221,9 +285,34 @@ kubectl apply -f aks/monitoring/grafana-public-dashboard-setup.yaml
 │   │   ├── rocket-chat-alerts.yaml
 │   │   ├── grafana-public-dashboard-setup.yaml
 │   │   ├── grafana-datasource-loki.yaml
+│   │   ├── grafana-tempo-datasource.yaml
+│   │   ├── grafana-tracing-dashboard.yaml
+│   │   ├── opentelemetry-collector.yaml
+│   │   ├── tempo-deployment.yaml
+│   │   ├── tempo-values.yaml
 │   │   ├── loki-values.yaml
 │   │   └── mongodb-servicemonitor.yaml
 │   └── 📁 scripts/                  # Utility scripts
+├── 🔄 azure-pipelines/              # Azure DevOps Pipelines
+│   ├── lifecycle-management.yml     # Cluster lifecycle automation
+│   ├── backup-automation.yml       # Backup automation
+│   └── subscription-monitor.yml    # Cost and subscription monitoring
+├── 🏗️ infrastructure/              # Infrastructure as Code
+│   └── terraform/                  # Terraform configurations
+│       ├── main.tf                 # AKS cluster definition
+│       ├── variables.tf            # Input variables
+│       ├── outputs.tf             # Output values
+│       └── storage.tf             # Storage configurations
+├── 📁 k8s/                         # Kubernetes manifests
+│   ├── base/                       # Base configurations
+│   └── overlays/                   # Environment-specific overlays
+│       ├── production/             # Production configurations
+│       └── monitoring/             # Monitoring stack
+├── 📁 scripts/                     # Automation scripts
+│   ├── backup/                     # Backup automation scripts
+│   ├── lifecycle/                  # Cluster lifecycle scripts
+│   ├── monitoring/                # Monitoring scripts
+│   └── secrets/                   # Secrets management scripts
 ├── 🏠 microk8s/                     # MicroK8s (Legacy/Development)
 │   ├── 📁 config/                   # MicroK8s configurations
 │   ├── 📁 monitoring/               # MicroK8s monitoring
@@ -232,6 +321,11 @@ kubectl apply -f aks/monitoring/grafana-public-dashboard-setup.yaml
 │   ├── TROUBLESHOOTING_GUIDE.md     # Comprehensive troubleshooting
 │   ├── MONITORING_SETUP_GUIDE.md    # Monitoring setup guide
 │   ├── COST_OPTIMIZATION_GUIDE.md   # Cost optimization strategies
+│   ├── LIFECYCLE_AUTOMATION.md      # Lifecycle automation guide
+│   ├── BACKUP_RESTORE_GUIDE.md      # Backup and restore procedures
+│   ├── COST_MANAGEMENT_AUTOMATION.md # Cost management automation
+│   ├── SECRETS_MANAGEMENT.md        # Secrets management guide
+│   ├── DISASTER_RECOVERY.md         # Disaster recovery runbook
 │   └── [additional guides]          # Specialized documentation
 ├── 🎯 portfolio/                    # Portfolio integration assets
 │   ├── portfolio-integration-guide.md
@@ -304,6 +398,11 @@ ALERT_EMAIL_RECIPIENT=your-alert-email@gmail.com
 | **[Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md)** | Complete issue resolution (5300+ lines) | DevOps, SRE |
 | **[Monitoring Setup Guide](docs/MONITORING_SETUP_GUIDE.md)** | Production monitoring implementation | Platform Engineers |
 | **[Cost Optimization Guide](docs/COST_OPTIMIZATION_GUIDE.md)** | Resource optimization strategies | FinOps, Management |
+| **[Lifecycle Automation](docs/LIFECYCLE_AUTOMATION.md)** | Complete cluster lifecycle automation | DevOps, Platform Engineers |
+| **[Backup & Restore Guide](docs/BACKUP_RESTORE_GUIDE.md)** | Comprehensive backup and restore procedures | DevOps, SRE |
+| **[Cost Management Automation](docs/COST_MANAGEMENT_AUTOMATION.md)** | Automated cost management and optimization | FinOps, Management |
+| **[Secrets Management](docs/SECRETS_MANAGEMENT.md)** | Azure Key Vault and secrets automation | Security, DevOps |
+| **[Disaster Recovery](docs/DISASTER_RECOVERY.md)** | Disaster recovery procedures and runbooks | SRE, Management |
 
 ### 🎯 **Quick Reference**
 
@@ -415,25 +514,62 @@ helm rollback rocketchat -n rocketchat
 # See docs/EMERGENCY_PROCEDURES.md
 ```
 
-## 🎯 **Current Status: PRODUCTION READY** ✅
+## 🎯 **Current Status: ENTERPRISE-GRADE PRODUCTION READY** ✅
 
-### ✅ **Achievements (September 21, 2025)**
+### ✅ **Latest Achievements (December 2024)**
 
 - **🚀 Complete Deployment**: Rocket.Chat running on AKS with SSL and high availability
-- **📊 Comprehensive Monitoring**: 1238+ metric series, 28-panel production dashboard
+- **📊 Comprehensive Monitoring**: 1238+ metric series, 34-panel production dashboard
 - **🎯 Advanced Observability**: Desired vs actual state monitoring, pod health tracking
 - **📝 Enhanced Logging**: Loki 2.9.0 with volume API support and structured queries
+- **🔍 Distributed Tracing**: Complete request tracing with Tempo and OpenTelemetry
 - **🔔 Intelligent Alerting**: 12+ alert rules with multi-channel notifications
 - **📚 Complete Documentation**: 5300+ lines of troubleshooting guides with JSON syntax error resolution
 - **💰 Cost Optimized**: 15-20% monthly savings through resource optimization
 - **🔧 Production Ready**: Dashboard import issues resolved, comprehensive pod monitoring active
+- **🆕 CI/CD Pipeline**: GitHub Actions automated deployment and testing
+- **🆕 Health Monitoring**: Automated health checks with comprehensive reporting
+- **🆕 Cost Management**: Real-time Azure cost monitoring and budget alerts
+- **🆕 Auto-scaling**: Horizontal and Vertical Pod Autoscalers for optimal resource usage
+- **🆕 High Availability**: Multi-zone deployment with pod disruption budgets and anti-affinity
+- **🔄 Lifecycle Automation**: Complete cluster lifecycle management with automated teardown/recreation
+- **💾 Backup System**: Comprehensive backup strategy with MongoDB dumps, PVC snapshots, and cluster state
+- **🔐 Secrets Management**: Azure Key Vault integration with automated secret synchronization
+- **🏗️ Infrastructure as Code**: Complete Terraform configuration for repeatable deployments
+- **🚨 Disaster Recovery**: Automated recovery from subscription suspensions and cluster failures
+
+### 🆕 **New Enterprise Features (December 2024)**
+
+- **✅ GitHub Actions CI/CD**: Automated deployment pipeline with security scanning
+- **✅ Health Check Automation**: Comprehensive health monitoring with 15+ checks
+- **✅ Azure Cost Management**: Real-time cost tracking and optimization recommendations
+- **✅ Auto-scaling Configuration**: HPA and VPA for dynamic resource management
+- **✅ High Availability Setup**: Multi-zone deployment with disaster recovery
+- **✅ Enhanced Security**: Network policies, priority classes, and security scanning
+- **✅ Monitoring Automation**: Automated health checks and cost monitoring
+- **✅ Distributed Tracing**: Complete request tracing with Tempo and OpenTelemetry
+- **✅ Lifecycle Automation**: Complete cluster lifecycle management with automated teardown/recreation
+- **✅ Backup System**: Comprehensive backup strategy with MongoDB dumps, PVC snapshots, and cluster state
+- **✅ Secrets Management**: Azure Key Vault integration with automated secret synchronization
+- **✅ Infrastructure as Code**: Complete Terraform configuration for repeatable deployments
+- **✅ Disaster Recovery**: Automated recovery from subscription suspensions and cluster failures
 
 ### 📋 **Next Sprint Tasks**
 
-- [ ] **MongoDB Exporter**: Deploy detailed database metrics collection
-- [ ] **Performance Tuning**: Fine-tune resource limits based on metrics
-- [ ] **Backup Automation**: Implement automated MongoDB backup schedules
-- [ ] **Security Hardening**: Additional network policies and pod security
+- [x] **CI/CD Pipeline**: GitHub Actions automated deployment ✅
+- [x] **Health Monitoring**: Automated health check system ✅
+- [x] **Cost Management**: Azure cost monitoring integration ✅
+- [x] **Auto-scaling**: HPA and VPA configuration ✅
+- [x] **High Availability**: Multi-zone deployment setup ✅
+- [x] **Lifecycle Automation**: Complete cluster lifecycle management ✅
+- [x] **Backup System**: Comprehensive backup strategy ✅
+- [x] **Secrets Management**: Azure Key Vault integration ✅
+- [x] **Infrastructure as Code**: Terraform configuration ✅
+- [x] **Disaster Recovery**: Automated recovery procedures ✅
+- [x] **Distributed Tracing**: Complete request tracing with Tempo and OpenTelemetry ✅
+- [ ] **Performance Optimization**: Advanced caching and CDN integration
+- [ ] **Security Hardening**: Pod Security Standards and audit logging
+- [ ] **Multi-Region Support**: Cross-region backup and failover procedures
 
 ## 🤝 Contributing
 

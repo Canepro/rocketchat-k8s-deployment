@@ -1,9 +1,9 @@
 # 🚨 Enhanced Monitoring & Alerting Guide
 
 **Date**: September 19, 2025
-**Last Updated**: September 21, 2025
-**Status**: ✅ Enhanced Monitoring Deployed
-**Purpose**: Comprehensive monitoring with alerts, notifications, and Azure integration
+**Last Updated**: September 22, 2025
+**Status**: ✅ Enhanced Monitoring with CPU/Memory Analytics Deployed
+**Purpose**: Comprehensive monitoring with alerts, notifications, Azure integration, and advanced resource analytics
 
 ## 📊 Enhanced Monitoring Overview
 
@@ -15,6 +15,10 @@
 - **Azure Monitor Configuration** - Enterprise-grade monitoring (configuration ready)
 - **Loki Volume API Support** - Advanced log volume visualization (Loki 2.9.0)
 - **Enhanced Dashboard Panels** - Fixed data accuracy and added user metrics panels
+- **🆕 Comprehensive CPU/Memory Analytics** - 6 new resource monitoring panels with efficiency metrics
+- **🆕 Node-Level Resource Monitoring** - Cluster-wide resource health visibility  
+- **🆕 Historical Resource Trending** - 24h resource usage patterns for capacity planning
+- **🆕 Resource Efficiency Scoring** - Optimization insights and right-sizing recommendations
 
 ### 📈 Monitoring Coverage
 
@@ -167,7 +171,14 @@ Perf
 ## 📊 Monitoring Dashboards
 
 ### Grafana Dashboards
-- **Rocket.Chat Production Monitoring**: Main operational dashboard
+- **Rocket.Chat Comprehensive Production Monitoring**: Main operational dashboard (34 panels)
+  - **🆕 Enhanced Resource Analytics Section**: 6 new CPU/memory monitoring panels
+  - **Real-time Resource Utilization**: CPU usage vs limits with color-coded thresholds
+  - **Memory Usage Analysis**: Working set vs configured limits
+  - **Resource Efficiency Metrics**: CPU and memory efficiency percentages
+  - **Node-level Monitoring**: Cluster-wide CPU and memory health
+  - **Historical Trending**: 24-hour resource usage patterns
+  - **MongoDB Resource Tracking**: Database-specific resource consumption
 - **Alertmanager**: Alert status and history
 - **Prometheus**: System metrics and performance
 
@@ -175,6 +186,28 @@ Perf
 - **Container Insights**: Detailed container analytics
 - **Cost Analysis**: Spending trends and optimization
 - **Log Analytics**: Centralized logging queries
+
+### New Resource Monitoring Panels (Added September 22, 2025)
+
+#### Panel 15: CPU Utilization (%)
+- **Purpose**: Real-time CPU usage vs configured limits
+- **Metrics**: `rate(container_cpu_usage_seconds_total[5m]) * 100` vs pod CPU limits
+- **Visualization**: Time series with color-coded thresholds (Green: 0-70%, Yellow: 70-90%, Red: 90%+)
+
+#### Panel 16: Memory Usage vs Limits  
+- **Purpose**: Memory consumption compared to pod limits
+- **Metrics**: `container_memory_working_set_bytes` vs `kube_pod_container_resource_limits`
+- **Visualization**: Time series with configurable memory thresholds
+
+#### Panel 29-32: Resource Efficiency & Node Health
+- **CPU Efficiency**: Average resource utilization efficiency across all pods
+- **Memory Efficiency**: Memory utilization efficiency with right-sizing insights
+- **Node CPU Usage**: Cluster-wide CPU consumption via Node Exporter
+- **Node Memory Usage**: Cluster-wide memory availability tracking
+
+#### Panel 33-34: Historical & Database Analytics
+- **Resource Trends**: 24-hour CPU and memory usage patterns for capacity planning
+- **MongoDB Resources**: Database-specific CPU and memory consumption tracking
 
 ## 🔍 Testing Alert System
 
@@ -240,13 +273,31 @@ Log Retention: 7 days Prometheus, 30 days Loki
 
 ## 🚀 Deployment Instructions
 
-### Deploy Enhanced Monitoring
+### Deploy Enhanced Monitoring with CPU/Memory Analytics
 ```bash
 # Deploy enhanced alerts and notifications
 ./aks/scripts/deploy-enhanced-monitoring.sh
 
+# Deploy enhanced CPU/memory monitoring dashboard
+./aks/scripts/update-monitoring-dashboard.sh
+
 # Optional: Deploy Azure Monitor integration
 # Follow prompts in the deployment script
+```
+
+### Enhanced Dashboard Deployment (New)
+```bash
+# Quick deployment of comprehensive CPU/memory monitoring
+cd aks/scripts
+chmod +x update-monitoring-dashboard.sh
+./update-monitoring-dashboard.sh
+
+# The script will:
+# ✅ Check prerequisites and cluster connectivity  
+# ✅ Backup existing dashboard configuration
+# ✅ Deploy 6 new CPU/memory monitoring panels
+# ✅ Restart Grafana to reload dashboards
+# ✅ Verify deployment success and provide access info
 ```
 
 ### Configure Email Notifications

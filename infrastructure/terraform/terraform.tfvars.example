@@ -1,0 +1,52 @@
+# Terraform Variables Example
+# Copy this file to terraform.tfvars and customize for your environment
+
+# Basic Configuration
+resource_group_name = "rocketchat-k8s-rg"
+cluster_name       = "rocketchat-aks"
+environment        = "production"
+lifecycle_stage    = "active"
+
+# Network Configuration
+dns_prefix           = "rocketchat"
+kubernetes_version   = "1.28"
+vnet_address_space   = "10.0.0.0/16"
+aks_subnet_cidr      = "10.0.1.0/24"
+service_cidr         = "10.1.0.0/16"
+dns_service_ip       = "10.1.0.10"
+
+# Node Pool Configuration
+system_node_count = 1
+system_node_size  = "Standard_DS2_v2"
+user_node_count   = 2
+user_node_size    = "Standard_DS2_v2"
+
+# Security Configuration
+ssh_source_address_prefix = "0.0.0.0/0"
+
+# Lifecycle Management
+auto_teardown_enabled = true
+prevent_destroy       = false
+
+# Cost Optimization
+enable_spot_instances = false
+spot_max_price       = 0.1
+
+# Monitoring Configuration
+enable_monitoring     = false
+log_retention_days    = 30
+
+# Backup Configuration
+backup_retention_days    = 7
+snapshot_retention_days  = 7
+
+# Domain Configuration
+rocketchat_domain = "chat.canepro.me"
+grafana_domain    = "grafana.chat.canepro.me"
+
+# Additional Tags
+additional_tags = {
+  Owner       = "development-team"
+  Project     = "rocketchat-migration"
+  CostCenter = "development"
+}

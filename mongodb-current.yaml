@@ -1,0 +1,142 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"StatefulSet","metadata":{"annotations":{},"name":"mongodb","namespace":"rocketchat"},"spec":{"replicas":3,"selector":{"matchLabels":{"app":"mongodb"}},"serviceName":"mongodb-headless","template":{"metadata":{"labels":{"app":"mongodb"}},"spec":{"containers":[{"command":["mongod","--replSet","rs0","--bind_ip_all"],"image":"mongo:6.0","livenessProbe":{"exec":{"command":["mongosh","--eval","db.adminCommand('ping')"]},"failureThreshold":3,"initialDelaySeconds":30,"periodSeconds":10,"timeoutSeconds":5},"name":"mongodb","ports":[{"containerPort":27017}],"readinessProbe":{"exec":{"command":["mongosh","--eval","db.adminCommand('ping')"]},"failureThreshold":3,"initialDelaySeconds":5,"periodSeconds":10,"timeoutSeconds":5},"resources":{"limits":{"cpu":"1000m","memory":"2Gi"},"requests":{"cpu":"500m","memory":"1Gi"}},"volumeMounts":[{"mountPath":"/data/db","name":"mongodb-data"}]}]}},"volumeClaimTemplates":[{"metadata":{"name":"mongodb-data"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}},"storageClassName":"default"}}]}}
+  creationTimestamp: "2025-09-18T23:16:37Z"
+  generation: 2
+  name: mongodb
+  namespace: rocketchat
+  resourceVersion: "12975679"
+  uid: a14e3a5e-8716-486c-9e11-f97232d7812d
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  podManagementPolicy: OrderedReady
+  replicas: 3
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: mongodb
+  serviceName: mongodb-headless
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - command:
+        - mongod
+        - --replSet
+        - rs0
+        - --bind_ip_all
+        image: mongo:6.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          exec:
+            command:
+            - mongosh
+            - --eval
+            - db.adminCommand('ping')
+          failureThreshold: 3
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: mongodb
+        ports:
+        - containerPort: 27017
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command:
+            - mongosh
+            - --eval
+            - db.adminCommand('ping')
+          failureThreshold: 3
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: 300m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /data/db
+          name: mongodb-data
+      - name: mongodb-exporter
+        image: bitnami/mongodb-exporter:0.40.0
+        ports:
+        - containerPort: 9216
+          name: metrics
+          protocol: TCP
+        env:
+        - name: MONGODB_URI
+          value: mongodb://localhost:27017
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 9216
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: 9216
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      creationTimestamp: null
+      name: mongodb-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+      storageClassName: default
+      volumeMode: Filesystem
+    status:
+      phase: Pending
+status:
+  availableReplicas: 3
+  collisionCount: 0
+  currentReplicas: 3
+  currentRevision: mongodb-6857c6c749
+  observedGeneration: 2
+  readyReplicas: 3
+  replicas: 3
+  updateRevision: mongodb-6857c6c749
+  updatedReplicas: 3

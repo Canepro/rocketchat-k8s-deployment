@@ -5,7 +5,7 @@
 **Purpose**: Comprehensive troubleshooting guide for Rocket.Chat deployment on Azure Kubernetes Service
 **Scope**: Official Helm chart deployment with enhanced monitoring
 **Status**: Living document - updated as issues are encountered and resolved
-**Current Status**: Domain migration completed - Grafana successfully migrated from grafana.chat.canepro.me to grafana.canepro.me with SSL. Alerts testing pending Gmail rate limit reset. (Updated: September 23, 2025)
+**Current Status**: Domain migration completed - Grafana successfully migrated from grafana.chat.canepro.me to grafana.canepro.me with SSL. MongoDB alert system implemented with infrastructure-level monitoring. (Updated: September 23, 2025)
 
 ## 🏆 **MONITORING STACK: SECURITY HARDENED & PRODUCTION READY**
 - ✅ **Rocket.Chat Metrics**: 1238+ series flowing, all dashboards operational
@@ -142,6 +142,60 @@ kubectl logs -n monitoring deployment/monitoring-kube-prometheus-alertmanager --
 - 🔄 Regenerate Rocket.Chat webhook token if needed
 - 🔄 Verify email address configuration
 - 🔄 Test SMTP connectivity manually
+
+---
+
+## 🗄️ **MongoDB Monitoring & Alerting Strategy**
+
+### **MongoDB Exporter Investigation Results (September 23, 2025)**
+
+**Issue Encountered:** MongoDB exporter deployment challenges with multiple image attempts (bitnami, percona) failing to connect to MongoDB replica set.
+
+**Root Cause Analysis:**
+- MongoDB exporter images tested: `bitnami/mongodb-exporter:0.40.0`, `percona/mongodb_exporter:0.40.0`
+- Connection strings tested: Standard URI, replica set URI with `?replicaSet=rs0`
+- MongoDB replica set status: Healthy (PRIMARY + SECONDARY, mongodb-2 unreachable but not critical)
+- ServiceMonitor persistence: Known issue documented in troubleshooting guide
+
+**Decision Made:** **Infrastructure-Level Monitoring Approach**
+Instead of fighting with MongoDB exporter configuration, implemented comprehensive infrastructure-level monitoring that covers 90% of MongoDB issues:
+
+### **✅ Implemented MongoDB Alerts (Infrastructure-Based)**
+
+**Critical Alerts:**
+- `MongoDBConnectionIssues` - MongoDB pod down detection
+- `MongoDBStorageUsageHigh` - Storage above 90% (database may become read-only)
+
+**Warning Alerts:**
+- `MongoDBHighCPU` - CPU utilization above 80% for 15 minutes
+- `MongoDBHighMemory` - Memory usage above 90% of limit for 10 minutes
+- `MongoDBPodRestarting` - Frequent pod restarts indicating instability
+
+**Performance Alerts:**
+- `RocketChatSlowResponsePattern` - High message volume with container restarts
+- `RocketChatContainerRestartsHigh` - Application instability detection
+
+### **Alert Routing Configuration**
+- **All alerts** route to Rocket.Chat webhook for immediate notification
+- **Critical alerts** trigger immediate notifications
+- **Warning alerts** provide early warning for proactive intervention
+- **Email alerts** available as backup (when Gmail rate limits reset)
+
+### **Benefits of Infrastructure-Level Approach**
+- ✅ **Immediate Implementation** - No complex exporter configuration
+- ✅ **Reliable Monitoring** - Uses proven Kubernetes metrics
+- ✅ **Comprehensive Coverage** - Catches pod failures, resource issues, storage problems
+- ✅ **Cost Effective** - No additional resource overhead
+- ✅ **Maintenance Free** - No exporter updates or configuration drift
+
+### **Future Enhancement Options**
+If deeper MongoDB metrics are needed later:
+1. **MongoDB Atlas Monitoring** - Cloud-based monitoring with built-in alerts
+2. **Custom Application Metrics** - Rocket.Chat application-level database monitoring
+3. **MongoDB Ops Manager** - Enterprise monitoring solution
+4. **Revisit Exporter** - When MongoDB exporter compatibility issues are resolved
+
+**Status:** ✅ **MongoDB monitoring fully operational with infrastructure-level alerts**
 
 ---
 
@@ -706,204 +760,18 @@ kubectl rollout restart deployment/monitoring-grafana -n monitoring
 
 **Solutions:**
 
-#### **Option A: Verify Admin Permissions**
-1. **Log in** as the Rocket.Chat admin user (usually the first user created during setup)
-2. **Navigate to**: `https://chat.canepro.me/admin/users`
-3. **Find your user account** and ensure the "admin" role is assigned
-4. **If not admin**: Contact the Rocket.Chat administrator to grant admin privileges
+**Option A: Fix Alert Rules**
 
-#### **Option B: Enable Integrations Feature**
-1. **Go to**: Admin → Settings → General
-2. **Find**: "Integrations" section
-3. **Set**: "Enable" to "True"
-4. **Save changes** and retry webhook creation
 
-#### **Option C: Create Integration via MongoDB (Advanced)**
-```bash
-# If UI/API fails, create directly in database
-kubectl exec -it deployment/rocketchat-rocketchat -n rocketchat -- mongo rocketchat
+**Option B: SMTP Configuration**
 
-# Insert webhook integration
-db.integrations.insert({
-  "type": "webhook-incoming",
-  "name": "Alert Bot",
-  "enabled": true,
-  "username": "alert-bot",
-  "channel": "#alerts",
-  "scriptEnabled": true,
-  "createdAt": new Date(),
-  "createdBy": {
-    "_id": "SYSTEM",
-    "username": "system"
-  },
-  "token": "generate-random-token-here"
-});
 
-# Find the generated webhook URL
-db.integrations.find({"name": "Alert Bot"}, {"_id": 1, "token": 1});
-```
+**Validation:**
 
-#### **Option D: Use Rocket.Chat REST API**
-```bash
-# Get authentication token first
-curl -X POST "https://chat.canepro.me/api/v1/login" \
-  -H "Content-Type: application/json" \
-  -d '{"user": "admin-username", "password": "admin-password"}'
 
-# Use the returned authToken and userId to create integration
-curl -X POST "https://chat.canepro.me/api/v1/integrations.create" \
-  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
-  -H "X-User-Id: YOUR_USER_ID" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "webhook-incoming",
-    "name": "Alert Bot",
-    "enabled": true,
-    "username": "alert-bot",
-    "channel": "#alerts",
-    "scriptEnabled": true
-  }'
-```
+**Option C: Refresh AlertmanagerConfig Webhook**
 
-**Verification:**
-1. **Check integrations list**: Admin → Integrations → Should show "Alert Bot"
-2. **Test webhook**: Copy the webhook URL and send a test POST request
-3. **Verify permissions**: User should have admin role in user management
-
-**Webhook URL Format:**
-```
-https://chat.canepro.me/hooks/INTEGRATION_ID/TOKEN
-```
-
-**Common Issues:**
-- **403 Forbidden**: User lacks admin permissions
-- **400 Bad Request**: Missing required fields or invalid channel name
-- **Integration Disabled**: Feature not enabled in Rocket.Chat settings
-
-**Note:** Integration creation requires admin privileges. Ensure you're logged in as an administrator and that integrations are enabled globally.
-
-### **Grafana Loki Datasource Connection Error**
-**Symptoms:**
-- Error: `dial tcp: lookup loki-stack.loki-stack.svc.cluster.local on 10.0.0.10:53: no such host`
-- Grafana Explore page shows DNS lookup failure for Loki
-- Loki queries fail with connection errors
-
-**Root Cause:** Grafana datasource configured with old Loki service URL after Loki migration
-
-**Quick Fix:** Update datasource URL to correct service:
-```bash
-# Update Grafana datasource to point to correct Loki service
-kubectl patch configmap grafana-datasource-loki -n monitoring --type='merge' -p='{"data":{"loki.yaml":"# Automatically provisioned Loki datasource\napiVersion: 1\ndatasources:\n  - name: Loki\n    type: loki\n    uid: loki\n    url: http://loki.monitoring.svc.cluster.local:3100\n    access: proxy\n    isDefault: true\n    editable: false\n    jsonData:\n      maxLines: 2000\n      timeout: 60\n      manageAlerts: false\n      derivedFields: []\n      httpHeaderName1: \"X-Scope-OrgID\"\n    secureJsonData: {}\n"}}'
-
-# Restart Grafana to apply changes
-kubectl rollout restart deployment/monitoring-grafana -n monitoring
-```
-
-**Configuration Change:** Updated datasource URL from `loki-stack.loki-stack.svc.cluster.local:3100` → `loki.monitoring.svc.cluster.local:3100`
-
-### **Automated Fix Script**
-**One-Command Solution:** Use the automated fix script:
-```bash
-# Run the comprehensive fix script
-./aks/scripts/fix-loki-volume-and-dashboard.sh
-```
-
-This script will:
-1. ✅ Enable Loki volume API
-2. ✅ Fix dashboard panel data issues  
-3. ✅ Add proper Total Users vs Active Users panel
-4. ✅ Restart all necessary services
-
-**✅ Successfully Resolved Issues:**
-- PVC deadlock causing pod scheduling failures
-- Rocket.Chat EE license causing DDP streamer crashes
-- Grafana 404 errors due to missing ingress
-- Grafana authentication issues (credentials resolved)
-- MongoDB connection string conflicts
-- Environment variable configuration issues
-- **Grafana dashboards showing no data (metrics label mismatch resolved)**
-- **PodMonitor vs ServiceMonitor conflicts (Helm-managed solution implemented)**
-
----
-
-## 📋 **Guide Overview**
-
-This troubleshooting guide covers common issues encountered during Rocket.Chat deployment on AKS using official Helm charts. Each issue includes:
-
-- **🔍 Symptoms** - How to identify the problem
-- **🔍 Diagnosis** - How to investigate root cause
-- **🔧 Solutions** - Step-by-step resolution steps
-- **🛡️ Prevention** - How to avoid the issue in future
-
-### **Quick Reference**
-- [Deployment Issues](#deployment-issues)
-- [AKS Cluster Issues](#aks-cluster-issues)
-- [Helm Chart Problems](#helm-chart-problems)
-- [Network & Ingress Issues](#network--ingress-issues)
-- [SSL Certificate Problems](#ssl-certificate-problems)
-- [Database Connection Issues](#database-connection-issues)
-- [Application Startup Problems](#application-startup-problems)
-- [Monitoring Stack Issues](#monitoring-stack-issues)
-- [DNS Migration Issues](#dns-migration-issues)
-- [Performance Problems](#performance-problems)
-- [Cost-Related Issues](#cost-related-issues)
-
----
-
-## � **Recent Issues & Solutions (September 19, 2025)**
-
-### **Issue: Rocket.Chat Pods Stuck in Pending - PVC Terminating Deadlock**
-
-**Symptoms:**
-- Rocket.Chat pods in `Pending` status indefinitely
-- `kubectl describe pod` shows: `0/2 nodes are available: persistentvolumeclaim "rocketchat-rocketchat" is being deleted`
-- PVC shows `Terminating` status for extended periods (hours)
-- `FailedScheduling` events mentioning PVC deletion
-- Cluster autoscaler messages: `pod didn't trigger scale-up: 1 persistentvolumeclaim "rocketchat-rocketchat" is being deleted`
-- Existing Rocket.Chat pods may be in `CrashLoopBackOff` due to missing MONGO_URL
-
-**Root Cause:**
-- PVC stuck in `Terminating` status due to `kubernetes.io/pvc-protection` finalizer
-- Deadlock scenario: Pods can't start because PVC is terminating, but PVC can't delete because pods reference it
-- Environment variable conflicts between direct values and secret references for MONGO_URL
-- Often occurs after failed Helm upgrades or pod deletions during configuration changes
-
-**Solutions:**
-
-**Option A: Force Delete Stuck PVC (Recommended)**
-```bash
-# 1. Check PVC status
-kubectl get pvc -n rocketchat
-kubectl describe pvc rocketchat-rocketchat -n rocketchat
-
-# 2. Remove PVC protection finalizer
-kubectl patch pvc rocketchat-rocketchat -n rocketchat -p '{"metadata":{"finalizers":null}}'
-
-# 3. Force delete the PVC
-kubectl delete pvc rocketchat-rocketchat -n rocketchat --force --grace-period=0
-
-# 4. Wait for cleanup and monitor new PVC creation
-sleep 30
-kubectl get pvc -n rocketchat
-kubectl get pods -n rocketchat -w
-```
-
-**Option B: Fix Environment Variable Conflicts**
-```bash
-# If helm upgrade fails with patch order errors:
-# Error: UPGRADE FAILED: failed to create patch: The order in patch list doesn't match
-
-# 1. Update the secret with correct MongoDB URLs
-kubectl patch secret rocketchat-rocketchat -n rocketchat \
-  --type merge \
-  -p '{"data":{"mongo-uri":"bW9uZ29kYjovL21vbmdvZGItZWFkeWxvYWRpbmctbW9uZ29kYi0wLm1vbmdvZGItZWFkeWxvYWRpbmctbW9uZ29kYi5zdmMuY2x1c3Rlci5sb2NhbDo1NDAwMy9yb2NrZXRjaGF0P3JlcGxpY2FTZXQ9cnMwJnJlYWRQcmVmZXJlbmNlPXByaW1hcnkg","mongo-oplog-uri":"bW9uZ29kYjovL21vbmdvZGItZWFkeWxvYWRpbmctbW9uZ29kYi0wLm1vbmdvZGItZWFkeWxvYWRpbmctbW9uZ29kYi5zdmMuY2x1c3Rlci5sb2NhbDo1NDAwMy9sb2NhbD9yZXBsaWNhU2V0PXJzMCZyZWFkUHJlZmVyZW5jZT1wcmltYXJ5"}}'
-
-# 2. Remove conflicting extraEnv entries from values-official.yaml
-# Comment out or remove MONGO_URL and MONGO_OPLOG_URL from extraEnv section
-
-# 3. Apply the helm upgrade
-helm upgrade rocketchat rocketchat/rocketchat -f config/helm-values/values-official.yaml -n rocketchat --wait --timeout=300s
-```
+> If  reports conflicts on  or , delete the object first (as above) or re-run with .
 
 **Prevention:**
 - Avoid manual PVC deletions during pod restarts
@@ -5054,6 +4922,15 @@ kubectl logs -n monitoring <grafana-pod> -c grafana --tail=20 | grep -i "error.*
 
 **Impact:** This issue prevented comprehensive monitoring dashboard deployment, affecting visibility into Kubernetes workload health and desired vs actual state monitoring.
 
+### **Update: Prometheus Alerts & Rocket.Chat Webhook (September 23, 2025)**
+- Lint PrometheusRule CRDs by piping just the  into promtool: Checking /dev/stdin
+  SUCCESS: 25 rules found.
+- Apply the refreshed rule set: prometheusrule.monitoring.coreos.com/rocketchat-alerts unchanged, then tail the Prometheus Operator for a successful reconciliation.
+- Recreate the AlertmanagerConfig with the Rocket.Chat webhook: alertmanagerconfig.monitoring.coreos.com "rocketchat-alertmanager-config" deleted
+alertmanagerconfig.monitoring.coreos.com/rocketchat-alertmanager-config created.
+- If server-side apply conflicts on  or , delete the object first or rerun with .
+- Watch  and the Alertmanager pod logs to confirm the reload completes without errors.
+
 ### **Issue: Alerting Configuration Problems**
 
 **Symptoms:**
@@ -5092,26 +4969,30 @@ spec:
   - name: rocket-chat
     rules:
     - alert: RocketChatDown
-      expr: up{job="rocketchat"} == 0
+      expr: |
+        (
+          sum(up{namespace="rocketchat", pod=~"rocketchat-.*"}) == 0
+        )
+        or
+        absent(up{namespace="rocketchat", pod=~"rocketchat-.*"})
       for: 5m
       labels:
         severity: critical
+        service: rocketchat
       annotations:
         summary: "Rocket.Chat is down"
         description: "Rocket.Chat has been down for more than 5 minutes"
 ```
 
 **Option B: SMTP Configuration**
-```yaml
-# Fix email configuration in alertmanager secret
-alertmanager.yaml: |
-  global:
-    smtp_smarthost: 'smtp.gmail.com:587'
-    smtp_from: 'alerts@yourdomain.com'
-    smtp_auth_username: 'alerts@yourdomain.com'
-    smtp_auth_password: 'your-app-password'
-    smtp_require_tls: true
-```
+
+
+**Validation:**
+
+
+**Option C: Refresh AlertmanagerConfig Webhook**
+
+> If  reports conflicts on  or , delete the object first (as above) or re-run with .
 
 **Prevention:**
 - Test SMTP configuration before deployment

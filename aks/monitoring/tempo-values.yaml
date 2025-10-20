@@ -1,0 +1,69 @@
+# Grafana Tempo Configuration for Rocket.Chat Distributed Tracing
+# Integrates with existing Prometheus and Grafana setup
+
+# Tempo server configuration
+tempo:
+  # Use a stable version for production
+  image:
+    tag: "2.3.0"
+  
+  # Enable persistence for trace storage
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClassName: default
+  
+  # Tempo configuration
+  config:
+    server:
+      http_listen_port: 3200
+      grpc_listen_port: 9095
+    distributor:
+      receivers:
+        jaeger:
+          protocols:
+            thrift_http:
+            grpc:
+        zipkin:
+        otlp:
+          protocols:
+            grpc:
+            http:
+        opencensus:
+    ingester:
+      max_block_duration: 5m
+    storage:
+      trace:
+        backend: local
+        local:
+          path: /var/tempo/traces
+    overrides:
+      defaults:
+        max_traces_per_user: 10000
+        max_bytes_per_trace: 5000000
+
+# Resource limits optimized for AKS
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 3200
+  annotations: {}
+
+# Node selector and tolerations for AKS
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000

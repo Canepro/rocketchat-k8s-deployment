@@ -13,19 +13,21 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: mongodb
+      app.kubernetes.io/component: metrics
+      app.kubernetes.io/instance: rocketchat
+      app.kubernetes.io/name: mongodb
   namespaceSelector:
     matchNames:
       - rocketchat
   endpoints:
-  - port: mongodb
+  - port: http-metrics
     interval: 30s
     path: /metrics
     relabelings:
-    - sourceLabels: [__meta_kubernetes_pod_label_app]
+    - sourceLabels: [__meta_kubernetes_service_label_app_kubernetes_io_name]
       targetLabel: service_name
-      replacement: mongodb
-    - sourceLabels: [__meta_kubernetes_pod_namespace]
+      replacement: mongodb-metrics
+    - sourceLabels: [__meta_kubernetes_service_namespace]
       targetLabel: namespace
-    - sourceLabels: [__meta_kubernetes_pod_name]
-      targetLabel: pod
+    - sourceLabels: [__meta_kubernetes_service_name]
+      targetLabel: service

@@ -12,7 +12,12 @@ spec:
     rules:
     # Critical Service Availability Alerts
     - alert: RocketChatDown
-      expr: avg(up{namespace="rocketchat", pod=~"rocketchat-.*"}) == 0
+      expr: |
+        (
+          sum(up{namespace="rocketchat", pod=~"rocketchat-.*"}) == 0
+        )
+        or
+        absent(up{namespace="rocketchat", pod=~"rocketchat-.*"})
       for: 5m
       labels:
         severity: critical
@@ -23,7 +28,12 @@ spec:
         runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/TROUBLESHOOTING_GUIDE.md"
 
     - alert: MongoDBConnectionIssues
-      expr: avg(up{namespace="rocketchat", pod=~"mongodb-.*"}) == 0
+      expr: |
+        (
+          sum(up{namespace="rocketchat", pod=~"mongodb-.*"}) == 0
+        )
+        or
+        absent(up{namespace="rocketchat", pod=~"mongodb-.*"})
       for: 5m
       labels:
         severity: critical
@@ -76,7 +86,10 @@ spec:
         runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/TROUBLESHOOTING_GUIDE.md"
 
     - alert: RocketChatMicroserviceDown
-      expr: avg(up{namespace="rocketchat", pod=~"rocketchat-(account|authorization|ddp-streamer|presence|stream-hub)-.*"}) < 1
+      expr: |
+        min(up{namespace="rocketchat", pod=~"rocketchat-(account|authorization|ddp-streamer|presence|stream-hub)-.*"}) < 1
+        or
+        absent(up{namespace="rocketchat", pod=~"rocketchat-(account|authorization|ddp-streamer|presence|stream-hub)-.*"})
       for: 5m
       labels:
         severity: warning
@@ -86,7 +99,37 @@ spec:
         description: "One or more Rocket.Chat microservices are not running. May impact functionality."
         runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/TROUBLESHOOTING_GUIDE.md"
 
-    # MongoDB Specific Alerts
+    # MongoDB Specific Alerts - Using MongoDB Exporter Metrics
+    - alert: MongoDBConnectionPoolExhausted
+      expr: |
+        mongodb_connections_available{namespace="rocketchat"} < 5
+        or
+        absent(mongodb_connections_available{namespace="rocketchat"})
+      for: 2m
+      labels:
+        severity: critical
+        service: mongodb
+      annotations:
+        summary: "🚨 MongoDB connection pool nearly exhausted"
+        description: "Only {{ $value }} connections available in pool. Database may become unresponsive."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/TROUBLESHOOTING_GUIDE.md"
+
+    - alert: MongoDBHighConnectionUsage
+      expr: |
+        (
+          mongodb_connections_current{namespace="rocketchat"}
+            /
+          clamp_min(mongodb_connections_available{namespace="rocketchat"}, 1)
+        ) > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        service: mongodb
+      annotations:
+        summary: "⚠️ MongoDB high connection usage"
+        description: "{{ $value | humanizePercentage }} of connection pool in use. Monitor for potential bottlenecks."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/PERFORMANCE_ANALYSIS.md"
+
     - alert: MongoDBHighCPU
       expr: |
         sum by (pod)(rate(container_cpu_usage_seconds_total{namespace="rocketchat", pod=~"mongodb-.*", image!=""}[5m]))
@@ -115,6 +158,32 @@ spec:
         summary: "⚠️ MongoDB high memory usage"
         description: "MongoDB memory usage above 90% of limit for 10 minutes."
         runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/PERFORMANCE_ANALYSIS.md"
+
+    - alert: MongoDBSlowQueries
+      expr: |
+        rate(mongodb_opcounters_total{namespace="rocketchat", type="query"}[5m]) > 100
+      for: 10m
+      labels:
+        severity: warning
+        service: mongodb
+      annotations:
+        summary: "⚠️ MongoDB high query volume"
+        description: "MongoDB processing {{ $value }} queries/second. Monitor for performance impact."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/PERFORMANCE_ANALYSIS.md"
+
+    - alert: MongoDBReplicationLag
+      expr: |
+        mongodb_replset_member_replication_lag{namespace="rocketchat"} > 10
+        or
+        absent(mongodb_replset_member_replication_lag{namespace="rocketchat"})
+      for: 5m
+      labels:
+        severity: warning
+        service: mongodb
+      annotations:
+        summary: "⚠️ MongoDB replication lag detected"
+        description: "Replication lag of {{ $value }} seconds. Check replica set health."
+        runbook_url: "https://github.com/Canepro/rocketchat-k8s-deployment/blob/main/docs/TROUBLESHOOTING_GUIDE.md"
 
     # Storage and Capacity Alerts
     - alert: RocketChatStorageUsageHigh
@@ -148,9 +217,15 @@ spec:
     # Network and Connectivity Alerts
     - alert: RocketChatIngressDown
       expr: |
-        probe_success{namespace="monitoring", service="monitoring-ingress"}
+        (
+          probe_success{namespace="monitoring", service="monitoring-ingress"} == 0
+        )
         or
-        up{namespace="rocketchat", service="rocketchat-rocketchat"} == 0
+        absent(probe_success{namespace="monitoring", service="monitoring-ingress"})
+        or
+        (
+          sum(up{namespace="rocketchat", service="rocketchat-rocketchat"}) == 0
+        )
       for: 5m
       labels:
         severity: critical
@@ -272,9 +347,13 @@ spec:
     # Cost Monitoring Alerts
     - alert: HighResourceUtilization
       expr: |
-        avg(rate(container_cpu_usage_seconds_total{namespace="rocketchat"}[5m])) > 0.7
+        avg(rate(container_cpu_usage_seconds_total{namespace="rocketchat", container!="POD"}[5m])) > 0.7
         or
-        avg(container_memory_usage_bytes{namespace="rocketchat"} / container_spec_memory_limit_bytes{namespace="rocketchat"}) > 0.8
+        avg(
+          container_memory_usage_bytes{namespace="rocketchat", container!="POD"}
+            /
+          clamp_min(container_spec_memory_limit_bytes{namespace="rocketchat", container!="POD"}, 1)
+        ) > 0.8
       for: 30m
       labels:
         severity: info

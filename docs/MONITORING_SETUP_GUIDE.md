@@ -1,7 +1,7 @@
 # 📊 Rocket.Chat AKS Monitoring Setup Guide
 
 **Created**: September 19, 2025  
-**Last Updated**: September 19, 2025 (Complete Implementation Verified)
+**Last Updated**: September 22, 2025 (Enhanced CPU/Memory Analytics Integration)
 **Purpose**: Complete guide for setting up production-ready monitoring for Rocket.Chat on AKS  
 **Scope**: Prometheus, Grafana, Loki, Alertmanager with Helm-managed configuration  
 **Status**: ✅ **PRODUCTION-READY IMPLEMENTATION COMPLETE**
@@ -9,9 +9,12 @@
 ## 🎉 **SUCCESS STORY**
 This monitoring stack has been **fully implemented and verified** with:
 - **50+ Rocket.Chat metric series** flowing into Prometheus
-- **28 comprehensive dashboard panels** displaying real-time data
+- **34 comprehensive dashboard panels** displaying real-time data (6 new CPU/memory panels added)
 - **Complete ServiceMonitor discovery** after troubleshooting
 - **End-to-end log aggregation** via Loki with 7 log analysis panels
+- **🆕 Advanced Resource Analytics** with CPU/memory efficiency tracking and optimization insights
+- **🆕 Node-level monitoring** for cluster-wide resource health visibility
+- **🆕 Historical trending** for capacity planning and performance analysis
 - **Official Rocket.Chat dashboards** integrated from Grafana community
 - **Comprehensive troubleshooting documentation** for future maintenance  
 
@@ -84,7 +87,23 @@ helm upgrade --install loki grafana/loki-stack \
   --wait
 ```
 
-### 3. Verify Deployment
+### 3. Deploy Enhanced CPU/Memory Dashboard (New)
+
+```bash
+# Deploy comprehensive resource monitoring dashboard
+cd aks/scripts
+chmod +x update-monitoring-dashboard.sh
+./update-monitoring-dashboard.sh
+
+# The script will automatically:
+# ✅ Check prerequisites and connectivity
+# ✅ Backup existing dashboard configuration  
+# ✅ Deploy 6 new CPU/memory monitoring panels
+# ✅ Restart Grafana to reload dashboards
+# ✅ Verify deployment and show access information
+```
+
+### 4. Verify Deployment
 
 ```bash
 # Check all pods are running
@@ -92,6 +111,9 @@ kubectl get pods -n monitoring
 
 # Verify PodMonitors
 kubectl get podmonitor -n monitoring
+
+# Check enhanced dashboard ConfigMap
+kubectl get configmap rocket-chat-dashboard-comprehensive -n monitoring
 
 # Check Prometheus targets
 kubectl proxy --port=8001 &
@@ -504,6 +526,19 @@ The dashboard utilizes comprehensive Rocket.Chat metrics including:
 - `rocketchat_channels_total`, `rocketchat_private_groups_total`
 - `rocketchat_livechat_total`, `rocketchat_agents_total`
 - `rocketchat_apps_installed`, `rocketchat_apps_enabled`
+
+**🆕 Resource Metrics (Enhanced CPU/Memory Analytics):**
+- `container_cpu_usage_seconds_total` - Real-time CPU usage per container
+- `container_memory_working_set_bytes` - Memory usage per container
+- `kube_pod_container_resource_limits` - CPU and memory limits per pod
+- `node_cpu_seconds_total` - Node-level CPU metrics via Node Exporter
+- `node_memory_MemTotal_bytes`, `node_memory_MemAvailable_bytes` - Node memory metrics
+
+**🆕 Resource Efficiency Calculations:**
+- CPU Utilization vs Limits: `rate(container_cpu_usage_seconds_total[5m]) / kube_pod_container_resource_limits{resource="cpu"} * 100`
+- Memory Utilization vs Limits: `container_memory_working_set_bytes / kube_pod_container_resource_limits{resource="memory"} * 100`
+- Node CPU Usage: `100 - (avg(irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)`
+- Node Memory Usage: `(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100`
 
 ### **Log Analysis Capabilities**
 The dashboard includes advanced log analysis using Loki:

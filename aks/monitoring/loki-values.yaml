@@ -38,8 +38,7 @@ loki:
       enforce_metric_name: false
       reject_old_samples: true
       reject_old_samples_max_age: 168h
-    # Volume feature is enabled by default in newer Loki versions
-    # No additional configuration needed for volume API
+    # Volume API disabled in Grafana datasource - using stable workaround
 
 # Promtail configuration for log collection
 promtail:

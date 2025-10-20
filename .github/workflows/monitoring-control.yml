@@ -1,0 +1,149 @@
+name: Monitoring Control
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Monitoring action to perform'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+        - deploy
+        - remove
+        - optimize
+      monitoring_type:
+        description: 'Type of monitoring to deploy'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+        - full
+        - lightweight
+        - none
+      optimization_level:
+        description: 'Cost optimization level'
+        required: false
+        default: 'medium'
+        type: choice
+        options:
+        - low
+        - medium
+        - high
+
+env:
+  CLUSTER_NAME: rocketchat-aks
+  RESOURCE_GROUP: rocketchat-k8s-rg
+  NAMESPACE: monitoring
+
+jobs:
+  deploy-monitoring:
+    if: github.event.inputs.action == 'deploy'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+        
+    - name: Get AKS credentials
+      run: |
+        az aks get-credentials --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --overwrite
+        
+    - name: Deploy monitoring stack
+      run: |
+        chmod +x scripts/monitoring/deploy-conditional-monitoring.sh
+        ENABLE_MONITORING=true MONITORING_TYPE=${{ github.event.inputs.monitoring_type }} ./scripts/monitoring/deploy-conditional-monitoring.sh
+        
+    - name: Verify monitoring deployment
+      run: |
+        kubectl get pods -n ${{ env.NAMESPACE }}
+        kubectl get services -n ${{ env.NAMESPACE }}
+        kubectl get ingress -n ${{ env.NAMESPACE }}
+
+  remove-monitoring:
+    if: github.event.inputs.action == 'remove'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+        
+    - name: Get AKS credentials
+      run: |
+        az aks get-credentials --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --overwrite
+        
+    - name: Remove monitoring stack
+      run: |
+        chmod +x scripts/monitoring/deploy-conditional-monitoring.sh
+        ENABLE_MONITORING=false ./scripts/monitoring/deploy-conditional-monitoring.sh
+        
+    - name: Verify monitoring removal
+      run: |
+        if kubectl get namespace ${{ env.NAMESPACE }} &> /dev/null; then
+          echo "Monitoring namespace still exists"
+          exit 1
+        else
+          echo "Monitoring namespace successfully removed"
+        fi
+
+  optimize-monitoring:
+    if: github.event.inputs.action == 'optimize'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+        
+    - name: Get AKS credentials
+      run: |
+        az aks get-credentials --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --overwrite
+        
+    - name: Optimize monitoring costs
+      run: |
+        chmod +x scripts/monitoring/cost-optimization-monitoring.sh
+        OPTIMIZATION_LEVEL=${{ github.event.inputs.optimization_level }} ./scripts/monitoring/cost-optimization-monitoring.sh
+        
+    - name: Verify optimization
+      run: |
+        kubectl get pods -n ${{ env.NAMESPACE }} -o wide
+        kubectl top pods -n ${{ env.NAMESPACE }} 2>/dev/null || echo "Metrics not available"
+
+  notify-completion:
+    if: always()
+    needs: [deploy-monitoring, remove-monitoring, optimize-monitoring]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Notify completion
+      run: |
+        echo "Monitoring control workflow completed"
+        echo "Action: ${{ github.event.inputs.action }}"
+        echo "Monitoring Type: ${{ github.event.inputs.monitoring_type }}"
+        echo "Optimization Level: ${{ github.event.inputs.optimization_level }}"
+        echo "Status: ${{ job.status }}"

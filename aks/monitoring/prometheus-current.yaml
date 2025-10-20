@@ -45,6 +45,18 @@ items:
         namespace: monitoring
         pathPrefix: /
         port: http-web
+    ruleSelector:
+      matchLabels:
+        app.kubernetes.io/name: rocketchat
+        release: monitoring
+
+    # Alertmanager configuration
+    alertmanagerConfigSelector:
+      matchLabels:
+        app.kubernetes.io/name: alertmanager
+    alertmanagerConfigNamespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: monitoring
     automountServiceAccountToken: true
     enableAdminAPI: false
     enableOTLPReceiver: false

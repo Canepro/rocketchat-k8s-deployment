@@ -1,0 +1,245 @@
+# AKS Lifecycle Management Pipeline
+# Azure DevOps pipeline for cluster lifecycle management
+
+trigger: none
+
+parameters:
+- name: action
+  displayName: 'Lifecycle action to perform'
+  type: string
+  default: 'teardown'
+  values:
+  - teardown
+  - recreate
+  - validate
+- name: enable_monitoring
+  displayName: 'Enable monitoring stack during recreation'
+  type: boolean
+  default: false
+- name: force_teardown
+  displayName: 'Force teardown even if cluster is not in Succeeded state'
+  type: boolean
+  default: false
+
+variables:
+  clusterName: 'rocketchat-aks'
+  resourceGroup: 'rocketchat-k8s-rg'
+  keyVaultName: 'rocketchat-kv'
+  backupStorageAccount: 'rocketchatbackups'
+
+stages:
+- stage: PreTeardownBackup
+  displayName: 'Pre-Teardown Backup'
+  condition: and(succeeded(), or(eq('${{ parameters.action }}', 'teardown'), eq(variables['Build.Reason'], 'Schedule')))
+  jobs:
+  - job: BackupJob
+    displayName: 'Backup Cluster State and Data'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Setup Azure CLI'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az extension add --name aks-preview
+          az aks get-credentials --name $(clusterName) --resource-group $(resourceGroup) --overwrite
+          
+    - task: AzureCLI@2
+      displayName: 'Backup Cluster State'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          chmod +x scripts/backup/backup-cluster-state.sh
+          ./scripts/backup/backup-cluster-state.sh
+          
+    - task: AzureCLI@2
+      displayName: 'Backup Secrets to Key Vault'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          chmod +x scripts/secrets/backup-secrets-to-keyvault.sh
+          ./scripts/secrets/backup-secrets-to-keyvault.sh
+          
+    - task: AzureCLI@2
+      displayName: 'Create PVC Snapshots'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          chmod +x scripts/backup/create-pvc-snapshots.sh
+          ./scripts/backup/create-pvc-snapshots.sh
+          
+    - task: AzureCLI@2
+      displayName: 'Backup MongoDB Data'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          chmod +x scripts/backup/mongodb-backup.sh
+          ./scripts/backup/mongodb-backup.sh
+          
+    - task: AzureCLI@2
+      displayName: 'Validate Backups'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          chmod +x scripts/backup/backup-integrity-check.sh
+          ./scripts/backup/backup-integrity-check.sh
+
+- stage: TeardownCluster
+  displayName: 'Teardown Cluster'
+  condition: and(succeeded(), or(eq('${{ parameters.action }}', 'teardown'), eq(variables['Build.Reason'], 'Schedule')))
+  dependsOn: PreTeardownBackup
+  jobs:
+  - job: TeardownJob
+    displayName: 'Teardown AKS Cluster'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Setup Azure CLI'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az extension add --name aks-preview
+          az aks get-credentials --name $(clusterName) --resource-group $(resourceGroup) --overwrite
+          
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '1.0.0'
+        
+    - task: AzureCLI@2
+      displayName: 'Teardown Cluster'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          chmod +x scripts/lifecycle/teardown-cluster.sh
+          FORCE_TEARDOWN=${{ parameters.force_teardown }} ./scripts/lifecycle/teardown-cluster.sh
+          
+    - task: AzureCLI@2
+      displayName: 'Verify Teardown'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          if az aks show --name $(clusterName) --resource-group $(resourceGroup) &> /dev/null; then
+            echo "Cluster still exists after teardown"
+            exit 1
+          else
+            echo "Cluster successfully torn down"
+          fi
+
+- stage: RecreateCluster
+  displayName: 'Recreate Cluster'
+  condition: and(succeeded(), or(eq('${{ parameters.action }}', 'recreate'), eq(variables['Build.Reason'], 'Schedule')))
+  jobs:
+  - job: RecreateJob
+    displayName: 'Recreate AKS Cluster'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Setup Azure CLI'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az extension add --name aks-preview
+          
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '1.0.0'
+        
+    - task: AzureCLI@2
+      displayName: 'Recreate Cluster'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          chmod +x scripts/lifecycle/recreate-cluster.sh
+          ENABLE_MONITORING=${{ parameters.enable_monitoring }} ./scripts/lifecycle/recreate-cluster.sh
+          
+    - task: AzureCLI@2
+      displayName: 'Get AKS Credentials'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az aks get-credentials --name $(clusterName) --resource-group $(resourceGroup) --overwrite
+          
+    - task: AzureCLI@2
+      displayName: 'Validate Cluster Health'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          chmod +x scripts/lifecycle/validate-cluster-health.sh
+          ./scripts/lifecycle/validate-cluster-health.sh
+
+- stage: ValidateDeployment
+  displayName: 'Validate Deployment'
+  condition: and(succeeded(), or(eq('${{ parameters.action }}', 'validate'), always()))
+  dependsOn: RecreateCluster
+  jobs:
+  - job: ValidateJob
+    displayName: 'Validate Cluster Health'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Setup Azure CLI'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az extension add --name aks-preview
+          az aks get-credentials --name $(clusterName) --resource-group $(resourceGroup) --overwrite
+          
+    - task: AzureCLI@2
+      displayName: 'Validate Cluster Health'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          chmod +x scripts/lifecycle/validate-cluster-health.sh
+          ./scripts/lifecycle/validate-cluster-health.sh
+          
+    - task: AzureCLI@2
+      displayName: 'Check Rocket.Chat Accessibility'
+      inputs:
+        azureSubscription: 'Azure-ServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          CLUSTER_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          if [ -n "$CLUSTER_IP" ]; then
+            echo "Cluster IP: $CLUSTER_IP"
+            echo "Rocket.Chat should be accessible at: https://chat.canepro.me"
+            echo "Grafana should be accessible at: https://grafana.chat.canepro.me"
+          else
+            echo "Cluster IP not available yet"
+          fi

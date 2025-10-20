@@ -11,7 +11,7 @@ spec:
     groupWait: 10s
     groupInterval: 10s
     repeatInterval: 1h
-    receiver: 'email-notifications'
+    receiver: 'rocketchat-webhook'
     routes:
     - matchers:
         - name: severity
@@ -23,11 +23,6 @@ spec:
           value: "warning"
       receiver: 'email-notifications'
       continue: true
-    - matchers:
-        - name: service
-          value: "rocketchat"
-      receiver: 'rocketchat-webhook'
-      continue: false
 
   receivers:
   - name: 'email-notifications'
@@ -44,6 +39,6 @@ spec:
 
   - name: 'rocketchat-webhook'
     webhookConfigs:
-    - url: 'https://REPLACE_WITH_YOUR_ROCKETCHAT_URL/hooks/REPLACE_WITH_NEW_WEBHOOK_TOKEN'
-      sendResolved: true
-      maxAlerts: 5
+      - url: 'https://chat.canepro.me/hooks/68d1f706fcb9489bcd5d7d07/wDtoAHhAAPfnerGDfGEt8Cnw4pvK5dPwGYJxF28HDDMBiPGC'
+        sendResolved: true
+        maxAlerts: 5

@@ -1,0 +1,126 @@
+# Grafana Tempo Deployment for Distributed Tracing
+# Deploy with: helm install tempo grafana/tempo -f tempo-values.yaml -n monitoring
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    name: monitoring
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tempo
+  namespace: monitoring
+  labels:
+    app: tempo
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3200
+    targetPort: 3200
+    name: http
+  - port: 9095
+    targetPort: 9095
+    name: grpc
+  selector:
+    app: tempo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tempo
+  namespace: monitoring
+  labels:
+    app: tempo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tempo
+  template:
+    metadata:
+      labels:
+        app: tempo
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: tempo
+        image: grafana/tempo:2.3.0
+        ports:
+        - containerPort: 3200
+          name: http
+        - containerPort: 9095
+          name: grpc
+        env:
+        - name: TEMPO_CONFIG_STRING
+          value: |
+            server:
+              http_listen_port: 3200
+              grpc_listen_port: 9095
+            distributor:
+              receivers:
+                jaeger:
+                  protocols:
+                    thrift_http:
+                    grpc:
+                zipkin:
+                otlp:
+                  protocols:
+                    grpc:
+                    http:
+                opencensus:
+            ingester:
+              max_block_duration: 5m
+            storage:
+              trace:
+                backend: local
+                local:
+                  path: /var/tempo/traces
+            overrides:
+              defaults:
+                max_traces_per_user: 10000
+                max_bytes_per_trace: 5000000
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        volumeMounts:
+        - name: tempo-storage
+          mountPath: /var/tempo
+        livenessProbe:
+          httpGet:
+            path: /ready
+            port: 3200
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3200
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: tempo-storage
+        persistentVolumeClaim:
+          claimName: tempo-storage
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tempo-storage
+  namespace: monitoring
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: default

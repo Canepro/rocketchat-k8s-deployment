@@ -1,0 +1,18 @@
+# Base namespace configuration
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rocketchat
+  labels:
+    name: rocketchat
+    environment: production
+    managed-by: terraform
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    name: monitoring
+    environment: production
+    managed-by: terraform

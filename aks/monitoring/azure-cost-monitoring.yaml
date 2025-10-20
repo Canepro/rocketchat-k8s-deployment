@@ -1,0 +1,427 @@
+# Azure Cost Management Integration for Rocket.Chat AKS Deployment
+# Provides real-time cost monitoring and budget alerts
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: azure-cost-monitoring
+  namespace: monitoring
+  labels:
+    app: azure-cost-monitoring
+    grafana_dashboard: "1"
+data:
+  azure-cost-dashboard.json: |
+    {
+      "uid": "azure-cost-monitoring",
+      "title": "Azure Cost Management - Rocket.Chat AKS",
+      "description": "Real-time cost monitoring and budget tracking for Rocket.Chat AKS deployment",
+      "tags": ["azure", "cost", "monitoring", "aks", "rocketchat"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "5m",
+      "time": {"from": "now-30d", "to": "now"},
+      "timepicker": {
+        "refresh_intervals": ["5m", "15m", "30m", "1h", "2h", "1d"],
+        "time_options": ["5m", "15m", "1h", "3h", "6h", "12h", "24h", "2d", "7d", "30d"]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "Daily Cost Trend",
+          "type": "timeseries",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "targets": [
+            {
+              "expr": "azure_cost_management_daily_cost",
+              "legendFormat": "Daily Cost ({{currency}})",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "currencyUSD",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "spanNulls": false,
+                "fillOpacity": 10,
+                "gradientMode": "none"
+              }
+            }
+          }
+        },
+        {
+          "id": 2,
+          "title": "Monthly Cost Breakdown",
+          "type": "piechart",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "targets": [
+            {
+              "expr": "azure_cost_management_service_cost",
+              "legendFormat": "{{service_name}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "currencyUSD",
+              "custom": {
+                "hideFrom": {"legend": false, "tooltip": false, "vis": false}
+              }
+            }
+          }
+        },
+        {
+          "id": 3,
+          "title": "Resource Group Costs",
+          "type": "stat",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 8},
+          "targets": [
+            {
+              "expr": "azure_cost_management_resource_group_cost{resource_group=\"rocketchat-k8s-rg\"}",
+              "legendFormat": "Rocket.Chat RG",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "currencyUSD",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": 0},
+                  {"color": "yellow", "value": 50},
+                  {"color": "red", "value": 80}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": 4,
+          "title": "AKS Cluster Cost",
+          "type": "stat",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 8},
+          "targets": [
+            {
+              "expr": "azure_cost_management_aks_cluster_cost",
+              "legendFormat": "AKS Cluster",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "currencyUSD",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": 0},
+                  {"color": "yellow", "value": 30},
+                  {"color": "red", "value": 50}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": 5,
+          "title": "Storage Cost",
+          "type": "stat",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 8},
+          "targets": [
+            {
+              "expr": "azure_cost_management_storage_cost",
+              "legendFormat": "Storage",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "currencyUSD",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": 0},
+                  {"color": "yellow", "value": 10},
+                  {"color": "red", "value": 20}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": 6,
+          "title": "Network Cost",
+          "type": "stat",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 8},
+          "targets": [
+            {
+              "expr": "azure_cost_management_network_cost",
+              "legendFormat": "Network",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "currencyUSD",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": 0},
+                  {"color": "yellow", "value": 5},
+                  {"color": "red", "value": 10}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": 7,
+          "title": "Cost by Resource Type",
+          "type": "barchart",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+          "targets": [
+            {
+              "expr": "azure_cost_management_resource_type_cost",
+              "legendFormat": "{{resource_type}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "currencyUSD",
+              "custom": {
+                "hideFrom": {"legend": false, "tooltip": false, "vis": false}
+              }
+            }
+          }
+        },
+        {
+          "id": 8,
+          "title": "Budget vs Actual",
+          "type": "timeseries",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+          "targets": [
+            {
+              "expr": "azure_cost_management_budget_amount",
+              "legendFormat": "Budget ({{currency}})",
+              "refId": "A"
+            },
+            {
+              "expr": "azure_cost_management_actual_cost",
+              "legendFormat": "Actual Cost ({{currency}})",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "currencyUSD",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "spanNulls": false,
+                "fillOpacity": 10,
+                "gradientMode": "none"
+              }
+            }
+          }
+        },
+        {
+          "id": 9,
+          "title": "Cost Optimization Recommendations",
+          "type": "table",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 6, "w": 24, "x": 0, "y": 20},
+          "targets": [
+            {
+              "expr": "azure_cost_management_optimization_recommendations",
+              "format": "table",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "displayMode": "auto"
+              }
+            }
+          }
+        }
+      ],
+      "templating": {
+        "list": [
+          {
+            "name": "resource_group",
+            "type": "query",
+            "query": "rocketchat-k8s-rg",
+            "current": {
+              "selected": false,
+              "text": "rocketchat-k8s-rg",
+              "value": "rocketchat-k8s-rg"
+            }
+          },
+          {
+            "name": "subscription_id",
+            "type": "query",
+            "query": "$AZURE_SUBSCRIPTION_ID",
+            "current": {
+              "selected": false,
+              "text": "All",
+              "value": "$__all"
+            }
+          }
+        ]
+      }
+    }
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: azure-cost-exporter-config
+  namespace: monitoring
+data:
+  azure-cost-exporter.yaml: |
+    # Azure Cost Management Exporter Configuration
+    azure:
+      subscription_id: "${AZURE_SUBSCRIPTION_ID}"
+      resource_group: "rocketchat-k8s-rg"
+      client_id: "${AZURE_CLIENT_ID}"
+      client_secret: "${AZURE_CLIENT_SECRET}"
+      tenant_id: "${AZURE_TENANT_ID}"
+    
+    cost_management:
+      enabled: true
+      budget_alerts:
+        enabled: true
+        thresholds:
+          warning: 70  # 70% of budget
+          critical: 90  # 90% of budget
+      
+      resource_tracking:
+        enabled: true
+        include_tags:
+          - "Project=rocketchat-k8s"
+          - "Environment=production"
+      
+      cost_breakdown:
+        by_service: true
+        by_resource_group: true
+        by_resource_type: true
+        by_location: true
+      
+      optimization:
+        enabled: true
+        recommendations:
+          - "rightsize_vms"
+          - "reserved_instances"
+          - "spot_instances"
+          - "storage_optimization"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: azure-cost-exporter
+  namespace: monitoring
+  labels:
+    app: azure-cost-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: azure-cost-exporter
+  template:
+    metadata:
+      labels:
+        app: azure-cost-exporter
+    spec:
+      containers:
+      - name: azure-cost-exporter
+        image: prometheuscommunity/azure-exporter:latest
+        ports:
+        - containerPort: 9279
+          name: metrics
+        env:
+        - name: AZURE_SUBSCRIPTION_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: subscription-id
+        - name: AZURE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: client-id
+        - name: AZURE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: client-secret
+        - name: AZURE_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: tenant-id
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 9279
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: 9279
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: azure-cost-exporter
+  namespace: monitoring
+  labels:
+    app: azure-cost-exporter
+spec:
+  selector:
+    app: azure-cost-exporter
+  ports:
+  - port: 9279
+    targetPort: 9279
+    name: metrics
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: azure-cost-exporter
+  namespace: monitoring
+  labels:
+    app: azure-cost-exporter
+spec:
+  selector:
+    matchLabels:
+      app: azure-cost-exporter
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
