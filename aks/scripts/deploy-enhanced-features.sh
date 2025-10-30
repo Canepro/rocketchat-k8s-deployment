@@ -20,7 +20,9 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # Configuration
 ENABLE_AUTOSCALING="${ENABLE_AUTOSCALING:-true}"
 ENABLE_HA="${ENABLE_HA:-true}"
-ENABLE_COST_MONITORING="${ENABLE_COST_MONITORING:-true}"
+# Cost monitoring requires Azure Service Principal by default
+# Set to 'true' only if you have service principal credentials or Managed Identity
+ENABLE_COST_MONITORING="${ENABLE_COST_MONITORING:-false}"
 ENABLE_HEALTH_CHECKS="${ENABLE_HEALTH_CHECKS:-true}"
 NAMESPACE_MONITORING="monitoring"
 NAMESPACE_ROCKETCHAT="rocketchat"

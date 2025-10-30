@@ -1,0 +1,73 @@
+# OpenTelemetry Instrumentation Patch for Rocket.Chat
+# Apply with: kubectl patch deployment rocketchat-rocketchat -n rocketchat --patch-file rocketchat-otel-patch.yaml
+
+spec:
+  template:
+    spec:
+      initContainers:
+      # Init container to install OpenTelemetry packages and setup tracing
+      - name: otel-instrumentation
+        image: node:18-alpine
+        command:
+        - sh
+        - -c
+        - |
+          echo "Installing OpenTelemetry packages..."
+          cd /otel-temp
+          export npm_config_cache=/otel-temp/.npm
+          npm init -y
+          npm install --save \
+            @opentelemetry/sdk-node \
+            @opentelemetry/auto-instrumentations-node \
+            @opentelemetry/exporter-trace-otlp-http \
+            @opentelemetry/resources \
+            @opentelemetry/semantic-conventions
+          echo "OpenTelemetry packages installed successfully! ✅"
+          ls -la node_modules/@opentelemetry || echo "Warning: OpenTelemetry modules not found"
+          
+          echo "Copying tracing.js configuration..."
+          cp /otel-config-source/tracing.js /otel-temp/tracing.js
+          chmod 644 /otel-temp/tracing.js
+          echo "Tracing configuration copied! ✅"
+          ls -la /otel-temp/tracing.js
+        volumeMounts:
+        - name: otel-modules
+          mountPath: /otel-temp
+        - name: otel-config-source
+          mountPath: /otel-config-source
+          readOnly: true
+      containers:
+      - name: rocketchat
+        env:
+        # OpenTelemetry configuration
+        - name: OTEL_SERVICE_NAME
+          value: "rocket-chat"
+        - name: OTEL_SERVICE_VERSION
+          value: "7.9.3"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://otel-collector.monitoring.svc.cluster.local:4318"
+        - name: OTEL_EXPORTER_OTLP_PROTOCOL
+          value: "http/protobuf"
+        - name: OTEL_TRACES_EXPORTER
+          value: "otlp"
+        - name: OTEL_METRICS_EXPORTER
+          value: "none"
+        - name: OTEL_LOGS_EXPORTER
+          value: "none"
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: "service.name=rocket-chat,service.version=7.9.3,deployment.environment=production,service.namespace=rocketchat"
+        - name: OTEL_LOG_LEVEL
+          value: "info"
+        - name: NODE_OPTIONS
+          value: "--require /otel-auto-instrumentation/tracing.js"
+        volumeMounts:
+        - name: otel-modules
+          mountPath: /otel-auto-instrumentation
+          readOnly: true
+      volumes:
+      - name: otel-modules
+        emptyDir: {}
+      - name: otel-config-source
+        configMap:
+          name: rocketchat-otel-config
+

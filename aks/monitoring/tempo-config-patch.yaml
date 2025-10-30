@@ -1,0 +1,80 @@
+# Tempo Configuration Patch to Enable Metrics Generator
+# This patches the Tempo ConfigMap to add metrics-generator support
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tempo
+  namespace: monitoring
+data:
+  tempo.yaml: |
+    memberlist:
+      cluster_label: "tempo.monitoring"
+    multitenancy_enabled: false
+    usage_report:
+      reporting_enabled: true
+    compactor:
+      compaction:
+        block_retention: 24h
+    distributor:
+      receivers:
+        jaeger:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:14250
+            thrift_binary:
+              endpoint: 0.0.0.0:6832
+            thrift_compact:
+              endpoint: 0.0.0.0:6831
+            thrift_http:
+              endpoint: 0.0.0.0:14268
+        opencensus: null
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+    ingester:
+      max_block_duration: 5m
+    metrics_generator:
+      ring:
+        kvstore:
+          store: inmemory
+      processor:
+        service_graphs:
+          max_items: 10000
+        span_metrics:
+          dimensions:
+            - http.method
+            - http.status_code
+            - service.name
+        local_blocks:
+          max_live_traces: 10000
+          max_block_duration: 30m
+          flush_check_period: 10s
+      storage:
+        path: /var/tempo/generator/wal
+        remote_write:
+          - url: http://monitoring-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090/api/v1/write
+            send_exemplars: true
+    server:
+      http_listen_port: 3200
+    storage:
+      trace:
+        backend: local
+        local:
+          path: /var/tempo/traces
+        wal:
+          path: /var/tempo/wal
+        block:
+          version: vParquet4
+    querier: {}
+    query_frontend: {}
+    overrides:
+      per_tenant_override_config: /conf/overrides.yaml
+      metrics_generator_processors:
+        - service-graphs
+        - span-metrics
+        - local-blocks
+

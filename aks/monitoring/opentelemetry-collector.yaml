@@ -8,6 +8,14 @@ metadata:
   namespace: monitoring
 data:
   otel-collector-config.yaml: |
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+      pprof:
+        endpoint: 0.0.0.0:1777
+      zpages:
+        endpoint: 0.0.0.0:55679
+    
     receivers:
       otlp:
         protocols:
@@ -40,6 +48,7 @@ data:
         timeout: 1s
         send_batch_size: 1024
       memory_limiter:
+        check_interval: 1s
         limit_mib: 512
       resource:
         attributes:
@@ -64,6 +73,7 @@ data:
         endpoint: "0.0.0.0:8889"
 
     service:
+      extensions: [health_check, pprof, zpages]
       pipelines:
         traces:
           receivers: [otlp, jaeger, zipkin]
@@ -117,7 +127,7 @@ spec:
           name: metrics
         env:
         - name: GOMEMLIMIT
-          value: "512Mi"
+          value: "512MiB"
         resources:
           limits:
             cpu: 500m

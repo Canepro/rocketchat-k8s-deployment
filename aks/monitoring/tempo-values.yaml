@@ -7,12 +7,6 @@ tempo:
   image:
     tag: "2.3.0"
   
-  # Enable persistence for trace storage
-  persistence:
-    enabled: true
-    size: 20Gi
-    storageClassName: default
-  
   # Tempo configuration
   config:
     server:
@@ -32,6 +26,24 @@ tempo:
         opencensus:
     ingester:
       max_block_duration: 5m
+    metrics_generator:
+      ring:
+        kvstore:
+          store: inmemory
+      processor:
+        service_graphs:
+          enabled: true
+          max_items: 10000
+        span_metrics:
+          enabled: true
+          dimensions:
+            - name: http.method
+            - name: http.status_code
+            - name: service.name
+      storage:
+        path: /var/tempo/generator/wal
+        remote_write:
+          - url: http://monitoring-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090/api/v1/write
     storage:
       trace:
         backend: local
@@ -41,6 +53,9 @@ tempo:
       defaults:
         max_traces_per_user: 10000
         max_bytes_per_trace: 5000000
+        metrics_generator_processors:
+          - service-graphs
+          - span-metrics
 
 # Resource limits optimized for AKS
 resources:
@@ -62,8 +77,13 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
-# Security context
+# Note: The Grafana Tempo Helm chart may not support persistence in the same way
+# For now, we'll use emptyDir and add an initContainer to fix permissions
+# If needed, we can switch to manual PVC deployment later
+
+# Security context - disable runAsNonRoot to allow directory creation
 securityContext:
-  runAsNonRoot: true
-  runAsUser: 1000
+  # Temporarily allow root to create directories
+  runAsNonRoot: false
+  runAsUser: 0
   fsGroup: 1000

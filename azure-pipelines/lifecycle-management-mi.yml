@@ -1,5 +1,5 @@
-# AKS Lifecycle Management Pipeline
-# Azure DevOps pipeline for cluster lifecycle management
+# AKS Lifecycle Management Pipeline (Managed Identity)
+# Azure DevOps pipeline for cluster lifecycle management using Managed Identity
 
 trigger: none
 
@@ -37,63 +37,66 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    - task: AzureCLI@2
-      displayName: 'Setup Azure CLI'
+    - task: Bash@3
+      displayName: 'Azure Login with Managed Identity'
+      env:
+        AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
+          echo "Logging in with Managed Identity..."
+          az login --identity
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          az account show --query '{name:name, id:id, tenant:tenantId}' -o table
+          echo "✅ Azure login successful"
+          
+          # Install AKS extension
           az extension add --name aks-preview
           az aks get-credentials --name $(clusterName) --resource-group $(resourceGroup) --overwrite
           
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Backup Cluster State'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           chmod +x scripts/backup/backup-cluster-state.sh
           ./scripts/backup/backup-cluster-state.sh
           
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Backup Secrets to Key Vault'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           chmod +x scripts/secrets/backup-secrets-to-keyvault.sh
           ./scripts/secrets/backup-secrets-to-keyvault.sh
           
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Create PVC Snapshots'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           chmod +x scripts/backup/create-pvc-snapshots.sh
           ./scripts/backup/create-pvc-snapshots.sh
           
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Backup MongoDB Data'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           chmod +x scripts/backup/mongodb-backup.sh
           ./scripts/backup/mongodb-backup.sh
           
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Validate Backups'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           chmod +x scripts/backup/backup-integrity-check.sh
           ./scripts/backup/backup-integrity-check.sh
 
@@ -107,13 +110,21 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    - task: AzureCLI@2
-      displayName: 'Setup Azure CLI'
+    - task: Bash@3
+      displayName: 'Azure Login with Managed Identity'
+      env:
+        AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
+          echo "Logging in with Managed Identity..."
+          az login --identity
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          az account show --query '{name:name, id:id, tenant:tenantId}' -o table
+          echo "✅ Azure login successful"
+          
+          # Install AKS extension
           az extension add --name aks-preview
           az aks get-credentials --name $(clusterName) --resource-group $(resourceGroup) --overwrite
           
@@ -122,23 +133,21 @@ stages:
       inputs:
         terraformVersion: '1.0.0'
         
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Teardown Cluster'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           chmod +x scripts/lifecycle/teardown-cluster.sh
           FORCE_TEARDOWN=${{ parameters.force_teardown }} ./scripts/lifecycle/teardown-cluster.sh
           
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Verify Teardown'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           if az aks show --name $(clusterName) --resource-group $(resourceGroup) &> /dev/null; then
             echo "Cluster still exists after teardown"
             exit 1
@@ -155,13 +164,21 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    - task: AzureCLI@2
-      displayName: 'Setup Azure CLI'
+    - task: Bash@3
+      displayName: 'Azure Login with Managed Identity'
+      env:
+        AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
+          echo "Logging in with Managed Identity..."
+          az login --identity
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          az account show --query '{name:name, id:id, tenant:tenantId}' -o table
+          echo "✅ Azure login successful"
+          
+          # Install AKS extension
           az extension add --name aks-preview
           
     - task: TerraformInstaller@0
@@ -169,32 +186,29 @@ stages:
       inputs:
         terraformVersion: '1.0.0'
         
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Recreate Cluster'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           chmod +x scripts/lifecycle/recreate-cluster.sh
           ENABLE_MONITORING=${{ parameters.enable_monitoring }} ./scripts/lifecycle/recreate-cluster.sh
           
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Get AKS Credentials'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           az aks get-credentials --name $(clusterName) --resource-group $(resourceGroup) --overwrite
           
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Validate Cluster Health'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           chmod +x scripts/lifecycle/validate-cluster-health.sh
           ./scripts/lifecycle/validate-cluster-health.sh
 
@@ -208,33 +222,39 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    - task: AzureCLI@2
-      displayName: 'Setup Azure CLI'
+    - task: Bash@3
+      displayName: 'Azure Login with Managed Identity'
+      env:
+        AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
+          echo "Logging in with Managed Identity..."
+          az login --identity
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          az account show --query '{name:name, id:id, tenant:tenantId}' -o table
+          echo "✅ Azure login successful"
+          
+          # Install AKS extension
           az extension add --name aks-preview
           az aks get-credentials --name $(clusterName) --resource-group $(resourceGroup) --overwrite
           
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Validate Cluster Health'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           chmod +x scripts/lifecycle/validate-cluster-health.sh
           ./scripts/lifecycle/validate-cluster-health.sh
           
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Check Rocket.Chat Accessibility'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           CLUSTER_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
           if [ -n "$CLUSTER_IP" ]; then
             echo "Cluster IP: $CLUSTER_IP"

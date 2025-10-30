@@ -36,18 +36,24 @@ This repository contains a **production-ready, enterprise-grade deployment** of 
 
 | Service | URL | Status | Description |
 |---------|-----|--------|-------------|
-| **Rocket.Chat** | [chat.canepro.me](https://chat.canepro.me) | 🟢 Production | Main chat application |
-| **Grafana** | [grafana.chat.canepro.me](https://grafana.chat.canepro.me) | 🟢 Production | Monitoring dashboards |
-| **Public Dashboard** | [Portfolio View](https://grafana.chat.canepro.me/d/public-rocketchat-overview) | 🟢 Anonymous | Portfolio demonstration |
-| **Prometheus** | Internal | 🟢 Production | Metrics collection |
-| **Loki** | Internal | 🟢 Production | Log aggregation |
+| **Rocket.Chat** | [chat.canepro.me](https://chat.canepro.me) | 🟢 Production | Main chat application with microservices |
+| **Grafana** | [grafana.canepro.me](https://grafana.canepro.me) | 🟢 Production | Unified observability dashboards |
+| **Tracing Dashboard** | [grafana.canepro.me/d/rocket-chat-tracing](https://grafana.canepro.me/d/rocket-chat-tracing) | 🟢 Production | Distributed tracing visualization |
+| **Tempo (Traces)** | Internal | 🟢 Production | Distributed tracing backend (1.8MB traces, 124KB metrics) |
+| **Prometheus** | Internal | 🟢 Production | Metrics collection (1238+ series) |
+| **Loki** | Internal | 🟢 Production | Log aggregation (2.9.0 with volume API) |
+| **OpenTelemetry** | Internal | 🟢 Production | Trace collection and export |
 
 ### 🎯 **Live Portfolio Demos**
 
 Experience the live production infrastructure:
 
 - **💬 [Try Live Chat](https://chat.canepro.me)** - Interactive Rocket.Chat instance with guest access
-- **📊 [View Live Dashboard](https://grafana.chat.canepro.me/d/public-rocketchat-overview/rocket-chat-production-monitoring-portfolio-view?orgId=1&refresh=30s&kiosk=tv&theme=dark)** - Real-time monitoring with anonymous access
+- **📊 [View Monitoring Dashboard](https://grafana.canepro.me)** - Real-time metrics, logs, and traces
+- **🔍 [View Distributed Tracing](https://grafana.canepro.me/d/rocket-chat-tracing)** - Live request tracing with Tempo
+- **📈 [Explore Metrics](https://grafana.canepro.me/explore)** - Query 1238+ metric series
+- **📝 [Query Logs](https://grafana.canepro.me/explore)** - Search logs with Loki (select Loki datasource)
+- **🔎 [Search Traces](https://grafana.canepro.me/explore)** - TraceQL queries (select Tempo datasource)
 
 ## 🏗️ Architecture
 
@@ -107,14 +113,36 @@ graph TB
 - **Infrastructure as Code**: Complete Terraform configuration for repeatable deployments
 - **Disaster Recovery**: Automated recovery from subscription suspensions and cluster failures
 
-### 📊 **Monitoring & Observability**
-- **Metrics Collection**: 1238+ metric series from Rocket.Chat and infrastructure
-- **Comprehensive Dashboards**: 28 real-time panels with production monitoring
+### 📊 **Monitoring & Observability** (Complete 3-Pillar Stack)
+
+#### **Metrics (Prometheus)**
+- **1238+ Metric Series**: Application, infrastructure, and custom metrics
+- **Comprehensive Dashboards**: 28+ real-time panels with production monitoring
 - **Kubernetes Monitoring**: Pod status, desired vs actual state, workload health
-- **Log Aggregation**: Centralized logging with structured query capabilities via Loki 2.9.0
-- **Distributed Tracing**: Complete request tracing with Tempo and OpenTelemetry
-- **Alerting**: 12+ alert rules with intelligent routing and notifications
-- **Performance Monitoring**: CPU, memory, API response times, error rates, user metrics
+- **Performance Tracking**: CPU, memory, API response times, error rates, user engagement
+- **Multi-Service Coverage**: Rocket.Chat, MongoDB, NGINX, all microservices
+
+#### **Logs (Loki 2.9.0)**
+- **Centralized Aggregation**: All application and system logs in one place
+- **Structured Queries**: LogQL for powerful log analysis
+- **Volume API Support**: Enhanced log exploration in Grafana
+- **Real-time Streaming**: Live log tailing and filtering
+- **Long-term Retention**: 50GB storage with 7-day retention
+
+#### **Traces (Tempo + OpenTelemetry)**
+- **Distributed Tracing**: End-to-end request visibility across microservices
+- **1.8MB Traces Stored**: Complete request history in Tempo WAL
+- **124KB Span Metrics**: Auto-generated metrics from traces
+- **Metrics-Generator**: Service graphs, span metrics, and local-blocks processors
+- **TraceQL Queries**: Powerful trace search and analysis
+- **Grafana Integration**: Unified metrics-logs-traces correlation
+- **OpenTelemetry Auto-instrumentation**: Automatic span generation for HTTP, Express, MongoDB
+
+#### **Alerting & Notifications**
+- **12+ Alert Rules**: Critical, warning, and info-level alerts
+- **Multi-channel Routing**: Email, Slack, webhooks, Azure Monitor
+- **Intelligent Grouping**: Correlated alerts to reduce noise
+- **Custom Thresholds**: Configurable alert conditions
 
 ### 🔐 **Security & Compliance**
 - **SSL/TLS Encryption**: Automated certificate management with Let's Encrypt
@@ -211,9 +239,11 @@ kubectl apply -f aks/monitoring/grafana-public-dashboard-setup.yaml
 | Service | Access Method | Credentials |
 |---------|---------------|-------------|
 | **Rocket.Chat** | `https://chat.canepro.me` | Your admin account |
-| **Grafana** | `https://grafana.chat.canepro.me` or Port-forward: `kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring` | `admin` / `prom-operator` |
+| **Grafana** | `https://grafana.canepro.me` or Port-forward: `kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring` | `admin` / `prom-operator` |
 | **Prometheus** | Port-forward: `kubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090 -n monitoring` | No auth required |
-| **Tracing Dashboard** | `https://grafana.chat.canepro.me/d/rocket-chat-tracing` | Same as Grafana |
+| **Tempo (Traces)** | Via Grafana: `https://grafana.canepro.me/explore` (select Tempo) | Same as Grafana |
+| **Loki (Logs)** | Via Grafana: `https://grafana.canepro.me/explore` (select Loki) | Same as Grafana |
+| **Tracing Dashboard** | `https://grafana.canepro.me/d/rocket-chat-tracing` | Same as Grafana |
 | **Health Check** | `./scripts/health-check.sh` | Automated health monitoring |
 | **Cost Dashboard** | Available in Grafana under "Azure Cost Management" | Same as Grafana |
 
@@ -255,18 +285,44 @@ kubectl apply -f aks/monitoring/grafana-public-dashboard-setup.yaml
 
 ### 🔍 **Complete Observability Stack**
 
-This deployment provides the **gold standard** of observability with all three pillars:
+This deployment provides the **gold standard** of observability with all three pillars fully operational:
 
-- **📊 Metrics**: Prometheus collects 1238+ metric series from Rocket.Chat and infrastructure
-- **📝 Logs**: Loki 2.9.0 aggregates and indexes all application and system logs
-- **🔍 Traces**: Tempo provides distributed tracing for end-to-end request visibility
-- **📈 Visualization**: Grafana unifies all three pillars in comprehensive dashboards
+#### **📊 Metrics (Prometheus + Grafana)**
+- **1238+ Metric Series**: Real-time collection from all services
+- **28+ Dashboard Panels**: Comprehensive production monitoring
+- **Custom ServiceMonitors**: Rocket.Chat, MongoDB, microservices
+- **Resource Tracking**: CPU, memory, network, storage across 55+ pods
+- **Business Metrics**: Active users, message rates, API performance
+
+#### **📝 Logs (Loki 2.9.0 + Promtail)**
+- **Centralized Aggregation**: All application and system logs
+- **50GB Storage**: 7-day retention with volume API support
+- **LogQL Queries**: Powerful structured log analysis
+- **Real-time Streaming**: Live log tailing with filtering
+- **Full-text Search**: Fast log discovery and investigation
+
+#### **🔍 Traces (Tempo + OpenTelemetry)**
+- **1.8MB Active Traces**: Complete request history in WAL
+- **124KB Span Metrics**: Auto-generated from traces
+- **Distributed Tracing**: End-to-end request visibility
+- **Metrics-Generator**: Service graphs, span metrics, local-blocks
+- **TraceQL Queries**: Advanced trace search and analysis
+- **Auto-instrumentation**: HTTP, Express, MongoDB tracing
+- **Correlation**: Link traces → logs → metrics seamlessly
+
+#### **📈 Unified Visualization (Grafana)**
+- **Single Pane of Glass**: All observability data in one place
+- **Trace → Log Correlation**: Click trace to see related logs
+- **Trace → Metrics Correlation**: Link spans to performance metrics
+- **Custom Dashboards**: Production, tracing, cost, Kubernetes
+- **Alert Visualization**: Real-time alert status and history
 
 **Key Benefits**:
-- **Complete Visibility**: Track requests from user action to database query
-- **Performance Optimization**: Identify bottlenecks across the entire stack
-- **Faster Debugging**: Correlate metrics, logs, and traces for rapid issue resolution
-- **Proactive Monitoring**: Detect issues before they impact users
+- **🎯 Complete Visibility**: Track every request from user action → app → database → response
+- **⚡ Performance Optimization**: Identify bottlenecks at span-level granularity
+- **🐛 Faster Debugging**: Correlate metrics, logs, and traces for root cause analysis in seconds
+- **🔮 Proactive Monitoring**: Detect anomalies before users experience issues
+- **💰 Cost Efficiency**: Understand resource usage at trace level for optimization
 
 ## 📁 Repository Structure
 
@@ -538,7 +594,7 @@ helm rollback rocketchat -n rocketchat
 - **🏗️ Infrastructure as Code**: Complete Terraform configuration for repeatable deployments
 - **🚨 Disaster Recovery**: Automated recovery from subscription suspensions and cluster failures
 
-### 🆕 **New Enterprise Features (December 2024)**
+### 🆕 **New Enterprise Features (October 2025)**
 
 - **✅ GitHub Actions CI/CD**: Automated deployment pipeline with security scanning
 - **✅ Health Check Automation**: Comprehensive health monitoring with 15+ checks
@@ -547,7 +603,13 @@ helm rollback rocketchat -n rocketchat
 - **✅ High Availability Setup**: Multi-zone deployment with disaster recovery
 - **✅ Enhanced Security**: Network policies, priority classes, and security scanning
 - **✅ Monitoring Automation**: Automated health checks and cost monitoring
-- **✅ Distributed Tracing**: Complete request tracing with Tempo and OpenTelemetry
+- **✅ Distributed Tracing**: **FULLY OPERATIONAL** - Complete request tracing with Tempo, OpenTelemetry, and metrics-generator
+  - 1.8MB of traces stored in Tempo WAL
+  - 124KB of generated span metrics
+  - Service graphs and span metrics processors active
+  - Local-blocks processor configured for Grafana drilldown
+  - Fixed deprecated OpenTelemetry exporter
+  - TraceQL queries fully functional
 - **✅ Lifecycle Automation**: Complete cluster lifecycle management with automated teardown/recreation
 - **✅ Backup System**: Comprehensive backup strategy with MongoDB dumps, PVC snapshots, and cluster state
 - **✅ Secrets Management**: Azure Key Vault integration with automated secret synchronization
@@ -566,7 +628,8 @@ helm rollback rocketchat -n rocketchat
 - [x] **Secrets Management**: Azure Key Vault integration ✅
 - [x] **Infrastructure as Code**: Terraform configuration ✅
 - [x] **Disaster Recovery**: Automated recovery procedures ✅
-- [x] **Distributed Tracing**: Complete request tracing with Tempo and OpenTelemetry ✅
+- [x] **Distributed Tracing**: Complete request tracing with Tempo and OpenTelemetry - FULLY OPERATIONAL ✅
+- [ ] **Terraform Consolidation**: Migrate all resources to Terraform for unified infrastructure management
 - [ ] **Performance Optimization**: Advanced caching and CDN integration
 - [ ] **Security Hardening**: Pod Security Standards and audit logging
 - [ ] **Multi-Region Support**: Cross-region backup and failover procedures
@@ -615,7 +678,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 > 💼 **Portfolio Ready**: This project includes live demo access and comprehensive integration guides for showcasing in professional portfolios. See the [portfolio/](portfolio/) directory for HTML/CSS templates and deployment instructions.
 
-*Last Updated: September 21, 2025 - Production-ready with live portfolio demos, anonymous dashboard access, comprehensive monitoring, and complete documentation*
+*Last Updated: October 30, 2025 - Production-ready with distributed tracing fully operational, comprehensive monitoring, and complete documentation*
 ---
 
 ## 🔐 Security & Privacy Notice
@@ -631,7 +694,7 @@ This repository is designed for public sharing and portfolio demonstration. All 
 ### **Live Demo Domains**
 The following domains are intentionally public for portfolio demonstration:
 - `chat.canepro.me` - Live Rocket.Chat instance with guest access
-- `grafana.chat.canepro.me` - Public monitoring dashboard (anonymous access)
+- `grafana.canepro.me` - Observability platform (metrics, logs, traces)
 
 ### **Configuration Security**
 - All credentials stored in Kubernetes secrets

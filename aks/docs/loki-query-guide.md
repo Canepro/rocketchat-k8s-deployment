@@ -134,10 +134,13 @@ sum by (pod) (count_over_time({namespace="rocketchat"} [1m]))
 
 ```bash
 # Check if Loki is receiving logs
-kubectl logs -n loki-stack loki-stack-0 --tail=10
+kubectl logs -n monitoring loki-0 --tail=10
 
 # Check Promtail log collection
-kubectl logs -n loki-stack loki-stack-promtail-<pod-name> --tail=10
+kubectl logs -n monitoring -l app.kubernetes.io/name=promtail --tail=10
+
+# Verify Loki has logs
+kubectl exec -n monitoring loki-0 -- wget -qO- 'http://localhost:3100/loki/api/v1/labels' | head -20
 
 # Verify Rocket.Chat pods are producing logs
 kubectl logs -n rocketchat <rocketchat-pod-name> --tail=10

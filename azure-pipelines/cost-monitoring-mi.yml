@@ -1,5 +1,5 @@
-# Subscription Monitor Pipeline
-# Azure DevOps pipeline for subscription suspension detection and recovery
+# Cost Monitoring Pipeline (Managed Identity)
+# Azure DevOps pipeline for cost monitoring using Managed Identity
 
 trigger: none
 
@@ -30,13 +30,26 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    - task: AzureCLI@2
+    - task: Bash@3
+      displayName: 'Azure Login with Managed Identity'
+      env:
+        AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+      inputs:
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
+          echo "Logging in with Managed Identity..."
+          az login --identity
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          az account show --query '{name:name, id:id, tenant:tenantId}' -o table
+          echo "✅ Azure login successful"
+          
+    - task: Bash@3
       displayName: 'Get Current Month Costs'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           # Get current month costs
           CURRENT_MONTH=$(date +%Y-%m)
           echo "Checking costs for: $CURRENT_MONTH"
@@ -47,13 +60,12 @@ stages:
             --query "[?contains(instanceName, '$(resourceGroup)')].{Resource:instanceName,Cost:pretaxCost,Currency:currency}" \
             -o table
               
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Get Cost Trends'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           # Get cost trends for the last 7 days
           az consumption usage list \
             --start-date $(date -d '7 days ago' +%Y-%m-%d) \
@@ -70,13 +82,26 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    - task: AzureCLI@2
+    - task: Bash@3
+      displayName: 'Azure Login with Managed Identity'
+      env:
+        AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+      inputs:
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
+          echo "Logging in with Managed Identity..."
+          az login --identity
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          az account show --query '{name:name, id:id, tenant:tenantId}' -o table
+          echo "✅ Azure login successful"
+          
+    - task: Bash@3
       displayName: 'Calculate Daily Spend'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           # Get current month costs
           CURRENT_MONTH=$(date +%Y-%m)
           CURRENT_DAY=$(date +%d)
@@ -115,13 +140,26 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    - task: AzureCLI@2
+    - task: Bash@3
+      displayName: 'Azure Login with Managed Identity'
+      env:
+        AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+      inputs:
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
+          echo "Logging in with Managed Identity..."
+          az login --identity
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          az account show --query '{name:name, id:id, tenant:tenantId}' -o table
+          echo "✅ Azure login successful"
+          
+    - task: Bash@3
       displayName: 'Check Cost Alerts'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           # Get current month costs
           CURRENT_MONTH=$(date +%Y-%m)
           TOTAL_COST=$(az consumption usage list \
@@ -160,13 +198,26 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    - task: AzureCLI@2
+    - task: Bash@3
+      displayName: 'Azure Login with Managed Identity'
+      env:
+        AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+      inputs:
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
+          echo "Logging in with Managed Identity..."
+          az login --identity
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          az account show --query '{name:name, id:id, tenant:tenantId}' -o table
+          echo "✅ Azure login successful"
+          
+    - task: Bash@3
       displayName: 'Analyze Resource Usage'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           # Get resource usage
           echo "Analyzing resource usage..."
           
@@ -176,13 +227,12 @@ stages:
             --query "[].{Name:name,Size:hardwareProfile.vmSize,Status:provisioningState}" \
             -o table
             
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Generate Optimization Recommendations'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           # Get current costs
           CURRENT_MONTH=$(date +%Y-%m)
           TOTAL_COST=$(az consumption usage list \
@@ -217,13 +267,12 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Notify Cost Status'
       inputs:
-        azureSubscription: 'Azure-ServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
           echo "Cost monitoring pipeline completed"
           echo "Check type: ${{ parameters.check_type }}"
           echo "Status: ${{ variables['Agent.JobStatus'] }}"

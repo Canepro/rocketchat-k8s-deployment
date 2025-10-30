@@ -1,347 +1,302 @@
-# 💰 Azure Cost Optimization & Monitoring Guide
+# 💰 Cost Optimization Guide
 
-**Date**: September 19, 2025
-**Last Updated**: September 19, 2025
-**Status**: ✅ Cost Optimizations Applied - 10-20% Savings Achieved
-**Target**: Stay within £100 Azure credit (~£57-80/month optimized spend)
-
-## 📊 Current Cost Analysis
-
-### Monthly Cost Breakdown (September 2025)
-```
-AKS Cluster (3 nodes):     £50-70/month
-  └─ Standard_DS2_v2 VMs:  £40-55/month
-  └─ System overhead:       £10-15/month
-
-Storage (Premium SSD):     £10-15/month
-  └─ MongoDB (30Gi):       £5-8/month
-  └─ Rocket.Chat (30Gi):   £5-7/month
-
-Networking (Load Balancer): £5-10/month
-  └─ Public IP:            £3-5/month
-  └─ Data transfer:        £2-5/month
-
-Total Estimated:           £65-95/month ✅
-```
-
-### Current Optimized Cost Analysis (Post-Optimization)
-```
-AKS Cluster (3 nodes):     £45-60/month (optimized)
-  └─ Standard_DS2_v2 VMs:  £35-50/month (resource rightsized)
-  └─ System overhead:       £10-10/month
-
-Storage (Premium SSD):     £8-12/month
-  └─ MongoDB (30Gi):       £4-6/month
-  └─ Rocket.Chat (30Gi):   £4-6/month
-
-Networking (Load Balancer): £4-8/month
-  └─ Public IP:            £3-5/month
-  └─ Data transfer:        £1-3/month
-
-Total Optimized:           £57-80/month ✅ (10-20% savings achieved)
-Cost Savings Achieved:     £8-15/month ✅
-```
-
-### Cost Optimization Opportunities Identified
-
-#### 1. Resource Rightsizing Savings (£5-10/month) ✅ APPLIED
-Optimizations have been successfully implemented:
-- Rocket.Chat CPU: 1000m → 750m (25% reduction) ✅
-- MongoDB CPU: 1000m → 300m (70% reduction) ✅
-- Rocket.Chat Memory: 2048Mi → 1024Mi (50% reduction) ✅
-- MongoDB Memory: 2048Mi → 512Mi (75% reduction) ✅
-
-#### 2. Storage Optimization (£2-5/month)
-- Review actual data usage vs allocated storage
-- Consider Standard SSD for non-critical workloads
-- Implement storage monitoring and alerts
-
-#### 3. Reserved Instances (30-50% savings)
-- Consider 1-3 year reservations for stable workloads
-- AKS node reservations for predictable usage
-
-## 🛠️ Cost Monitoring Setup
-
-### Azure Cost Management Configuration
-
-#### 1. Cost Alerts Setup
-```bash
-# Azure CLI commands for cost monitoring
-az monitor action-group create \
-  --name "cost-alerts" \
-  --resource-group "<your-resource-group>" \
-  --short-name "cost" \
-  --email-receiver "admin@yourdomain.com"
-```
-
-#### 2. Budget Alerts
-```bash
-# Create monthly budget with alerts
-az consumption budget create \
-  --budget-name "monthly-budget" \
-  --resource-group "<your-resource-group>" \
-  --amount 80 \
-  --time-grain "Monthly" \
-  --start-date "2025-09-01" \
-  --end-date "2025-12-01" \
-  --notifications "cost-alerts"
-```
-
-### Azure Portal Cost Monitoring
-
-#### Daily Monitoring Tasks
-1. **Access Azure Cost Management**:
-   - Portal → Cost Management + Billing → Cost analysis
-   - Filter by subscription and resource group
-
-2. **Key Metrics to Monitor**:
-   - Daily spend vs budget
-   - Service breakdown (AKS, Storage, Networking)
-   - Resource utilization vs cost
-
-3. **Cost Analysis Views**:
-   - **Accumulated costs**: Track spending over time
-   - **Cost by service**: Identify highest cost areas
-   - **Cost by resource**: Pinpoint expensive resources
-
-## 🔧 Resource Optimization Implementation
-
-### Phase 1: Immediate Resource Rightsizing
-
-#### Update Rocket.Chat Resources
-```yaml
-# aks/config/helm-values/values-official.yaml
-resources:
-  limits:
-    cpu: 500m      # Reduced from 1000m (-50%)
-    memory: 1536Mi # Reduced from 2048Mi (-25%)
-  requests:
-    cpu: 250m      # Reduced from 500m (-50%)
-    memory: 512Mi  # Reduced from 1024Mi (-50%)
-```
-
-#### Update MongoDB Resources
-```yaml
-# aks/config/mongodb-standalone.yaml
-resources:
-  limits:
-    cpu: 300m      # Reduced from 1000m (-70%)
-    memory: 512Mi  # Reduced from 2048Mi (-75%)
-  requests:
-    cpu: 100m      # Reduced from 500m (-80%)
-    memory: 256Mi  # Reduced from 1024Mi (-75%)
-```
-
-### Phase 2: Storage Optimization
-
-#### Storage Class Analysis
-```bash
-# Check current storage classes
-kubectl get storageclass
-
-# Analyze PVC usage
-kubectl get pvc -n rocketchat -o json | jq '.items[] | {name: .metadata.name, storage: .spec.resources.requests.storage, used: .status.capacity.storage}'
-```
-
-#### Storage Rightsizing Recommendations
-```
-Current: 30Gi MongoDB + 30Gi Rocket.Chat = 60Gi total
-Optimized: 15Gi MongoDB + 15Gi Rocket.Chat = 30Gi total (-50%)
-Potential Savings: £5-8/month on storage costs
-```
-
-### Phase 3: Advanced Cost Optimizations
-
-#### Reserved Instances (Future Consideration)
-```bash
-# Check RI recommendations
-az consumption reservation recommendation list \
-  --subscription-id "your-subscription-id" \
-  --look-back-period "7" \
-  --scope "Shared"
-```
-
-#### Spot Instances for Non-Critical Workloads
-- Consider spot instances for development/testing
-- Implement pod disruption budgets for production stability
-
-## 📊 Cost Monitoring Dashboard
-
-### Azure Monitor Workbook Setup
-
-#### 1. Cost Analysis Workbook
-```json
-{
-  "name": "Cost Analysis Workbook",
-  "type": "Microsoft.Insights/workbooks",
-  "properties": {
-    "displayName": "Rocket.Chat Cost Analysis",
-    "serializedData": "...",
-    "version": "1.0"
-  }
-}
-```
-
-#### 2. Key Cost Metrics to Track
-- Daily spend vs monthly budget
-- Cost per service (AKS, Storage, Network)
-- Resource utilization efficiency
-- Cost trends and anomalies
-
-### Grafana Cost Dashboard (Optional Enhancement)
-
-#### Cost Metrics Integration
-```yaml
-# Potential Azure Cost datasource for Grafana
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: azure-cost-datasource
-  namespace: monitoring
-data:
-  datasource.yaml: |
-    apiVersion: 1
-    datasources:
-    - name: Azure Cost Management
-      type: azure-costmanagement
-      access: proxy
-      jsonData:
-        subscriptionId: "your-subscription-id"
-        clientId: "your-client-id"
-```
-
-## 🚨 Cost Alert Configuration
-
-### Budget Alerts Setup
-
-#### Monthly Budget Alert
-```
-Budget Amount: £80/month
-Alert Thresholds:
-  - 50% (£40): Warning notification
-  - 80% (£64): Critical notification
-  - 100% (£80): Action required
-```
-
-#### Daily Spend Alerts
-```
-Daily Limit: £2.67/day (based on £80/month)
-Alert Threshold: 150% of daily budget (£4/day)
-```
-
-### Automated Cost Controls
-
-#### Azure Policy for Cost Control
-```json
-{
-  "properties": {
-    "displayName": "Restrict VM sizes",
-    "policyRule": {
-      "if": {
-        "allOf": [
-          {
-            "field": "type",
-            "equals": "Microsoft.Compute/virtualMachines"
-          },
-          {
-            "not": {
-              "field": "Microsoft.Compute/virtualMachines/sku.name",
-              "in": ["Standard_DS2_v2"]
-            }
-          }
-        ]
-      },
-      "then": {
-        "effect": "deny"
-      }
-    }
-  }
-}
-```
-
-## 📈 Cost Optimization Timeline
-
-### Week 1: Immediate Actions
-- [ ] Implement resource rightsizing (Rocket.Chat & MongoDB)
-- [ ] Set up Azure Cost Management alerts
-- [ ] Configure budget notifications
-- [ ] Create cost monitoring workbook
-
-### Week 2-4: Storage & Advanced Optimizations
-- [ ] Analyze storage usage patterns
-- [ ] Implement storage rightsizing
-- [ ] Review reserved instance options
-- [ ] Set up automated cost reporting
-
-### Ongoing: Monitoring & Maintenance
-- [ ] Weekly cost reviews
-- [ ] Monthly optimization assessments
-- [ ] Quarterly reserved instance evaluations
-- [ ] Annual cost strategy reviews
-
-## 🎯 Cost Targets & KPIs
-
-### Monthly Cost Targets
-```
-Current Spend:    £65-95/month
-Target Spend:     £55-75/month (-15-25% reduction)
-Azure Credit:     £100/month (25-30% buffer)
-```
-
-### Cost Efficiency KPIs
-```
-Cost per User:     <£2/month (estimated)
-Cost per GB:       <£0.10/GB storage
-CPU Utilization:   >60% (avoid over-provisioning)
-Memory Utilization: >70% (avoid over-provisioning)
-```
-
-## 📋 Cost Monitoring Checklist
-
-### Daily Monitoring
-- [ ] Check Azure Cost Management dashboard
-- [ ] Review budget vs actual spend
-- [ ] Monitor resource utilization
-- [ ] Check for cost anomalies
-
-### Weekly Review
-- [ ] Analyze cost trends
-- [ ] Review service breakdown
-- [ ] Assess optimization opportunities
-- [ ] Update cost forecasts
-
-### Monthly Assessment
-- [ ] Complete cost analysis report
-- [ ] Review budget performance
-- [ ] Plan upcoming optimizations
-- [ ] Adjust cost targets if needed
-
-## 🔍 Troubleshooting Cost Issues
-
-### High Cost Alerts
-1. **Sudden cost spike**: Check for unplanned resource scaling
-2. **Storage costs rising**: Review data growth patterns
-3. **Network costs increasing**: Investigate traffic patterns
-
-### Cost Optimization Issues
-1. **Resource limits too low**: Monitor for performance degradation
-2. **Storage insufficient**: Plan capacity upgrades
-3. **Reserved instances**: Review utilization commitments
-
-## 📞 Support & Resources
-
-### Azure Cost Management Resources
-- [Azure Cost Management Documentation](https://docs.microsoft.com/en-us/azure/cost-management-billing/)
-- [Azure Pricing Calculator](https://azure.microsoft.com/en-us/pricing/calculator/)
-- [Azure Advisor Cost Recommendations](https://portal.azure.com/#blade/Microsoft_Azure_Expert/AdvisorMenuBlade/cost)
-
-### Cost Optimization Best Practices
-- Regular resource utilization reviews
-- Implement tagging for cost allocation
-- Use Azure Advisor recommendations
-- Monitor for underutilized resources
+**Last Updated:** October 30, 2025  
+**Status:** ✅ Complete  
+**Purpose:** Guide for reducing costs while maintaining functionality
 
 ---
-**Cost Optimization Guide**: September 19, 2025
-**Next Review**: October 19, 2025
-**Target Monthly Cost**: £55-75/month
+
+## 📊 Summary
+
+### **Completed Optimizations**
+
+| Component | Before | After | Savings |
+|-----------|--------|-------|---------|
+| **MongoDB** | 3 replicas | 1 replica | **66% reduction** |
+| **NATS** | 2 replicas | 1 replica | **50% reduction** |
+| **DDP Streamer** | 2 replicas | 1 replica | **50% reduction** |
+
+**Total Rocket.Chat Savings:** ~50-60% reduction in compute costs
+
+**Estimated Monthly Savings:** ~£30-50/month (50-60% reduction on optimized components)
+
+---
+
+## 🚀 Quick Start
+
+### **Automated Cost Optimization**
+
+Use the interactive script:
+```bash
+./scripts/cost-optimization.sh
+```
+
+This script handles:
+- MongoDB replica reduction with automatic replica set reconfiguration
+- NATS replica reduction
+- DDP Streamer replica reduction
+- Verification and status reporting
+
+---
+
+## 📋 Detailed Optimization Steps
+
+### **Step 1: Reduce MongoDB Replicas**
+
+**Current:** 3 replicas (for high availability)  
+**Recommended:** 1 replica for cost savings, or 2 for basic redundancy
+
+**Impact:**
+- **Storage Savings:** 33-66% reduction (from 3x to 1-2x 10Gi volumes)
+- **Compute Savings:** 33-66% reduction (from 3x to 1-2x pods)
+- **Trade-off:** Less redundancy (for dev/non-critical workloads this is acceptable)
+
+**Commands:**
+```bash
+# Option A: Use automated script (handles replica set automatically)
+./scripts/cost-optimization.sh
+
+# Option B: Manual scaling (requires replica set fix)
+kubectl scale statefulset mongodb --replicas=1 -n rocketchat
+
+# Fix replica set after scaling
+./scripts/fix-mongodb-replica-set.sh
+```
+
+**⚠️ Important:** When scaling down MongoDB, the replica set must be reconfigured. Use the automated script or fix manually.
+
+**Verification:**
+```bash
+# Check replica count
+kubectl get statefulset mongodb -n rocketchat
+
+# Verify MongoDB is PRIMARY
+kubectl exec mongodb-0 -n rocketchat -- mongosh --eval "rs.status().members.forEach(m => print(m.name + ': ' + m.stateStr))"
+
+# Check resource usage
+kubectl top pods -n rocketchat | grep mongodb
+```
+
+### **Step 2: Reduce NATS Replicas**
+
+**Current:** 2 replicas  
+**Recommended:** 1 replica for cost savings
+
+**Impact:**
+- **Compute Savings:** 50% reduction
+- **Trade-off:** Less redundancy (acceptable for most workloads)
+
+**Commands:**
+```bash
+kubectl scale statefulset rocketchat-nats --replicas=1 -n rocketchat
+```
+
+**Verification:**
+```bash
+# Check replica count
+kubectl get statefulset rocketchat-nats -n rocketchat
+
+# Verify NATS is running
+kubectl get pods -n rocketchat | grep nats
+```
+
+### **Step 3: Reduce DDP Streamer Replicas**
+
+**Current:** 2 replicas  
+**Recommended:** 1 replica for cost savings
+
+**Impact:**
+- **Compute Savings:** 50% reduction
+- **Trade-off:** Less redundancy (acceptable for most workloads)
+
+**Commands:**
+```bash
+kubectl scale deployment rocketchat-ddp-streamer --replicas=1 -n rocketchat
+```
+
+**Verification:**
+```bash
+# Check replica count
+kubectl get deployment rocketchat-ddp-streamer -n rocketchat
+
+# Verify DDP Streamer is running
+kubectl get pods -n rocketchat | grep ddp-streamer
+```
+
+---
+
+## 📊 Monitoring Stack Analysis
+
+### **Current Monitoring Configuration**
+
+| Component | Replicas | CPU Usage | Memory Usage | Storage |
+|-----------|----------|-----------|--------------|---------|
+| **Prometheus** | 1 | 26m | 472Mi | 10Gi (7d retention) |
+| **Loki** | 1 | 4m | 143Mi | 50Gi (7d retention) |
+| **Grafana** | 1 | 6m | 325Mi | N/A |
+| **Alertmanager** | 1 | 10m | 49Mi | N/A |
+
+**Status:** ✅ Monitoring stack is already optimized (all at 1 replica)
+
+### **Optional Monitoring Optimizations**
+
+If you want to reduce monitoring costs further:
+
+#### **1. Reduce Retention Periods**
+
+**Prometheus** (currently 7 days):
+```bash
+# Edit Prometheus configuration
+kubectl edit prometheus monitoring-kube-prometheus-prometheus -n monitoring
+
+# Change retention from 7d to 3d
+# retention: 3d
+```
+
+**Loki** (currently 7 days / 168h):
+```bash
+# Edit Loki values
+# Change reject_old_samples_max_age from 168h to 72h (3 days)
+```
+
+**Savings:** ~50% reduction in storage costs
+
+#### **2. Reduce Storage Sizes**
+
+**Loki** (currently 50Gi):
+```bash
+# Edit Loki StatefulSet
+kubectl edit statefulset loki -n monitoring
+
+# Reduce volumeClaimTemplate size from 50Gi to 25Gi
+# Note: Requires PVC recreation (more complex)
+```
+
+**Savings:** ~50% reduction in Loki storage costs
+
+---
+
+## 🔍 Current Resource Usage
+
+**After Optimization:**
+- MongoDB: 98m CPU, 228Mi memory (well below limits)
+- NATS: 3m CPU, 39Mi memory (very low)
+- DDP Streamer: 2m CPU, 58Mi memory (very low)
+
+**Overall:** Heavy over-provisioning eliminated, appropriate resource allocation achieved
+
+---
+
+## 📈 Cost Impact Analysis
+
+### **Achieved Savings (Rocket.Chat):**
+- **MongoDB**: 66% reduction (~£20-30/month savings)
+- **NATS**: 50% reduction (~£5-10/month savings)
+- **DDP Streamer**: 50% reduction (~£5-10/month savings)
+- **Total**: ~£30-50/month savings (50-60% reduction on optimized components)
+
+### **Potential Additional Savings (Monitoring):**
+- **Retention Reduction**: ~£5-10/month (storage savings)
+- **Storage Size Reduction**: ~£5-10/month (if reducing Loki storage)
+- **Total Potential**: ~£10-20/month additional savings
+
+---
+
+## 🎯 Recommendations
+
+### **Current Status: ✅ Excellent**
+
+Your deployment is well-optimized:
+- ✅ Rocket.Chat components minimized
+- ✅ Monitoring stack already at 1 replica
+- ✅ Resource usage is appropriate
+- ✅ No functionality lost
+
+### **Optional Next Steps:**
+
+1. **Monitor for 1-2 weeks** to ensure stability with reduced replicas
+2. **Consider retention reduction** if historical data isn't critical
+3. **Review storage sizes** if storage costs are high
+
+### **Risk Assessment:**
+
+**Current Optimizations:**
+- ✅ Low risk (all pods running, no errors)
+- ✅ No data loss risk
+- ✅ Easy to rollback if needed
+
+**Potential Monitoring Optimizations:**
+- ⚠️ Retention reduction: Medium risk (lose historical data)
+- ⚠️ Storage reduction: High risk (requires data migration)
+
+---
+
+## 🔄 Rollback Procedures
+
+If you need to restore previous configuration:
+
+```bash
+# Scale MongoDB back to 3 replicas
+kubectl scale statefulset mongodb --replicas=3 -n rocketchat
+
+# Wait for pods to start
+kubectl wait --for=condition=ready pod/mongodb-0 -n rocketchat --timeout=300s
+kubectl wait --for=condition=ready pod/mongodb-1 -n rocketchat --timeout=300s
+kubectl wait --for=condition=ready pod/mongodb-2 -n rocketchat --timeout=300s
+
+# MongoDB will automatically add them back to the replica set
+
+# Scale NATS back to 2 replicas
+kubectl scale statefulset rocketchat-nats --replicas=2 -n rocketchat
+
+# Scale DDP Streamer back to 2 replicas
+kubectl scale deployment rocketchat-ddp-streamer --replicas=2 -n rocketchat
+```
+
+---
+
+## 📋 Maintenance Checklist
+
+**Weekly:**
+- [ ] Monitor pod health: `kubectl get pods -n rocketchat`
+- [ ] Check resource usage: `kubectl top pods -n rocketchat`
+- [ ] Verify MongoDB replica set: `kubectl exec mongodb-0 -n rocketchat -- mongosh --eval "rs.status()"`
+
+**Monthly:**
+- [ ] Review Azure cost reports
+- [ ] Check storage growth (Prometheus, Loki)
+- [ ] Review retention policies
+
+**As Needed:**
+- [ ] Scale up if workload increases
+- [ ] Adjust retention based on needs
+- [ ] Review resource limits based on actual usage
+
+---
+
+## 📚 Related Documentation
+
+- **How-To Guide:** `docs/HOW_TO_GUIDE.md`
+- **Troubleshooting:** `docs/TROUBLESHOOTING_GUIDE.md` (Section 6.2: MongoDB Replica Set Issues)
+- **Authentication:** `docs/DEPLOYMENT_AUTHENTICATION_GUIDE.md`
+
+---
+
+## ⚠️ Common Issues
+
+### **MongoDB Replica Set After Scaling**
+
+**Problem:** After scaling down MongoDB, you may see `ReplicaSetNoPrimary` errors.
+
+**Solution:** The cost optimization script handles this automatically. If done manually:
+```bash
+./scripts/fix-mongodb-replica-set.sh
+```
+
+See `docs/TROUBLESHOOTING_GUIDE.md` Section 6.2 for detailed troubleshooting.
+
+---
+
+**Last Updated:** October 30, 2025  
+**Optimization Status:** ✅ Complete  
+**Estimated Monthly Savings:** ~£30-50/month (50-60% reduction)

@@ -1,0 +1,90 @@
+# OpenTelemetry Auto-Instrumentation Configuration for Rocket.Chat
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rocketchat-otel-config
+  namespace: rocketchat
+data:
+  tracing.js: |
+    // OpenTelemetry Auto-Instrumentation for Rocket.Chat
+    // This file is loaded via NODE_OPTIONS --require flag
+    
+    console.log('[OpenTelemetry] Starting auto-instrumentation for Rocket.Chat...');
+    
+    try {
+      const { NodeSDK } = require('/otel-auto-instrumentation/node_modules/@opentelemetry/sdk-node');
+      const { getNodeAutoInstrumentations } = require('/otel-auto-instrumentation/node_modules/@opentelemetry/auto-instrumentations-node');
+      const { OTLPTraceExporter } = require('/otel-auto-instrumentation/node_modules/@opentelemetry/exporter-trace-otlp-http');
+      
+      // Get configuration from environment variables
+      const serviceName = process.env.OTEL_SERVICE_NAME || 'rocket-chat';
+      const serviceVersion = process.env.OTEL_SERVICE_VERSION || 'unknown';
+      const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://otel-collector.monitoring.svc.cluster.local:4318';
+      
+      console.log(`[OpenTelemetry] Service: ${serviceName} v${serviceVersion}`);
+      console.log(`[OpenTelemetry] OTLP Endpoint: ${otlpEndpoint}`);
+      
+      // Configure the OpenTelemetry SDK
+      // Resource attributes are automatically detected from OTEL_RESOURCE_ATTRIBUTES env var
+      const sdk = new NodeSDK({
+        traceExporter: new OTLPTraceExporter({
+          url: `${otlpEndpoint}/v1/traces`,
+          headers: {},
+        }),
+        instrumentations: [
+          getNodeAutoInstrumentations({
+            // Customize instrumentation settings
+            '@opentelemetry/instrumentation-fs': {
+              enabled: false, // Disable filesystem instrumentation (too noisy)
+            },
+            '@opentelemetry/instrumentation-http': {
+              enabled: true,
+              requestHook: (span, request) => {
+                // Add custom attributes to HTTP spans
+                span.setAttributes({
+                  'http.method': request.method,
+                  'http.url': request.url || request.path,
+                  'service.name': serviceName,
+                });
+              },
+            },
+            '@opentelemetry/instrumentation-express': {
+              enabled: true,
+            },
+            '@opentelemetry/instrumentation-mongodb': {
+              enabled: true,
+              responseHook: (span, response) => {
+                // Add MongoDB operation details
+                if (response && response.result) {
+                  span.setAttributes({
+                    'db.mongodb.collection': response.result.collection || 'unknown',
+                  });
+                }
+              },
+            },
+            '@opentelemetry/instrumentation-dns': {
+              enabled: false, // Disable DNS instrumentation
+            },
+          }),
+        ],
+      });
+      
+      // Start the SDK
+      sdk.start();
+      console.log('[OpenTelemetry] Auto-instrumentation started successfully! ✅');
+      
+      // Graceful shutdown
+      process.on('SIGTERM', () => {
+        console.log('[OpenTelemetry] Shutting down...');
+        sdk.shutdown()
+          .then(() => console.log('[OpenTelemetry] Tracing terminated'))
+          .catch((error) => console.error('[OpenTelemetry] Error terminating tracing:', error))
+          .finally(() => process.exit(0));
+      });
+      
+    } catch (error) {
+      console.error('[OpenTelemetry] Failed to initialize auto-instrumentation:', error);
+      console.error('[OpenTelemetry] Rocket.Chat will continue without tracing');
+      // Don't crash the application if OpenTelemetry fails
+    }
+

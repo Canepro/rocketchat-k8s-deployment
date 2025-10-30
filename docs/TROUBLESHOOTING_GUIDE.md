@@ -1,11 +1,11 @@
 # 🔧 Rocket.Chat AKS Deployment Troubleshooting Guide
 
 **Created**: September 4, 2025
-**Last Updated**: September 23, 2025 (Security Hardening + Alerts Testing & Domain Migration)
+**Last Updated**: October 30, 2025 (Added MongoDB replica set fix after scaling down, cost optimization procedures)
 **Purpose**: Comprehensive troubleshooting guide for Rocket.Chat deployment on Azure Kubernetes Service
 **Scope**: Official Helm chart deployment with enhanced monitoring
 **Status**: Living document - updated as issues are encountered and resolved
-**Current Status**: Domain migration completed - Grafana successfully migrated from grafana.chat.canepro.me to grafana.canepro.me with SSL. MongoDB alert system implemented with infrastructure-level monitoring. (Updated: September 23, 2025)
+**Current Status**: Production deployment optimized for cost. MongoDB replica set scaling issues documented and resolved. (Updated: October 30, 2025)
 
 ## 🏆 **MONITORING STACK: SECURITY HARDENED & PRODUCTION READY**
 - ✅ **Rocket.Chat Metrics**: 1238+ series flowing, all dashboards operational
@@ -2141,25 +2141,31 @@ kubectl exec -n rocketchat <mongodb-pod> -- mongorestore /path/to/backup/dump
 - Replica set not initialized
 - Primary election failures
 - Replication lag
+- **NEW (October 30, 2025):** `ReplicaSetNoPrimary` errors after scaling down
+- **NEW (October 30, 2025):** `getaddrinfo ENOTFOUND mongodb-1` errors
+- **NEW (October 30, 2025):** Pods crashing with MongoDB connection errors after replica reduction
 
 **Diagnosis:**
 ```bash
 # Check replica set status
-kubectl exec -n rocketchat mongodb-0 -- mongo --eval "rs.status()"
+kubectl exec -n rocketchat mongodb-0 -- mongosh --eval "rs.status()"
 
 # Check MongoDB logs
 kubectl logs -n rocketchat mongodb-0
 
 # Verify PVCs are bound
 kubectl get pvc -n rocketchat
+
+# Check replica set members (especially after scaling down)
+kubectl exec -n rocketchat mongodb-0 -- mongosh --eval "rs.status().members.forEach(m => print(m.name + ': ' + m.stateStr))"
 ```
 
 **Solutions:**
 
-**Option A: Initialize Replica Set**
+**Option A: Initialize Replica Set** (for new deployments)
 ```bash
 # Connect to MongoDB and initialize
-kubectl exec -n rocketchat mongodb-0 -- mongo --eval "
+kubectl exec -n rocketchat mongodb-0 -- mongosh --eval "
 rs.initiate({
   _id: 'rs0',
   members: [
@@ -2171,7 +2177,42 @@ rs.initiate({
 "
 ```
 
-**Option B: Fix PVC Issues**
+**Option B: Fix Replica Set After Scaling Down** ⚠️ **NEW (October 30, 2025)**
+
+**Problem:** After scaling MongoDB from 3 to 1 replica, the replica set configuration still references mongodb-1 and mongodb-2, causing `ReplicaSetNoPrimary` errors.
+
+**Solution:**
+```bash
+# Method 1: Use automated script (recommended)
+./scripts/fix-mongodb-replica-set.sh
+
+# Method 2: Manual reconfiguration
+kubectl exec mongodb-0 -n rocketchat -- mongosh --eval "
+cfg = rs.conf();
+cfg.members = [{_id: 0, host: 'mongodb-0.mongodb-headless.rocketchat.svc.cluster.local:27017', priority: 2}];
+cfg.version = cfg.version + 1;
+rs.reconfig(cfg, {force: true});
+print('Replica set reconfigured to single member');
+"
+
+# Verify MongoDB is now PRIMARY
+kubectl exec mongodb-0 -n rocketchat -- mongosh --eval "rs.isMaster().ismaster ? print('PRIMARY') : print('Not primary')"
+
+# Restart Rocket.Chat pods to reconnect
+kubectl rollout restart deployment/rocketchat-stream-hub -n rocketchat
+kubectl rollout restart deployment/rocketchat-rocketchat -n rocketchat
+
+# Verify fix
+kubectl get pods -n rocketchat
+kubectl exec mongodb-0 -n rocketchat -- mongosh --eval "rs.status().members.forEach(m => print(m.name + ': ' + m.stateStr))"
+```
+
+**Prevention:**
+- When scaling down MongoDB, use `./scripts/cost-optimization.sh` which handles replica set reconfiguration automatically
+- Or reconfigure replica set BEFORE scaling down
+- Scale down gradually: 3 → 2 → 1, reconfiguring at each step
+
+**Option C: Fix PVC Issues**
 ```bash
 # Check PVC status
 kubectl get pvc -n rocketchat
@@ -2187,6 +2228,7 @@ kubectl apply -f values-official.yaml
 - Monitor replica set health
 - Use persistent storage for MongoDB
 - Plan for replica set maintenance
+- **When scaling down:** Always reconfigure replica set first or use automated scripts
 
 ---
 

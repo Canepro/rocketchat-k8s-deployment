@@ -64,6 +64,12 @@ promtail:
 Validation:
 
 ```bash
-kubectl -n loki-stack logs -l app.kubernetes.io/name=promtail --tail=50 | cat
-kubectl -n loki-stack exec deploy/loki-stack-promtail -- ls -la /var/log/pods | head
+# Check Promtail pods
+kubectl get pods -n monitoring | grep promtail
+
+# Check Promtail logs
+kubectl logs -n monitoring -l app.kubernetes.io/name=promtail --tail=50 | cat
+
+# Verify Loki is receiving logs
+kubectl exec -n monitoring loki-0 -- wget -qO- 'http://localhost:3100/loki/api/v1/labels' | head -20
 ```
