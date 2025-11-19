@@ -95,6 +95,13 @@ LEGACY MicroK8s (Emergency Rollback):
 - ✅ **Custom Dashboards**: Rocket.Chat production monitoring dashboard
 - ✅ **SSL Certificates**: Automated certificate management for both services
 - ✅ **Full Observability**: Complete monitoring stack operational
+- ✅ **OKE Central Hub**: **ALL 3 TELEMETRY PIPELINES OPERATIONAL** (Metrics, Logs, Traces)
+  - AKS → OKE unified monitoring at `https://observability.canepro.me`
+  - Prometheus remote write for metrics
+  - Promtail → Loki for logs
+  - OTEL Collector → Tempo for traces
+  - Cross-cluster visibility with `cluster=rocket-chat-aks` labels
+  - Status: [OKE_FORWARDING_STATUS.md](OKE_FORWARDING_STATUS.md)
 
 ### Recent Issues Resolved (September 19, 2025) ✅
 - ✅ **PVC Deadlock**: Fixed Rocket.Chat pods stuck in Pending due to terminating PVC
@@ -121,5 +128,5 @@ LEGACY MicroK8s (Emergency Rollback):
 
 ---
 
-**Last Updated**: September 19, 2025
-**Status**: 🟢 PRODUCTION ACTIVE - Migration Complete, Cost Optimized, All Issues Resolved
+**Last Updated**: November 19, 2025
+**Status**: 🟢 PRODUCTION ACTIVE - Migration Complete, OKE Central Hub Operational, All Issues Resolved

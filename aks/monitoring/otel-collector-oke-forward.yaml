@@ -1,0 +1,105 @@
+# OpenTelemetry Collector Configuration for Forwarding Traces to OKE Central Hub
+# This configuration forwards traces to both local Tempo and OKE Tempo
+#
+# Usage:
+# 1. Replace the existing otel-collector-config ConfigMap with this configuration
+# 2. Apply: kubectl apply -f aks/monitoring/otel-collector-oke-forward.yaml
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: monitoring
+data:
+  otel-collector-config.yaml: |
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+      pprof:
+        endpoint: 0.0.0.0:1777
+      zpages:
+        endpoint: 0.0.0.0:55679
+      # Basic Auth for OKE Tempo
+      basicauth/oke:
+        client_auth:
+          username: observability-user
+          password: 50JjX+diU6YmAZPl
+    
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      jaeger:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:14250
+          thrift_http:
+            endpoint: 0.0.0.0:14268
+          thrift_compact:
+            endpoint: 0.0.0.0:6831
+          thrift_binary:
+            endpoint: 0.0.0.0:6832
+      zipkin:
+        endpoint: 0.0.0.0:9411
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: 'otel-collector'
+              scrape_interval: 10s
+              static_configs:
+                - targets: ['localhost:8888']
+
+    processors:
+      batch:
+        timeout: 1s
+        send_batch_size: 1024
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 512
+      resource:
+        attributes:
+          - key: service.name
+            value: rocket-chat
+            action: upsert
+          - key: service.version
+            value: "1.0.0"
+            action: upsert
+          - key: deployment.environment
+            value: production
+            action: upsert
+          # Add cluster identifier to all traces
+          - key: cluster
+            value: rocket-chat-aks
+            action: upsert
+          - key: region
+            value: azure
+            action: upsert
+
+    exporters:
+      logging:
+        loglevel: info
+      
+      # OKE Central Hub Tempo (Secure HTTP)
+      # Using OTLP/HTTP is more reliable through Ingress than gRPC
+      otlphttp/oke:
+        endpoint: https://observability.canepro.me/tempo
+        auth:
+          authenticator: basicauth/oke
+      
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+
+    service:
+      extensions: [health_check, pprof, zpages, basicauth/oke]
+      pipelines:
+        traces:
+          receivers: [otlp, jaeger, zipkin]
+          processors: [memory_limiter, batch, resource]
+          exporters: [otlphttp/oke, logging] # Removed local to fix error
+        metrics:
+          receivers: [prometheus]
+          processors: [memory_limiter, batch]
+          exporters: [prometheus, logging]

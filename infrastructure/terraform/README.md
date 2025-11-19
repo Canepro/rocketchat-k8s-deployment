@@ -1,42 +1,56 @@
-# AKS Infrastructure as Code
+# AKS Infrastructure as Code - Terraform Configuration
 
-This directory contains Terraform configurations for automated AKS cluster lifecycle management.
+## 📋 Overview
 
-## Overview
+This Terraform configuration manages the complete Azure Kubernetes Service (AKS) infrastructure for Rocket.Chat deployment, including networking, storage, security, and monitoring resources.
 
-The Terraform configuration creates:
-- AKS cluster with system and user node pools
-- Virtual network with proper subnetting
-- Azure Key Vault for secrets management
-- Storage accounts for backups and state
-- Network security groups and load balancer
-- Storage classes for different performance tiers
+## 🔐 Authentication & Access
 
-## Prerequisites
+### Important: User Account Authentication
 
-1. **Azure CLI** installed and authenticated
-2. **Terraform** >= 1.0 installed
-3. **kubectl** for cluster management
-4. **Azure subscription** with appropriate permissions
+**This configuration is designed for user account authentication (not service principal):**
 
-## Quick Start
+- ✅ **Azure Provider**: Uses default credentials from `az login`
+- ✅ **Kubernetes Provider**: Uses kubeconfig file (no Azure AD integration required)
+- ✅ **Helm Provider**: Uses same kubeconfig as Kubernetes provider
 
-### 1. Configure Backend Storage
+### Prerequisites
 
-Create a storage account for Terraform state:
+1. **Azure CLI** authenticated:
+   ```bash
+   az login
+   az account set --subscription <your-subscription-id>  # Optional
+   ```
+
+2. **kubectl** configured with AKS cluster access:
+   ```bash
+   # Your kubeconfig should be available at:
+   # - Linux/Mac: ~/.kube/config
+   # - Windows: C:\Users\<user>\.kube\config
+   # - Or set KUBECONFIG environment variable
+   
+   kubectl get nodes  # Verify access
+   ```
+
+3. **Terraform** >= 1.5 installed
+
+## 🚀 Quick Start
+
+### 1. Configure Backend Storage (One-Time Setup)
+
+The Terraform state is stored in Azure Storage. Create the backend resources:
 
 ```bash
-# Create resource group for Terraform state
-az group create --name terraform-state-rg --location "UK South"
+# Option 1: Use existing storage account (recommended)
+# Set backend configuration via environment variables or backend.hcl
 
-# Create storage account
+# Option 2: Create new storage account manually
+az group create --name terraform-state-rg --location "UK South"
 az storage account create \
   --name tfstate$(date +%s) \
   --resource-group terraform-state-rg \
   --location "UK South" \
   --sku Standard_LRS
-
-# Create container
 az storage container create \
   --name tfstate \
   --account-name <storage-account-name>
@@ -44,40 +58,67 @@ az storage container create \
 
 ### 2. Configure Variables
 
-Copy and customize the variables:
-
 ```bash
+# Copy example variables
 cp terraform.tfvars.example terraform.tfvars
+
 # Edit terraform.tfvars with your values
+# Key variables:
+# - resource_group_name
+# - cluster_name
+# - environment (dev/staging/production)
+# - kubeconfig_path (optional, auto-detected if not set)
 ```
 
-### 3. Initialize and Deploy
+### 3. Initialize Terraform
 
 ```bash
-# Initialize Terraform
+# Initialize with backend configuration
 terraform init
 
-# Plan the deployment
+# Or with backend config file
+terraform init -backend-config=backend.hcl
+```
+
+### 4. Plan and Apply
+
+```bash
+# Review changes
 terraform plan
 
-# Apply the configuration
+# Apply configuration
 terraform apply
 ```
 
-## Configuration
+## 📁 Configuration Structure
 
-### Key Variables
+```
+infrastructure/terraform/
+├── providers.tf          # Provider configuration (Azure, Kubernetes, Helm)
+├── versions.tf          # Version constraints (backwards compatibility)
+├── variables.tf         # Input variables
+├── locals.tf           # Local values and computed configurations
+├── main.tf             # Main Azure infrastructure (AKS, VNet, Key Vault, Storage)
+├── storage.tf          # Kubernetes Storage Classes and Volume Snapshots
+├── outputs.tf          # Output values
+├── terraform.tfvars.example  # Example variable values
+└── README.md           # This file
+```
 
-- `cluster_name`: Name of the AKS cluster
-- `environment`: Environment (dev/staging/production)
-- `lifecycle_stage`: Current stage (active/suspended/teardown)
-- `auto_teardown_enabled`: Enable automatic teardown
-- `enable_monitoring`: Deploy full monitoring stack
+## 🔧 Key Features
+
+### Infrastructure Components
+
+- **AKS Cluster**: Kubernetes cluster with system and user node pools
+- **Networking**: Virtual Network, Subnet, NSG, Public IP
+- **Storage**: Backup storage account, Kubernetes storage classes
+- **Security**: Key Vault for secrets management
+- **Monitoring**: Log Analytics workspace
 
 ### Node Pools
 
-- **System Pool**: Kubernetes system components
-- **User Pool**: Application workloads (Rocket.Chat, MongoDB)
+- **System Pool**: Kubernetes system components (auto-scaling: 1-3 nodes)
+- **User Pool**: Application workloads (auto-scaling: 1-5 nodes)
 
 ### Storage Classes
 
@@ -85,73 +126,89 @@ terraform apply
 - `standard-ssd`: Cost-optimized storage
 - `standard-hdd`: Backup storage
 
-## Lifecycle Management
+### Volume Snapshots
 
-### Cluster States
+- `premium-ssd-snapshot`: Default snapshot class
+- `standard-ssd-snapshot`: Standard SSD snapshots
 
-1. **Active**: Full cluster with all services
-2. **Suspended**: Cluster stopped, resources preserved
-3. **Teardown**: Cluster destroyed, snapshots created
+## 🌍 Environment Management
 
-### State Transitions
+### Using Terraform Workspaces
 
 ```bash
-# Suspend cluster (preserve resources)
-terraform apply -var="lifecycle_stage=suspended"
+# Create and switch to environment workspace
+terraform workspace new dev
+terraform workspace select dev
 
-# Resume cluster
-terraform apply -var="lifecycle_stage=active"
-
-# Teardown cluster (create snapshots first)
-terraform apply -var="lifecycle_stage=teardown"
+# Environment-specific variables can be set via:
+# - terraform.tfvars (per workspace)
+# - Environment variables (TF_VAR_*)
+# - Command line flags (-var="environment=dev")
 ```
 
-## Backup Integration
+### Lifecycle Stages
 
-The Terraform configuration creates:
-- Storage account for MongoDB backups
-- Storage account for cluster state backups
-- Key Vault for secrets management
-- Snapshot classes for PVC backups
+The configuration supports lifecycle management:
 
-## Cost Optimization
+- **active**: Full cluster with all services
+- **suspended**: Cluster stopped, resources preserved
+- **teardown**: Cluster destroyed, snapshots created
 
-### Resource Sizing
+```bash
+# Change lifecycle stage
+terraform apply -var="lifecycle_stage=suspended"
+```
 
-- System nodes: `Standard_DS2_v2` (2 vCPU, 7GB RAM)
-- User nodes: `Standard_DS2_v2` (2 vCPU, 7GB RAM)
-- Auto-scaling enabled for cost efficiency
+## 🔒 Security Considerations
+
+### Key Vault Access
+
+- Current user (from `az login`) gets full access
+- AKS cluster managed identity gets read-only access
+- Additional users can be added via Azure Portal or CLI
+
+### Network Security
+
+- NSG rules for HTTPS (443), HTTP (80), SSH (22)
+- Network policies enabled
+- Private cluster option available (modify `main.tf`)
+
+### SSH Access
+
+Configure allowed source IPs:
+
+```hcl
+ssh_source_address_prefix = "YOUR_IP/32"  # Restrict SSH access
+```
+
+## 💰 Cost Optimization
+
+### Auto-Scaling
+
+- System nodes: 1-3 nodes (scales based on demand)
+- User nodes: 1-5 nodes (scales based on workload)
 
 ### Spot Instances
 
-Enable spot instances for cost savings:
+Enable for cost savings (dev/staging environments):
 
 ```hcl
 enable_spot_instances = true
 spot_max_price       = 0.1
 ```
 
-## Security
+### VM Sizes
 
-### Network Security
+- Default: `Standard_DS2_v2` (2 vCPU, 7GB RAM)
+- Override via variables: `system_node_size`, `user_node_size`
 
-- Network policies enabled
-- NSG rules for HTTPS/HTTP/SSH
-- Private cluster option available
-
-### Secrets Management
-
-- Azure Key Vault integration
-- Workload identity for automatic secret injection
-- Encrypted storage for sensitive data
-
-## Monitoring
+## 📊 Monitoring
 
 ### Log Analytics
 
-- Centralized logging
-- 30-day retention
-- Cost tracking and optimization
+- Workspace created automatically
+- 30-day retention (configurable)
+- OMS agent enabled on cluster
 
 ### Metrics
 
@@ -159,56 +216,119 @@ spot_max_price       = 0.1
 - Resource utilization tracking
 - Cost analysis and forecasting
 
-## Troubleshooting
+## 🔄 Backup Integration
+
+### Storage Accounts
+
+- **Backups**: MongoDB backups and cluster state
+- **Versioning**: Enabled with 30-day retention
+- **Containers**: `mongodb-backups`, `cluster-state`
+
+### Volume Snapshots
+
+Use Kubernetes Volume Snapshots for PVC backups:
+
+```bash
+# Create snapshot
+kubectl create volumesnapshot <snapshot-name> \
+  --source=<pvc-name> \
+  --volume-snapshot-class=premium-ssd-snapshot
+```
+
+## 🛠️ Troubleshooting
 
 ### Common Issues
 
-1. **State Lock**: Check for concurrent operations
-2. **Permission Errors**: Verify Azure CLI authentication
-3. **Resource Conflicts**: Check for existing resources
+1. **Authentication Errors**
+   ```bash
+   # Verify Azure login
+   az account show
+   
+   # Verify kubeconfig
+   kubectl cluster-info
+   ```
+
+2. **Provider Configuration**
+   ```bash
+   # Kubernetes provider requires cluster to exist first
+   # If you get "cluster not found" errors, ensure:
+   # 1. Cluster is created in main.tf
+   # 2. kubeconfig is properly configured
+   # 3. Run terraform apply in correct order
+   ```
+
+3. **State Lock**
+   ```bash
+   # Check for concurrent operations
+   az storage blob show \
+     --account-name <storage-account> \
+     --container-name tfstate \
+     --name <state-file>.tflock
+   ```
+
+4. **Resource Conflicts**
+   ```bash
+   # Import existing resources
+   terraform import azurerm_resource_group.main /subscriptions/.../resourceGroups/...
+   ```
 
 ### Recovery Procedures
 
-1. **State Corruption**: Restore from backup
-2. **Resource Deletion**: Use `terraform import`
-3. **Configuration Drift**: Run `terraform plan` to identify
+1. **State Corruption**: Restore from Azure Storage versioning
+2. **Resource Deletion**: Use `terraform import` to re-add
+3. **Configuration Drift**: Run `terraform plan` to identify differences
 
-## Automation Integration
+## 📝 Best Practices
+
+1. **State Management**
+   - Always use remote backend (Azure Storage)
+   - Enable versioning on storage account
+   - Regular state backups
+
+2. **Variable Management**
+   - Use `.tfvars` files (not committed to git)
+   - Environment-specific configurations
+   - Sensitive values via environment variables
+
+3. **Resource Tagging**
+   - Consistent tagging strategy (via `locals.tf`)
+   - Cost tracking tags
+   - Lifecycle management tags
+
+4. **Version Control**
+   - Commit only `.tf` files
+   - Never commit `.tfstate` or `.tfvars` files
+   - Use `.gitignore` for sensitive files
+
+## 🔗 Integration
 
 ### CI/CD Pipelines
 
-The Terraform configuration integrates with:
-- GitHub Actions workflows
-- Azure DevOps pipelines
-- Automated backup scripts
-- Cost monitoring systems
+This configuration can be integrated with:
+- GitHub Actions (using Azure CLI auth)
+- Azure DevOps (using service connections)
+- GitLab CI (using Azure credentials)
+
+**Note**: Without service principal, CI/CD requires:
+- Azure CLI authentication via managed identity (Azure VMs)
+- Or manual `az login` token refresh
 
 ### Scripts Integration
 
-- `scripts/lifecycle/teardown-cluster.sh`
-- `scripts/lifecycle/recreate-cluster.sh`
-- `scripts/backup/create-pvc-snapshots.sh`
+The Terraform outputs integrate with:
+- `scripts/lifecycle/` - Cluster lifecycle management
+- `scripts/backup/` - Backup automation
+- `scripts/monitoring/` - Monitoring setup
 
-## Outputs
+## 📚 Additional Resources
 
-Key outputs for automation:
-- `cluster_name`: Cluster identifier
-- `public_ip_address`: Load balancer IP
-- `storage_account_name`: Backup storage
-- `key_vault_name`: Secrets management
-- `kubectl_config`: Connection command
+- [Terraform Azure Provider Documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)
+- [AKS Documentation](https://docs.microsoft.com/azure/aks/)
+- [Kubernetes Storage Classes](https://kubernetes.io/docs/concepts/storage/storage-classes/)
 
-## Best Practices
-
-1. **State Management**: Use remote backend
-2. **Variable Management**: Use `.tfvars` files
-3. **Resource Tagging**: Consistent tagging strategy
-4. **Backup Strategy**: Regular state backups
-5. **Cost Monitoring**: Track resource costs
-
-## Support
+## 🆘 Support
 
 For issues and questions:
 - Check Terraform documentation
 - Review Azure AKS documentation
-- Consult project troubleshooting guide
+- Consult project troubleshooting guide: `docs/TROUBLESHOOTING_GUIDE.md`

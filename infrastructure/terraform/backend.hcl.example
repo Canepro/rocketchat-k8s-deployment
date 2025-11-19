@@ -1,0 +1,20 @@
+# Terraform Backend Configuration Example
+# Copy this file to backend.hcl and fill in your values
+# 
+# Usage:
+#   terraform init -backend-config=backend.hcl
+#
+# Or set as environment variables:
+#   export TF_BACKEND_RESOURCE_GROUP_NAME="terraform-state-rg"
+#   export TF_BACKEND_STORAGE_ACCOUNT_NAME="tfstate12345678"
+#   export TF_BACKEND_CONTAINER_NAME="tfstate"
+#   export TF_BACKEND_KEY="aks-cluster.tfstate"
+
+resource_group_name  = "terraform-state-rg"
+storage_account_name = "tfstate12345678"  # Must be globally unique, lowercase, alphanumeric
+container_name       = "tfstate"
+key                  = "aks-rocketchat.tfstate"  # State file name
+
+# Optional: Subscription ID (uses current az login subscription if not specified)
+# subscription_id = "00000000-0000-0000-0000-000000000000"
+

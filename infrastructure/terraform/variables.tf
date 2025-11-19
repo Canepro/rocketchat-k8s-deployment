@@ -17,7 +17,7 @@ variable "environment" {
   description = "Environment name (dev, staging, production)"
   type        = string
   default     = "production"
-  
+
   validation {
     condition     = contains(["dev", "staging", "production"], var.environment)
     error_message = "Environment must be one of: dev, staging, production."
@@ -28,7 +28,7 @@ variable "lifecycle_stage" {
   description = "Current lifecycle stage (active, suspended, teardown)"
   type        = string
   default     = "active"
-  
+
   validation {
     condition     = contains(["active", "suspended", "teardown"], var.lifecycle_stage)
     error_message = "Lifecycle stage must be one of: active, suspended, teardown."
@@ -174,4 +174,26 @@ variable "additional_tags" {
   description = "Additional tags to apply to all resources"
   type        = map(string)
   default     = {}
+}
+
+# Kubernetes provider configuration
+variable "kubeconfig_path" {
+  description = "Path to kubeconfig file. Auto-detected if not specified (checks ~/.kube/config and Windows paths)"
+  type        = string
+  default     = null
+
+  # Auto-detection will occur in provider block if null
+}
+
+variable "kubeconfig_context" {
+  description = "Kubernetes context to use. Uses current context if not specified"
+  type        = string
+  default     = null
+}
+
+# Subscription configuration (optional - defaults to current Azure CLI subscription)
+variable "subscription_id" {
+  description = "Azure subscription ID. Uses current az login subscription if not specified"
+  type        = string
+  default     = null
 }

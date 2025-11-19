@@ -113,30 +113,43 @@ graph TB
 - **Infrastructure as Code**: Complete Terraform configuration for repeatable deployments
 - **Disaster Recovery**: Automated recovery from subscription suspensions and cluster failures
 
-### 📊 **Monitoring & Observability** (Complete 3-Pillar Stack)
+### 📊 **Monitoring & Observability** (Complete 3-Pillar Stack + Central Hub)
+
+#### **🌐 Central Observability Hub (OKE)**
+- **Unified Monitoring**: Centralized metrics, logs, and traces from multiple clusters
+- **Cross-Cluster Visibility**: Monitor AKS and OKE workloads from single pane of glass
+- **Secure Forwarding**: HTTPS with authentication for all telemetry pipelines
+- **Production Ready**: All 3 telemetry pipelines operational and verified
+- **Access**: `https://observability.canepro.me` (Grafana, Prometheus, Loki, Tempo)
 
 #### **Metrics (Prometheus)**
 - **1238+ Metric Series**: Application, infrastructure, and custom metrics
+- **Remote Write**: AKS → OKE central hub for unified metrics
 - **Comprehensive Dashboards**: 28+ real-time panels with production monitoring
 - **Kubernetes Monitoring**: Pod status, desired vs actual state, workload health
 - **Performance Tracking**: CPU, memory, API response times, error rates, user engagement
 - **Multi-Service Coverage**: Rocket.Chat, MongoDB, NGINX, all microservices
+- **Multi-Cluster Labels**: `cluster=rocket-chat-aks` for cross-cluster queries
 
 #### **Logs (Loki 2.9.0)**
 - **Centralized Aggregation**: All application and system logs in one place
+- **Multi-Cluster Forwarding**: Promtail → OKE Loki for unified log aggregation
 - **Structured Queries**: LogQL for powerful log analysis
 - **Volume API Support**: Enhanced log exploration in Grafana
 - **Real-time Streaming**: Live log tailing and filtering
 - **Long-term Retention**: 50GB storage with 7-day retention
+- **Cross-Cluster Labels**: Filter by pod, namespace, container across clusters
 
 #### **Traces (Tempo + OpenTelemetry)**
 - **Distributed Tracing**: End-to-end request visibility across microservices
+- **Central Trace Storage**: OTEL Collector → OKE Tempo for unified tracing
 - **1.8MB Traces Stored**: Complete request history in Tempo WAL
 - **124KB Span Metrics**: Auto-generated metrics from traces
 - **Metrics-Generator**: Service graphs, span metrics, and local-blocks processors
 - **TraceQL Queries**: Powerful trace search and analysis
 - **Grafana Integration**: Unified metrics-logs-traces correlation
 - **OpenTelemetry Auto-instrumentation**: Automatic span generation for HTTP, Express, MongoDB
+- **Multi-Cluster Tracing**: `cluster=rocket-chat-aks` tag for cross-cluster correlation
 
 #### **Alerting & Notifications**
 - **12+ Alert Rules**: Critical, warning, and info-level alerts
@@ -331,9 +344,19 @@ This deployment provides the **gold standard** of observability with all three p
 ├── 🚀 aks/                          # Azure Kubernetes Service (Production)
 │   ├── 📁 config/
 │   │   ├── helm-values/             # Helm chart configurations
+│   │   │   ├── prometheus-oke-remote-write.yaml  # OKE central hub forwarding
+│   │   │   ├── values-official.yaml
+│   │   │   └── values-monitoring.yaml
 │   │   ├── certificates/            # SSL certificate configs
 │   │   └── mongodb-standalone.yaml  # Fallback MongoDB config
 │   ├── 📁 deployment/               # Deployment scripts
+│   ├── 📁 docs/                     # AKS-specific documentation
+│   │   ├── OKE_FORWARDING_STATUS.md       # Central hub status (all pipelines ✅)
+│   │   ├── OKE_CENTRAL_HUB_SETUP.md       # Setup guide
+│   │   ├── OKE_EXPOSE_SERVICES.md         # Service exposure guide
+│   │   ├── OKE_FORWARDING_QUICK_REFERENCE.md  # Quick reference
+│   │   ├── DISTRIBUTED_TRACING_GUIDE.md   # Tracing setup
+│   │   └── [other guides]
 │   ├── 📁 monitoring/               # Monitoring configurations
 │   │   ├── rocketchat-servicemonitors.yaml
 │   │   ├── rocketchat-dashboard-comprehensive.json
@@ -344,11 +367,17 @@ This deployment provides the **gold standard** of observability with all three p
 │   │   ├── grafana-tempo-datasource.yaml
 │   │   ├── grafana-tracing-dashboard.yaml
 │   │   ├── opentelemetry-collector.yaml
+│   │   ├── otel-collector-oke-forward.yaml   # OKE trace forwarding
 │   │   ├── tempo-deployment.yaml
 │   │   ├── tempo-values.yaml
 │   │   ├── loki-values.yaml
+│   │   ├── oke-auth-secret.yaml              # OKE authentication
+│   │   ├── oke-remote-write-config.yaml      # Prometheus remote write
 │   │   └── mongodb-servicemonitor.yaml
 │   └── 📁 scripts/                  # Utility scripts
+│       ├── setup-oke-forwarding.sh           # OKE forwarding automation
+│       ├── remove-monitoring-stack.sh        # Cleanup script
+│       └── [other scripts]
 ├── 🔄 azure-pipelines/              # Azure DevOps Pipelines
 │   ├── lifecycle-management.yml     # Cluster lifecycle automation
 │   ├── backup-automation.yml       # Backup automation
@@ -572,10 +601,15 @@ helm rollback rocketchat -n rocketchat
 
 ## 🎯 **Current Status: ENTERPRISE-GRADE PRODUCTION READY** ✅
 
-### ✅ **Latest Achievements (December 2024)**
+### ✅ **Latest Achievements (November 2025)**
 
 - **🚀 Complete Deployment**: Rocket.Chat running on AKS with SSL and high availability
 - **📊 Comprehensive Monitoring**: 1238+ metric series, 34-panel production dashboard
+- **🌐 Central Observability Hub**: **OKE central hub fully operational** - all 3 telemetry pipelines working
+  - ✅ **Metrics**: AKS Prometheus → OKE Prometheus via remote write
+  - ✅ **Logs**: AKS Promtail → OKE Loki with cross-cluster labels  
+  - ✅ **Traces**: AKS OTEL Collector → OKE Tempo with `cluster=rocket-chat-aks` tags
+  - ✅ **Access**: `https://observability.canepro.me` - unified monitoring for all clusters
 - **🎯 Advanced Observability**: Desired vs actual state monitoring, pod health tracking
 - **📝 Enhanced Logging**: Loki 2.9.0 with volume API support and structured queries
 - **🔍 Distributed Tracing**: Complete request tracing with Tempo and OpenTelemetry
@@ -594,7 +628,7 @@ helm rollback rocketchat -n rocketchat
 - **🏗️ Infrastructure as Code**: Complete Terraform configuration for repeatable deployments
 - **🚨 Disaster Recovery**: Automated recovery from subscription suspensions and cluster failures
 
-### 🆕 **New Enterprise Features (October 2025)**
+### 🆕 **New Enterprise Features (November 2025)**
 
 - **✅ GitHub Actions CI/CD**: Automated deployment pipeline with security scanning
 - **✅ Health Check Automation**: Comprehensive health monitoring with 15+ checks
@@ -603,6 +637,15 @@ helm rollback rocketchat -n rocketchat
 - **✅ High Availability Setup**: Multi-zone deployment with disaster recovery
 - **✅ Enhanced Security**: Network policies, priority classes, and security scanning
 - **✅ Monitoring Automation**: Automated health checks and cost monitoring
+- **✅ Central Observability Hub**: **FULLY OPERATIONAL** - OKE central hub with multi-cluster monitoring
+  - **All 3 telemetry pipelines working**: Metrics, Logs, Traces ✅
+  - Cross-cluster visibility with unified Grafana interface
+  - Secure HTTPS forwarding with authentication
+  - AKS → OKE remote write for Prometheus metrics
+  - AKS → OKE log forwarding via Promtail → Loki
+  - AKS → OKE trace forwarding via OTEL Collector → Tempo
+  - Cluster labels for cross-cluster queries (`cluster=rocket-chat-aks`)
+  - Access: `https://observability.canepro.me`
 - **✅ Distributed Tracing**: **FULLY OPERATIONAL** - Complete request tracing with Tempo, OpenTelemetry, and metrics-generator
   - 1.8MB of traces stored in Tempo WAL
   - 124KB of generated span metrics
@@ -610,6 +653,7 @@ helm rollback rocketchat -n rocketchat
   - Local-blocks processor configured for Grafana drilldown
   - Fixed deprecated OpenTelemetry exporter
   - TraceQL queries fully functional
+  - Multi-cluster trace correlation
 - **✅ Lifecycle Automation**: Complete cluster lifecycle management with automated teardown/recreation
 - **✅ Backup System**: Comprehensive backup strategy with MongoDB dumps, PVC snapshots, and cluster state
 - **✅ Secrets Management**: Azure Key Vault integration with automated secret synchronization
@@ -629,6 +673,7 @@ helm rollback rocketchat -n rocketchat
 - [x] **Infrastructure as Code**: Terraform configuration ✅
 - [x] **Disaster Recovery**: Automated recovery procedures ✅
 - [x] **Distributed Tracing**: Complete request tracing with Tempo and OpenTelemetry - FULLY OPERATIONAL ✅
+- [x] **Central Observability Hub**: OKE central hub with multi-cluster monitoring - ALL 3 PIPELINES OPERATIONAL ✅
 - [ ] **Terraform Consolidation**: Migrate all resources to Terraform for unified infrastructure management
 - [ ] **Performance Optimization**: Advanced caching and CDN integration
 - [ ] **Security Hardening**: Pod Security Standards and audit logging
@@ -678,7 +723,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 > 💼 **Portfolio Ready**: This project includes live demo access and comprehensive integration guides for showcasing in professional portfolios. See the [portfolio/](portfolio/) directory for HTML/CSS templates and deployment instructions.
 
-*Last Updated: October 30, 2025 - Production-ready with distributed tracing fully operational, comprehensive monitoring, and complete documentation*
+*Last Updated: November 19, 2025 - Production-ready with OKE central observability hub fully operational (all 3 telemetry pipelines), comprehensive multi-cluster monitoring, and complete documentation*
 ---
 
 ## 🔐 Security & Privacy Notice

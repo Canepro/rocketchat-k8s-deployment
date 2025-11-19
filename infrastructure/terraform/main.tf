@@ -1,31 +1,8 @@
 # AKS Cluster Infrastructure as Code
 # Terraform configuration for automated cluster lifecycle management
 
-terraform {
-  required_version = ">= 1.0"
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 3.0"
-    }
-  }
-  
-  backend "azurerm" {
-    # Configure backend in terraform.tfvars or via environment variables
-    # resource_group_name  = "terraform-state-rg"
-    # storage_account_name = "tfstate<random>"
-    # container_name       = "tfstate"
-    # key                  = "aks-cluster.tfstate"
-  }
-}
-
-provider "azurerm" {
-  features {
-    resource_group {
-      prevent_deletion_if_contains_resources = false
-    }
-  }
-}
+# Terraform and provider configuration moved to providers.tf
+# This file now focuses on Azure infrastructure resources
 
 # Data sources
 data "azurerm_client_config" "current" {}
@@ -43,36 +20,19 @@ resource "azurerm_kubernetes_cluster" "main" {
 
   default_node_pool {
     name                = "system"
-    node_count         = var.system_node_count
-    vm_size            = var.system_node_size
-    vnet_subnet_id     = azurerm_subnet.aks_subnet.id
-    type               = "VirtualMachineScaleSets"
+    node_count          = var.system_node_count
+    vm_size             = var.system_node_size
+    vnet_subnet_id      = azurerm_subnet.aks_subnet.id
+    type                = "VirtualMachineScaleSets"
     enable_auto_scaling = true
-    min_count          = 1
-    max_count          = 3
-    
-    # Enable node auto-repair and auto-upgrade
-    auto_scaling_enabled = true
-    auto_repair_enabled  = true
-    auto_upgrade_enabled = true
-  }
+    min_count           = local.node_pool_configs.system.min_count
+    max_count           = local.node_pool_configs.system.max_count
 
-  # User node pool for workloads
-  node_pool {
-    name                = "user"
-    node_count          = var.user_node_count
-    vm_size            = var.user_node_size
-    vnet_subnet_id     = azurerm_subnet.aks_subnet.id
-    type               = "VirtualMachineScaleSets"
-    enable_auto_scaling = true
-    min_count          = 1
-    max_count          = 5
-    
-    # Node pool labels and taints
-    node_labels = {
-      "workload" = "rocketchat"
-      "environment" = var.environment
-    }
+    # Node labels
+    node_labels = local.node_pool_configs.system.node_labels
+
+    # Enable node auto-repair and auto-upgrade
+    # Note: auto_repair_enabled and auto_upgrade_enabled are cluster-level settings
   }
 
   # Identity configuration
@@ -89,32 +49,28 @@ resource "azurerm_kubernetes_cluster" "main" {
     dns_service_ip    = var.dns_service_ip
   }
 
-  # Add-ons
-  addon_profile {
-    http_application_routing {
-      enabled = false
-    }
-    
-    oms_agent {
-      enabled                    = true
-      log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
-    }
+  # Monitoring addon (deprecated addon_profile replaced with oms_agent block)
+  oms_agent {
+    log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
   }
+
+  # HTTP Application Routing (disabled by default for security)
+  http_application_routing_enabled = false
 
   # Tags for cost tracking and lifecycle management
-  tags = {
-    Environment     = var.environment
-    Project         = "rocketchat-k8s"
-    LifecycleStage  = var.lifecycle_stage
-    CostCenter      = "development"
-    ManagedBy       = "terraform"
-    BackupEnabled   = "true"
-    AutoTeardown    = var.auto_teardown_enabled ? "true" : "false"
-  }
+  tags = local.common_tags
+}
 
-  lifecycle {
-    prevent_destroy = var.prevent_destroy
-  }
+# Azure Resource Lock to prevent accidental deletion
+# Note: Terraform lifecycle.prevent_destroy cannot use variables
+# Using Azure Resource Lock instead for variable-controlled protection
+resource "azurerm_management_lock" "cluster" {
+  count      = var.prevent_destroy ? 1 : 0
+  name       = "${var.cluster_name}-lock"
+  scope      = azurerm_kubernetes_cluster.main.id
+  lock_level = "CanNotDelete"
+  
+  notes = "Prevent accidental cluster deletion - managed by Terraform"
 }
 
 # Log Analytics Workspace for monitoring
@@ -125,10 +81,7 @@ resource "azurerm_log_analytics_workspace" "main" {
   sku                 = "PerGB2018"
   retention_in_days   = 30
 
-  tags = {
-    Environment = var.environment
-    Project     = "rocketchat-k8s"
-  }
+  tags = local.common_tags
 }
 
 # Virtual Network
@@ -138,10 +91,7 @@ resource "azurerm_virtual_network" "main" {
   resource_group_name = data.azurerm_resource_group.main.name
   address_space       = [var.vnet_address_space]
 
-  tags = {
-    Environment = var.environment
-    Project     = "rocketchat-k8s"
-  }
+  tags = local.common_tags
 }
 
 # AKS Subnet
@@ -193,14 +143,11 @@ resource "azurerm_network_security_group" "aks" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "22"
-    source_address_prefix        = var.ssh_source_address_prefix
+    source_address_prefix      = var.ssh_source_address_prefix
     destination_address_prefix = "*"
   }
 
-  tags = {
-    Environment = var.environment
-    Project     = "rocketchat-k8s"
-  }
+  tags = local.common_tags
 }
 
 # Associate NSG with subnet
@@ -216,29 +163,30 @@ resource "azurerm_public_ip" "aks_lb" {
   resource_group_name = data.azurerm_resource_group.main.name
   allocation_method   = "Static"
   sku                 = "Standard"
-  
+
   # Preserve IP during teardown/recreation cycles
   lifecycle {
     prevent_destroy = true
   }
 
-  tags = {
-    Environment     = var.environment
-    Project         = "rocketchat-k8s"
-    PreserveIP     = "true"
-    LifecycleStage  = var.lifecycle_stage
-  }
+  tags = merge(local.common_tags, {
+    PreserveIP = "true"
+  })
 }
 
 # Azure Key Vault for secrets management
 resource "azurerm_key_vault" "main" {
-  name                = "${var.cluster_name}-kv-${random_string.suffix.result}"
+  name                = local.key_vault_name
   location            = data.azurerm_resource_group.main.location
   resource_group_name = data.azurerm_resource_group.main.name
   tenant_id           = data.azurerm_client_config.current.tenant_id
   sku_name            = "standard"
 
-  # Access policies
+  # Access policies - Using Azure RBAC (modern approach)
+  # For user account access, you'll be added via Azure Portal or CLI
+  # Alternative: use access_policy blocks for legacy support
+
+  # Current user access (from az login)
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
     object_id = data.azurerm_client_config.current.object_id
@@ -248,7 +196,7 @@ resource "azurerm_key_vault" "main" {
     ]
   }
 
-  # AKS cluster access
+  # AKS cluster managed identity access
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
     object_id = azurerm_kubernetes_cluster.main.identity[0].principal_id
@@ -262,22 +210,12 @@ resource "azurerm_key_vault" "main" {
   soft_delete_retention_days = 7
   purge_protection_enabled   = false
 
-  tags = {
-    Environment = var.environment
-    Project     = "rocketchat-k8s"
-  }
-}
-
-# Random string for Key Vault name uniqueness
-resource "random_string" "suffix" {
-  length  = 8
-  special = false
-  upper   = false
+  tags = local.common_tags
 }
 
 # Storage Account for backups
 resource "azurerm_storage_account" "backups" {
-  name                     = "${var.cluster_name}backups${random_string.suffix.result}"
+  name                     = local.storage_account_name
   location                 = data.azurerm_resource_group.main.location
   resource_group_name      = data.azurerm_resource_group.main.name
   account_tier             = "Standard"
@@ -292,11 +230,9 @@ resource "azurerm_storage_account" "backups" {
     }
   }
 
-  tags = {
-    Environment = var.environment
-    Project     = "rocketchat-k8s"
-    Purpose     = "backups"
-  }
+  tags = merge(local.common_tags, {
+    Purpose = "backups"
+  })
 }
 
 # Container for MongoDB backups
@@ -311,4 +247,43 @@ resource "azurerm_storage_container" "cluster_state" {
   name                  = "cluster-state"
   storage_account_name  = azurerm_storage_account.backups.name
   container_access_type = "private"
+}
+
+# User Node Pool (separate from default system pool)
+# Must be created as separate resource - cannot be defined inline in cluster resource
+resource "azurerm_kubernetes_cluster_node_pool" "user" {
+  name                  = "user"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.main.id
+  vm_size               = var.user_node_size
+  vnet_subnet_id        = azurerm_subnet.aks_subnet.id
+  node_count            = var.user_node_count
+
+  # Auto-scaling configuration
+  enable_auto_scaling = true
+  min_count           = local.node_pool_configs.user.min_count
+  max_count           = local.node_pool_configs.user.max_count
+
+  # Node pool type
+  type = "VirtualMachineScaleSets"
+
+  # Node labels and taints
+  node_labels = local.node_pool_configs.user.node_labels
+  node_taints = local.node_pool_configs.user.node_taints
+
+  # OS configuration
+  os_type         = "Linux"
+  os_disk_type    = "Managed"
+  os_disk_size_gb = 128
+
+  # Spot instances (optional, for cost optimization)
+  priority        = var.enable_spot_instances ? "Spot" : "Regular"
+  eviction_policy = var.enable_spot_instances ? "Delete" : null
+  spot_max_price  = var.enable_spot_instances ? var.spot_max_price : null
+
+  # Lifecycle - prevent accidental deletion
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = local.common_tags
 }

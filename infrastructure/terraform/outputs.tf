@@ -205,10 +205,10 @@ output "cluster_endpoint" {
 output "cost_tags" {
   description = "Tags for cost tracking"
   value = {
-    Environment     = var.environment
-    Project         = "rocketchat-k8s"
-    LifecycleStage  = var.lifecycle_stage
-    CostCenter      = "development"
-    ManagedBy       = "terraform"
+    Environment    = var.environment
+    Project        = "rocketchat-k8s"
+    LifecycleStage = var.lifecycle_stage
+    CostCenter     = "development"
+    ManagedBy      = "terraform"
   }
 }

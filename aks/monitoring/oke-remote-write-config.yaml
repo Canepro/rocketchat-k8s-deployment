@@ -1,0 +1,76 @@
+# Prometheus Remote Write Configuration for OKE Central Hub
+# This configuration enables Prometheus to forward metrics to the central OKE monitoring cluster
+#
+# Usage:
+# 1. Update the OKE_PROMETHEUS_URL with your OKE Prometheus endpoint
+# 2. Optionally configure authentication (basic_auth or bearer_token)
+# 3. Apply this configuration via Helm values or Prometheus Operator
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prometheus-oke-remote-write
+  namespace: monitoring
+  labels:
+    app: prometheus
+    release: monitoring
+type: Opaque
+stringData:
+  # Optional: Basic auth credentials for OKE Prometheus
+  # username: admin
+  # password: <your-oke-prometheus-password>
+  # 
+  # Or use bearer token:
+  # bearer_token: <your-bearer-token>
+---
+# PrometheusRemoteWrite CRD (if using Prometheus Operator)
+# This is the recommended approach for kube-prometheus-stack
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRemoteWrite
+metadata:
+  name: oke-central-hub
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  url: "http://<OKE_PROMETHEUS_IP>:9090/api/v1/write"
+  # Optional: Basic authentication
+  # basicAuth:
+  #   username:
+  #     name: prometheus-oke-remote-write
+  #     key: username
+  #   password:
+  #     name: prometheus-oke-remote-write
+  #     key: password
+  # 
+  # Optional: Bearer token authentication
+  # bearerToken:
+  #   secret:
+  #     name: prometheus-oke-remote-write
+  #     key: bearer_token
+  
+  # External labels to identify this cluster
+  writeRelabelConfigs:
+    - sourceLabels: [__name__]
+      targetLabel: __name__
+    - targetLabel: cluster
+      replacement: rocket-chat-aks  # Change to your cluster identifier
+    - targetLabel: environment
+      replacement: production
+    - targetLabel: region
+      replacement: azure  # Change to your region
+  
+  # Queue configuration for reliable delivery
+  queueConfig:
+    maxSamplesPerSend: 1000
+    batchSendDeadline: 5s
+    minBackoff: 30ms
+    maxBackoff: 100ms
+    maxRetries: 10
+    capacity: 10000
+  
+  # Metadata configuration
+  metadataConfig:
+    send: true
+    sendInterval: 1m
+

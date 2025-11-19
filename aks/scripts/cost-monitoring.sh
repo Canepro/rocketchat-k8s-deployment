@@ -116,13 +116,16 @@ show_budget_status() {
 
     # Calculate days in current month
     CURRENT_DAY=$(date +%d)
-    DAYS_IN_MONTH=$(cal $(date +%m) $(date +%Y) | awk 'NF {DAYS = $NF}; END {print DAYS}')
+    # Get last day of current month using date arithmetic (works in WSL/bash)
+    YEAR=$(date +%Y)
+    MONTH=$(date +%m)
+    DAYS_IN_MONTH=$(date -d "$YEAR-$MONTH-01 +1 month -1 day" +%d 2>/dev/null || echo "30")
 
     # Calculate expected spend
     EXPECTED_DAILY=$(( BUDGET_LIMIT / DAYS_IN_MONTH ))
     EXPECTED_MONTHLY=$(( EXPECTED_DAILY * CURRENT_DAY ))
 
-    printf "  Month progress: Day %d of %d (%.0f%%)\n" $CURRENT_DAY $DAILY_LIMIT $(( CURRENT_DAY * 100 / DAYS_IN_MONTH ))
+    printf "  Month progress: Day %d of %d (%.0f%%)\n" $CURRENT_DAY $DAYS_IN_MONTH $(( CURRENT_DAY * 100 / DAYS_IN_MONTH ))
     printf "  Expected spend so far: £%d\n" $EXPECTED_MONTHLY
     printf "  Remaining budget: £%d\n" $(( BUDGET_LIMIT - EXPECTED_MONTHLY ))
     printf "  Remaining days: %d\n" $(( DAYS_IN_MONTH - CURRENT_DAY ))

@@ -1,17 +1,14 @@
-# Loki Stack Configuration for Rocket.Chat Logging
-# Deployed in loki-stack namespace for centralized logging
+# Loki Stack Configuration for Rocket.Chat Logging with OKE Forwarding
+# Deployed in monitoring namespace for centralized logging
 
-# Use a newer Loki version that supports volume API
 loki:
   image:
-    tag: "2.9.0"  # Use a newer version that supports volume API
-  # Enable persistence for log storage - CRITICAL for production
+    tag: "2.9.0"
   persistence:
     enabled: true
     size: 50Gi
     storageClassName: default
 
-  # Loki configuration
   config:
     auth_enabled: false
     server:
@@ -38,26 +35,44 @@ loki:
       enforce_metric_name: false
       reject_old_samples: true
       reject_old_samples_max_age: 168h
-      volume_enabled: true  # Enable volume API for Grafana Explore tab
+      volume_enabled: true
 
-# Promtail configuration for log collection
+# Promtail configuration - ONLY forward to OKE (simpler config)
 promtail:
   enabled: true
+  
+  # Override the default config template entirely
+  configmap:
+    enabled: false
+  
   config:
+    # Disable default client to loki-stack
+    clients:
+      # Only OKE Central Hub Loki Gateway (Secure)
+      - url: https://observability.canepro.me/loki/loki/api/v1/push
+        basic_auth:
+          username: observability-user
+          password: 50JjX+diU6YmAZPl
+        headers:
+          X-Scope-OrgID: "1"
+    
     server:
       http_listen_port: 9080
       grpc_listen_port: 0
+      
     positions:
       filename: /run/promtail/positions.yaml
-    clients:
-      - url: http://loki-stack.loki-stack.svc.cluster.local:3100/loki/api/v1/push  # Correct service name per troubleshooting guide
-        # future: add basicAuth or bearer token if auth_enabled=true
+    
     scrape_configs:
       - job_name: kubernetes-pods
         kubernetes_sd_configs:
           - role: pod
         pipeline_stages:
           - cri: {}
+          - static_labels:
+              cluster: rocket-chat-aks
+              environment: production
+              region: azure
         relabel_configs:
           - action: labelmap
             regex: __meta_kubernetes_pod_label_(.+)
