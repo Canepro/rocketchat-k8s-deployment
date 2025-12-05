@@ -1,537 +1,499 @@
-# 🚀 Enterprise Rocket.Chat on Azure Kubernetes Service
+# 🚀 RocketChat on Azure Kubernetes Service - Template Repository
 
-[![Production Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)](https://<YOUR_DOMAIN>)
-[![Monitoring](https://img.shields.io/badge/Monitoring-Complete-blue.svg)](https://grafana.<YOUR_DOMAIN>)
-[![Documentation](https://img.shields.io/badge/Documentation-Comprehensive-orange.svg)](./docs/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-1.28+-blue.svg)](https://kubernetes.io/)
+[![Terraform](https://img.shields.io/badge/Terraform-1.0+-purple.svg)](https://www.terraform.io/)
 
-> **Production-grade Rocket.Chat deployment on Azure Kubernetes Service with comprehensive monitoring, logging, and alerting capabilities.**
+> **Production-ready template** for deploying RocketChat on Azure Kubernetes Service (AKS) with comprehensive monitoring, logging, and alerting capabilities.
+
+---
+
+## ⚠️ THIS IS A TEMPLATE REPOSITORY
+
+This repository provides a **complete, production-ready template** for deploying RocketChat on AKS. Before deploying, you must configure the following:
+
+### 📝 Required Configuration
+
+| Item | Description | Example |
+|------|-------------|---------|
+| **Domain Name** | Your domain for RocketChat | `chat.example.com` |
+| **Grafana Domain** | Your monitoring dashboard domain | `grafana.example.com` |
+| **Static IP** | Azure static IP for load balancer | Allocated via Azure Portal |
+| **Azure Subscription** | Your Azure subscription ID | From Azure Portal |
+| **Resource Group** | Azure resource group name | `rocketchat-prod-rg` |
+| **DNS Access** | Ability to configure A records | DNS provider admin access |
+
+### ✅ Quick Configuration Checklist
+
+Before deploying, ensure you have:
+
+- [ ] **Replaced `<YOUR_DOMAIN>`** in all configuration files
+- [ ] **Replaced `<YOUR_GRAFANA_DOMAIN>`** in monitoring configs
+- [ ] **Replaced `<YOUR_STATIC_IP>`** in infrastructure configs
+- [ ] **Updated `terraform.tfvars`** with your Azure details
+- [ ] **Configured Azure CLI** authentication (`az login`)
+- [ ] **Set up DNS provider** access for A record creation
+- [ ] **Reviewed resource limits** for your deployment size
+- [ ] **Changed default passwords** in MongoDB configuration
+
+---
 
 ## 📋 Table of Contents
 
-- [🎯 Overview](#-overview)
-- [🏗️ Architecture](#️-architecture)
-- [✨ Features](#-features)
-- [🚀 Quick Start](#-quick-start)
-- [📊 Monitoring & Observability](#-monitoring--observability)
-- [📁 Repository Structure](#-repository-structure)
-- [🔧 Configuration](#-configuration)
-- [📚 Documentation](#-documentation)
-- [🛡️ Security](#️-security)
-- [💰 Cost Optimization](#-cost-optimization)
-- [🔄 Maintenance](#-maintenance)
-- [🆘 Support](#-support)
+- [Overview](#-overview)
+- [Architecture](#️-architecture)
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [Configuration Guide](#-configuration-guide)
+- [Resource Sizing](#-resource-sizing)
+- [Monitoring & Observability](#-monitoring--observability)
+- [Repository Structure](#-repository-structure)
+- [Documentation](#-documentation)
+- [Security](#️-security)
+- [Maintenance](#-maintenance)
+- [Support](#-support)
+
+---
 
 ## 🎯 Overview
 
-This repository contains a **production-ready, enterprise-grade deployment** of Rocket.Chat on Azure Kubernetes Service (AKS) with:
+This template provides **everything you need** to deploy a production-grade RocketChat instance on Azure Kubernetes Service, including:
 
-- **🔄 High Availability**: Multi-replica MongoDB cluster with automated failover
-- **📊 Complete Observability**: Prometheus, Grafana, Loki, and Alertmanager
-- **🔐 Enterprise Security**: SSL/TLS, RBAC, network policies, and secret management
-- **💰 Cost Optimized**: Resource-efficient configuration with monitoring
-- **📖 Comprehensive Documentation**: Detailed setup, troubleshooting, and maintenance guides
+### ✨ What's Included
 
-### 🌟 **Live Services**
+- **🏗️ Infrastructure as Code**: Complete Terraform configuration for AKS
+- **📦 Helm Configurations**: Production and dev/test Helm values
+- **📊 Full Observability Stack**: Prometheus, Grafana, Loki, Tempo, OpenTelemetry
+- **🔐 Security Hardening**: SSL/TLS, RBAC, network policies, secrets management
+- **💰 Cost Optimized**: Dev/test defaults (~$50-100/month), production examples (~$200-300/month)
+- **📖 Comprehensive Docs**: Setup guides, troubleshooting, maintenance procedures
+- **🔄 Lifecycle Management**: Backup, restore, and disaster recovery scripts
+- **🎯 Production Examples**: HA configurations with 3+ replicas
 
-| Service | URL | Status | Description |
-|---------|-----|--------|-------------|
-| **Rocket.Chat** | [<YOUR_DOMAIN>](https://<YOUR_DOMAIN>) | 🟢 Production | Main chat application with microservices |
-| **Grafana** | [<YOUR_GRAFANA_DOMAIN>](https://<YOUR_GRAFANA_DOMAIN>) | 🟢 Production | Unified observability dashboards |
-| **Tracing Dashboard** | [<YOUR_GRAFANA_DOMAIN>/d/rocket-chat-tracing](https://<YOUR_GRAFANA_DOMAIN>/d/rocket-chat-tracing) | 🟢 Production | Distributed tracing visualization |
-| **Tempo (Traces)** | Internal | 🟢 Production | Distributed tracing backend (1.8MB traces, 124KB metrics) |
-| **Prometheus** | Internal | 🟢 Production | Metrics collection (1238+ series) |
-| **Loki** | Internal | 🟢 Production | Log aggregation (2.9.0 with volume API) |
-| **OpenTelemetry** | Internal | 🟢 Production | Trace collection and export |
+### 🎯 Deployment Profiles
 
-### 🎯 **Live Portfolio Demos**
+This template comes with **two pre-configured profiles**:
 
-Experience the live production infrastructure:
+#### Development/Test (Default)
+- **Cost**: ~$50-100/month
+- **RocketChat**: 1 replica, 250m CPU, 512Mi RAM
+- **MongoDB**: 1 instance, 250m CPU, 512Mi RAM, 5Gi storage
+- **Use Case**: Testing, development, proof-of-concept
 
-- **💬 [Try Live Chat](https://<YOUR_DOMAIN>)** - Interactive Rocket.Chat instance with guest access
-- **📊 [View Monitoring Dashboard](https://<YOUR_GRAFANA_DOMAIN>)** - Real-time metrics, logs, and traces
-- **🔍 [View Distributed Tracing](https://<YOUR_GRAFANA_DOMAIN>/d/rocket-chat-tracing)** - Live request tracing with Tempo
-- **📈 [Explore Metrics](https://<YOUR_GRAFANA_DOMAIN>/explore)** - Query 1238+ metric series
-- **📝 [Query Logs](https://<YOUR_GRAFANA_DOMAIN>/explore)** - Search logs with Loki (select Loki datasource)
-- **🔎 [Search Traces](https://<YOUR_GRAFANA_DOMAIN>/explore)** - TraceQL queries (select Tempo datasource)
+#### Production (Examples Provided)
+- **Cost**: ~$200-300/month
+- **RocketChat**: 3 replicas, 1000m CPU, 2Gi RAM
+- **MongoDB**: 3-node cluster, 500m CPU, 1Gi RAM, 50Gi storage
+- **Use Case**: Production workloads, 100-2000 users
+
+---
 
 ## 🏗️ Architecture
 
 ```mermaid
 graph TB
-    subgraph "Azure Kubernetes Service"
-        subgraph "Rocket.Chat Namespace"
-            RC[Rocket.Chat Pods]
-            MS[Microservices]
-            DB[(MongoDB Cluster)]
+    subgraph "Azure Cloud"
+        subgraph "Azure Kubernetes Service (AKS)"
+            subgraph "RocketChat Namespace"
+                RC[RocketChat Pods]
+                MS[Microservices]
+                DB[(MongoDB)]
+            end
+            
+            subgraph "Monitoring Namespace"
+                P[Prometheus]
+                G[Grafana]
+                L[Loki]
+                T[Tempo]
+            end
+            
+            subgraph "Ingress"
+                IC[NGINX Ingress]
+                CM[Cert-Manager]
+            end
         end
         
-        subgraph "Monitoring Namespace"
-            P[Prometheus]
-            G[Grafana]
-            L[Loki]
-            AM[Alertmanager]
-        end
-        
-        subgraph "Ingress"
-            IC[NGINX Ingress]
-            CM[Cert-Manager]
-        end
-    end
-    
-    subgraph "External Services"
+        LB[Azure Load Balancer]
         DNS[Azure DNS]
-        EMAIL[Email Alerts]
-        SLACK[Slack Notifications]
     end
     
-    Users --> IC
+    Users[Users] --> DNS
+    DNS --> LB
+    LB --> IC
     IC --> RC
     RC --> DB
     RC --> P
     P --> G
     L --> G
-    AM --> EMAIL
-    AM --> SLACK
-    CM --> DNS
+    T --> G
 ```
+
+### Key Components
+
+- **RocketChat**: Chat application with optional microservices architecture
+- **MongoDB**: NoSQL database (single instance or replica set)
+- **NGINX Ingress**: HTTP/HTTPS routing with SSL termination
+- **Cert-Manager**: Automatic SSL certificate management
+- **Prometheus**: Metrics collection and alerting
+- **Grafana**: Visualization and dashboards
+- **Loki**: Log aggregation and querying
+- **Tempo**: Distributed tracing backend
+
+---
 
 ## ✨ Features
 
-### 🚀 **Application Features**
+### 🚀 Application Features
 - **Multi-instance Deployment**: Horizontal scaling with load balancing
 - **Microservices Architecture**: Account, Authorization, DDP Streamer, Presence, Stream Hub
 - **Real-time Communication**: WebSocket support with session affinity
-- **File Storage**: Persistent volume claims with Azure Premium SSD
-- **Database**: MongoDB replica set with automated backups
+- **File Storage**: Persistent volume claims with Azure storage
+- **Database**: MongoDB with optional replica set for high availability
 
-### 🔄 **Lifecycle Automation**
-- **Automated Cluster Lifecycle**: Complete teardown/recreation automation with snapshot-based recovery
-- **Comprehensive Backup System**: MongoDB dumps, PVC snapshots, and cluster state preservation
-- **Azure DevOps Pipelines**: Automated lifecycle management, backup automation, and subscription monitoring
-- **Secrets Management**: Azure Key Vault integration with automated secret synchronization
-- **Infrastructure as Code**: Complete Terraform configuration for repeatable deployments
-- **Disaster Recovery**: Automated recovery from subscription suspensions and cluster failures
+### 📊 Monitoring & Observability (Complete 3-Pillar Stack)
+- **Metrics (Prometheus)**: 1000+ metric series from all services
+- **Logs (Loki)**: Centralized log aggregation with LogQL queries
+- **Traces (Tempo)**: Distributed tracing with OpenTelemetry
+- **Dashboards (Grafana)**: Pre-configured dashboards for monitoring
+- **Alerting**: Multi-channel notifications (email, Slack, webhooks)
 
-### 📊 **Monitoring & Observability** (Complete 3-Pillar Stack)
+### 🔐 Security & Compliance
+- **SSL/TLS Encryption**: Automated certificate management
+- **Network Security**: Kubernetes network policies
+- **Secret Management**: Kubernetes secrets with Azure Key Vault option
+- **RBAC**: Role-based access control
+- **Container Security**: Non-root containers with security contexts
 
-#### **Metrics (Prometheus)**
-- **1238+ Metric Series**: Application, infrastructure, and custom metrics
-- **Comprehensive Dashboards**: 28+ real-time panels with production monitoring
-- **Kubernetes Monitoring**: Pod status, desired vs actual state, workload health
-- **Performance Tracking**: CPU, memory, API response times, error rates, user engagement
-- **Multi-Service Coverage**: Rocket.Chat, MongoDB, NGINX, all microservices
-
-#### **Logs (Loki 2.9.0)**
-- **Centralized Aggregation**: All application and system logs in one place
-- **Structured Queries**: LogQL for powerful log analysis
-- **Volume API Support**: Enhanced log exploration in Grafana
-- **Real-time Streaming**: Live log tailing and filtering
-- **Long-term Retention**: 50GB storage with 7-day retention
-
-#### **Traces (Tempo + OpenTelemetry)**
-- **Distributed Tracing**: End-to-end request visibility across microservices
-- **1.8MB Traces Stored**: Complete request history in Tempo WAL
-- **124KB Span Metrics**: Auto-generated metrics from traces
-- **Metrics-Generator**: Service graphs, span metrics, and local-blocks processors
-- **TraceQL Queries**: Powerful trace search and analysis
-- **Grafana Integration**: Unified metrics-logs-traces correlation
-- **OpenTelemetry Auto-instrumentation**: Automatic span generation for HTTP, Express, MongoDB
-
-#### **Alerting & Notifications**
-- **12+ Alert Rules**: Critical, warning, and info-level alerts
-- **Multi-channel Routing**: Email, Slack, webhooks, Azure Monitor
-- **Intelligent Grouping**: Correlated alerts to reduce noise
-- **Custom Thresholds**: Configurable alert conditions
-
-### 🔐 **Security & Compliance**
-- **SSL/TLS Encryption**: Automated certificate management with Let's Encrypt
-- **Network Security**: Kubernetes network policies and security contexts
-- **Secret Management**: Kubernetes secrets for sensitive data
-- **RBAC**: Role-based access control for service accounts
-- **Container Security**: Non-root containers with read-only filesystems
-
-### 💰 **Cost Optimization**
-- **Resource Efficiency**: Optimized CPU/memory limits (10-20% cost reduction)
+### 💰 Cost Optimization
+- **Resource Efficiency**: Optimized CPU/memory limits
 - **Storage Optimization**: Right-sized persistent volumes
-- **Monitoring**: Cost tracking and alerting for budget management
-- **Auto-scaling**: Horizontal pod autoscaling based on metrics
+- **Auto-scaling**: Horizontal pod autoscaling (optional)
+- **Cost Monitoring**: Built-in cost tracking dashboards
+
+---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Azure Subscription** with AKS permissions
-- **kubectl** configured for your AKS cluster
-- **Helm 3.x** installed
-- **Domain name** with DNS management access
-- **GitHub Actions** (optional, for CI/CD)
+Before you begin, ensure you have:
 
-### 1. Clone Repository
+- ✅ **Azure Account** with active subscription
+- ✅ **Azure CLI** installed and configured (`az login`)
+- ✅ **kubectl** installed (version 1.28+)
+- ✅ **Helm 3.x** installed
+- ✅ **Terraform** installed (version 1.0+)
+- ✅ **Domain Name** with DNS management access
+- ✅ **Static IP Address** allocated in Azure
+
+### Step 1: Clone and Configure
 
 ```bash
-git clone https://github.com/your-username/rocketchat-k8s-deployment.git
+# Clone the repository
+git clone <your-repository-url>
 cd rocketchat-k8s-deployment
+
+# Configure Terraform variables
+cd infrastructure/terraform
+cp terraform.tfvars.example terraform.tfvars
+nano terraform.tfvars  # Update with your values
 ```
 
-### 2. Deploy Rocket.Chat (Basic)
+### Step 2: Deploy Infrastructure
 
 ```bash
-# Deploy to AKS (Production)
-cd aks/deployment
+# Initialize Terraform
+terraform init
+
+# Review the deployment plan
+terraform plan
+
+# Deploy AKS cluster
+terraform apply
+```
+
+### Step 3: Configure kubectl
+
+```bash
+# Get cluster credentials
+az aks get-credentials \
+  --resource-group <YOUR_RESOURCE_GROUP> \
+  --name <YOUR_CLUSTER_NAME>
+
+# Verify connection
+kubectl get nodes
+```
+
+### Step 4: Configure Domains
+
+Replace placeholders in configuration files:
+
+```bash
+# Update RocketChat domain
+find k8s/ aks/ -name "*.yaml" -exec sed -i 's/<YOUR_DOMAIN>/chat.example.com/g' {} \;
+
+# Update Grafana domain
+find k8s/ aks/ -name "*.yaml" -exec sed -i 's/<YOUR_GRAFANA_DOMAIN>/grafana.example.com/g' {} \;
+```
+
+### Step 5: Deploy RocketChat
+
+```bash
+# Deploy using Helm
+cd ../../aks/deployment
 chmod +x deploy-aks-official.sh
 ./deploy-aks-official.sh
 ```
 
-### 3. Deploy Enhanced Features (Recommended)
+### Step 6: Deploy Monitoring Stack
 
 ```bash
-# Deploy all enhanced features (autoscaling, HA, cost monitoring, health checks)
-cd aks/scripts
-chmod +x deploy-enhanced-features.sh
-./deploy-enhanced-features.sh
-```
-
-### 4. Deploy Monitoring Stack
-
-```bash
-# Deploy complete monitoring solution
+# Deploy Prometheus, Grafana, Loki, Tempo
 helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
   -n monitoring \
-  -f aks/config/helm-values/monitoring-values.yaml \
+  -f ../../aks/config/helm-values/monitoring-values.yaml \
   --create-namespace \
-  --wait \
-  --timeout 10m0s
-
-# Apply ServiceMonitors for Rocket.Chat metrics
-kubectl apply -f aks/monitoring/rocketchat-servicemonitors.yaml
-
-# Apply comprehensive dashboard (34 panels with pod monitoring)
-kubectl apply -f aks/monitoring/rocket-chat-dashboard-comprehensive-configmap.yaml
-
-# Deploy cost monitoring dashboard
-kubectl apply -f aks/monitoring/azure-cost-monitoring.yaml
-
-# Deploy autoscaling configuration
-kubectl apply -f aks/monitoring/autoscaling-config.yaml
-
-# Deploy high availability configuration
-kubectl apply -f aks/monitoring/high-availability-config.yaml
-
-# Deploy distributed tracing stack
-cd aks/scripts
-chmod +x deploy-tracing-stack.sh
-./deploy-tracing-stack.sh
-
-# Optional: Deploy public dashboard for portfolio demos
-kubectl apply -f aks/monitoring/grafana-public-dashboard-setup.yaml
+  --wait
 ```
 
-### 5. Run Health Checks
+### Step 7: Configure DNS
+
+Point your domains to the load balancer IP:
 
 ```bash
-# Run comprehensive health check
-./scripts/health-check.sh
+# Get load balancer IP
+kubectl get svc -n ingress-nginx
+
+# Create A records:
+# chat.example.com -> <LOAD_BALANCER_IP>
+# grafana.example.com -> <LOAD_BALANCER_IP>
 ```
 
-### 6. Access Services
+### Step 8: Access Your Deployment
 
-| Service | Access Method | Credentials |
-|---------|---------------|-------------|
-| **Rocket.Chat** | `https://<YOUR_DOMAIN>` | Your admin account |
-| **Grafana** | `https://<YOUR_GRAFANA_DOMAIN>` or Port-forward: `kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring` | `admin` / `prom-operator` |
-| **Prometheus** | Port-forward: `kubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090 -n monitoring` | No auth required |
-| **Tempo (Traces)** | Via Grafana: `https://<YOUR_GRAFANA_DOMAIN>/explore` (select Tempo) | Same as Grafana |
-| **Loki (Logs)** | Via Grafana: `https://<YOUR_GRAFANA_DOMAIN>/explore` (select Loki) | Same as Grafana |
-| **Tracing Dashboard** | `https://<YOUR_GRAFANA_DOMAIN>/d/rocket-chat-tracing` | Same as Grafana |
-| **Health Check** | `./scripts/health-check.sh` | Automated health monitoring |
-| **Cost Dashboard** | Available in Grafana under "Azure Cost Management" | Same as Grafana |
+- **RocketChat**: `https://<YOUR_DOMAIN>`
+- **Grafana**: `https://<YOUR_GRAFANA_DOMAIN>` (default: admin/prom-operator)
+
+---
+
+## 🔧 Configuration Guide
+
+### Essential Configuration Files
+
+| File | Purpose | Action Required |
+|------|---------|-----------------|
+| `infrastructure/terraform/terraform.tfvars` | Azure infrastructure config | ⚠️ **MUST UPDATE** |
+| `aks/config/helm-values/values-official.yaml` | RocketChat configuration | Update domain |
+| `k8s/base/ingress.yaml` | Ingress routing | Update domain |
+| `aks/config/helm-values/monitoring-values.yaml` | Monitoring stack | Update Grafana domain |
+
+### Configuration Steps
+
+#### 1. Update Terraform Configuration
+
+```bash
+cd infrastructure/terraform
+cp terraform.tfvars.example terraform.tfvars
+```
+
+Edit `terraform.tfvars` with your values:
+
+```hcl
+# Required
+resource_group_name = "rocketchat-prod-rg"
+cluster_name        = "rocketchat-aks"
+rocketchat_domain   = "chat.example.com"
+grafana_domain      = "grafana.example.com"
+
+# Optional - adjust for your needs
+environment         = "production"
+system_node_count   = 1  # Dev/test: 1, Production: 2-3
+user_node_count     = 2  # Dev/test: 1-2, Production: 2-3
+```
+
+#### 2. Update RocketChat Helm Values
+
+Edit `aks/config/helm-values/values-official.yaml`:
+
+```yaml
+host: "chat.example.com"
+
+ingress:
+  enabled: true
+  tls:
+    - hosts:
+        - "chat.example.com"
+```
+
+#### 3. Update MongoDB Configuration
+
+For production, use the example:
+
+```bash
+cp examples/helm-values/mongodb-production.yaml aks/config/helm-values/mongodb-production.yaml
+# Edit and update passwords
+```
+
+---
+
+## 📊 Resource Sizing
+
+### Comparison Table
+
+| Component | Dev/Test (Default) | Production (Example) | Enterprise |
+|-----------|-------------------|---------------------|------------|
+| **RocketChat Replicas** | 1 | 3 | 5+ |
+| **RocketChat CPU** | 250m / 100m | 1000m / 500m | 2000m / 1000m |
+| **RocketChat Memory** | 512Mi / 256Mi | 2Gi / 1Gi | 4Gi / 2Gi |
+| **MongoDB Replicas** | 1 | 3 | 3 |
+| **MongoDB CPU** | 250m / 100m | 500m / 250m | 1000m / 500m |
+| **MongoDB Memory** | 512Mi / 256Mi | 1Gi / 512Mi | 2Gi / 1Gi |
+| **MongoDB Storage** | 5Gi | 50Gi | 100Gi+ |
+| **Monthly Cost** | ~$50-100 | ~$200-300 | ~$500+ |
+| **User Capacity** | 10-50 | 100-2000 | 2000+ |
+
+### Scaling Guidance
+
+#### Small Deployment (10-50 users)
+Use **default dev/test configuration** - no changes needed!
+
+#### Medium Deployment (100-500 users)
+```yaml
+# values-official.yaml
+replicaCount: 2
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+```
+
+#### Large Deployment (500-2000 users)
+Use **production examples** in `examples/helm-values/`:
+
+```bash
+cp examples/helm-values/values-production.yaml aks/config/helm-values/
+# Deploy with production values
+```
+
+---
 
 ## 📊 Monitoring & Observability
 
-### 🎛️ **Grafana Dashboards**
+### Included Monitoring Stack
 
-- **Rocket.Chat Comprehensive Production Monitoring**: 28 panels with complete observability
-  - Pod status and health monitoring (all 55+ cluster pods)
-  - Desired vs actual state tracking (deployments, StatefulSets, DaemonSets)
-  - Application metrics (users, messages, performance)
-  - Infrastructure health with workload status tables
-- **Rocket.Chat Distributed Tracing**: Complete request tracing visualization
-  - Request flow tracking across microservices
-  - Performance bottleneck identification
-  - Error correlation and debugging
-  - End-to-end request visibility
-- **Kubernetes Cluster Overview**: Infrastructure monitoring and resource utilization  
-- **Loki Logs**: Centralized log analysis and troubleshooting with volume API support
+- **Prometheus**: Metrics collection (30s intervals)
+- **Grafana**: Visualization dashboards
+- **Loki**: Log aggregation
+- **Tempo**: Distributed tracing
+- **Alertmanager**: Alert routing and notifications
 
-### 📈 **Key Metrics Monitored**
+### Pre-configured Dashboards
 
-| Category | Metrics | Purpose |
-|----------|---------|---------|
-| **Application** | `rocketchat_users_active`, `rocketchat_messages_total` | User engagement & activity |
-| **Performance** | `rocketchat_rest_api_*`, response times, message rates | API & messaging performance |
-| **Kubernetes** | `kube_pod_status_phase`, `kube_deployment_status_replicas` | Workload health & state |
-| **Infrastructure** | CPU, memory, pod restarts, node coverage | Resource utilization & stability |
-| **Database** | MongoDB connections, replica status, operations | Database cluster health |
-| **Networking** | Request rates, error rates, DDP connections | Service reliability |
-| **Tracing** | Request traces, span durations, error correlation | Distributed system visibility |
+- RocketChat Comprehensive Monitoring (28 panels)
+- Distributed Tracing Dashboard
+- Kubernetes Cluster Overview
+- MongoDB Metrics
+- Cost Monitoring
 
-### 🔔 **Alerting**
+### Access Monitoring
 
-- **Critical Alerts**: Service down, high error rates, resource exhaustion
-- **Warning Alerts**: Performance degradation, capacity planning
-- **Info Alerts**: Deployment events, configuration changes
-- **Notification Channels**: Email, Slack, webhooks, Azure Monitor
+```bash
+# Port-forward Grafana (if not using ingress)
+kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
 
-### 🔍 **Complete Observability Stack**
+# Access at: http://localhost:3000
+# Default credentials: admin / prom-operator
+```
 
-This deployment provides the **gold standard** of observability with all three pillars fully operational:
-
-#### **📊 Metrics (Prometheus + Grafana)**
-- **1238+ Metric Series**: Real-time collection from all services
-- **28+ Dashboard Panels**: Comprehensive production monitoring
-- **Custom ServiceMonitors**: Rocket.Chat, MongoDB, microservices
-- **Resource Tracking**: CPU, memory, network, storage across 55+ pods
-- **Business Metrics**: Active users, message rates, API performance
-
-#### **📝 Logs (Loki 2.9.0 + Promtail)**
-- **Centralized Aggregation**: All application and system logs
-- **50GB Storage**: 7-day retention with volume API support
-- **LogQL Queries**: Powerful structured log analysis
-- **Real-time Streaming**: Live log tailing with filtering
-- **Full-text Search**: Fast log discovery and investigation
-
-#### **🔍 Traces (Tempo + OpenTelemetry)**
-- **1.8MB Active Traces**: Complete request history in WAL
-- **124KB Span Metrics**: Auto-generated from traces
-- **Distributed Tracing**: End-to-end request visibility
-- **Metrics-Generator**: Service graphs, span metrics, local-blocks
-- **TraceQL Queries**: Advanced trace search and analysis
-- **Auto-instrumentation**: HTTP, Express, MongoDB tracing
-- **Correlation**: Link traces → logs → metrics seamlessly
-
-#### **📈 Unified Visualization (Grafana)**
-- **Single Pane of Glass**: All observability data in one place
-- **Trace → Log Correlation**: Click trace to see related logs
-- **Trace → Metrics Correlation**: Link spans to performance metrics
-- **Custom Dashboards**: Production, tracing, cost, Kubernetes
-- **Alert Visualization**: Real-time alert status and history
-
-**Key Benefits**:
-- **🎯 Complete Visibility**: Track every request from user action → app → database → response
-- **⚡ Performance Optimization**: Identify bottlenecks at span-level granularity
-- **🐛 Faster Debugging**: Correlate metrics, logs, and traces for root cause analysis in seconds
-- **🔮 Proactive Monitoring**: Detect anomalies before users experience issues
-- **💰 Cost Efficiency**: Understand resource usage at trace level for optimization
+---
 
 ## 📁 Repository Structure
 
 ```
-📁 rocketchat-k8s-deployment/
-├── 🚀 aks/                          # Azure Kubernetes Service (Production)
-│   ├── 📁 config/
-│   │   ├── helm-values/             # Helm chart configurations
-│   │   ├── certificates/            # SSL certificate configs
-│   │   └── mongodb-standalone.yaml  # Fallback MongoDB config
-│   ├── 📁 deployment/               # Deployment scripts
-│   ├── 📁 monitoring/               # Monitoring configurations
-│   │   ├── rocketchat-servicemonitors.yaml
-│   │   ├── rocketchat-dashboard-comprehensive.json
-│   │   ├── rocket-chat-dashboard-comprehensive-configmap.yaml
-│   │   ├── rocket-chat-alerts.yaml
-│   │   ├── grafana-public-dashboard-setup.yaml
-│   │   ├── grafana-datasource-loki.yaml
-│   │   ├── grafana-tempo-datasource.yaml
-│   │   ├── grafana-tracing-dashboard.yaml
-│   │   ├── opentelemetry-collector.yaml
-│   │   ├── tempo-deployment.yaml
-│   │   ├── tempo-values.yaml
-│   │   ├── loki-values.yaml
-│   │   └── mongodb-servicemonitor.yaml
-│   └── 📁 scripts/                  # Utility scripts
-├── 🔄 azure-pipelines/              # Azure DevOps Pipelines
-│   ├── lifecycle-management.yml     # Cluster lifecycle automation
-│   ├── backup-automation.yml       # Backup automation
-│   └── subscription-monitor.yml    # Cost and subscription monitoring
-├── 🏗️ infrastructure/              # Infrastructure as Code
-│   └── terraform/                  # Terraform configurations
-│       ├── main.tf                 # AKS cluster definition
-│       ├── variables.tf            # Input variables
-│       ├── outputs.tf             # Output values
-│       └── storage.tf             # Storage configurations
-├── 📁 k8s/                         # Kubernetes manifests
+rocketchat-k8s-deployment/
+├── 🏗️ infrastructure/terraform/    # Terraform IaC for AKS
+│   ├── main.tf                     # Cluster configuration
+│   ├── variables.tf                # Input variables
+│   ├── terraform.tfvars.example    # Configuration template
+│   └── TERRAFORM_SETUP.md          # Setup guide
+├── 📦 aks/                          # AKS-specific configs
+│   ├── config/helm-values/         # Helm chart values
+│   ├── deployment/                 # Deployment scripts
+│   ├── monitoring/                 # Monitoring configs
+│   └── scripts/                    # Utility scripts
+├── ☸️ k8s/                          # Kubernetes manifests
 │   ├── base/                       # Base configurations
-│   └── overlays/                   # Environment-specific overlays
-│       ├── production/             # Production configurations
-│       └── monitoring/             # Monitoring stack
-├── 📁 scripts/                     # Automation scripts
-│   ├── backup/                     # Backup automation scripts
-│   ├── lifecycle/                  # Cluster lifecycle scripts
-│   ├── monitoring/                # Monitoring scripts
-│   └── secrets/                   # Secrets management scripts
-├── 🏠 microk8s/                     # MicroK8s (Legacy/Development)
-│   ├── 📁 config/                   # MicroK8s configurations
-│   ├── 📁 monitoring/               # MicroK8s monitoring
-│   └── 📁 scripts/                  # MicroK8s scripts
+│   └── overlays/                   # Environment overlays
 ├── 📚 docs/                         # Documentation
-│   ├── TROUBLESHOOTING_GUIDE.md     # Comprehensive troubleshooting
-│   ├── MONITORING_SETUP_GUIDE.md    # Monitoring setup guide
-│   ├── COST_OPTIMIZATION_GUIDE.md   # Cost optimization strategies
-│   ├── LIFECYCLE_AUTOMATION.md      # Lifecycle automation guide
-│   ├── BACKUP_RESTORE_GUIDE.md      # Backup and restore procedures
-│   ├── COST_MANAGEMENT_AUTOMATION.md # Cost management automation
-│   ├── SECRETS_MANAGEMENT.md        # Secrets management guide
-│   ├── DISASTER_RECOVERY.md         # Disaster recovery runbook
-│   └── [additional guides]          # Specialized documentation
-├── 🎯 portfolio/                    # Portfolio integration assets
-│   ├── portfolio-integration-guide.md
-│   ├── portfolio-demo-access.md
-│   ├── portfolio-demo-styles.css
-│   └── setup-portfolio-demo.sh
-├── 📄 README.md                     # This file
-└── 📄 LICENSE                       # MIT License
+│   ├── TROUBLESHOOTING_GUIDE.md
+│   ├── MONITORING_SETUP_GUIDE.md
+│   └── [additional guides]
+├── 🎯 examples/                     # Production examples
+│   └── helm-values/                # Sample configurations
+├── 📜 scripts/                      # Automation scripts
+│   ├── backup/                     # Backup scripts
+│   └── lifecycle/                  # Lifecycle management
+├── README.md                        # This file
+└── DEPLOYMENT_GUIDE.md              # Detailed deployment guide
 ```
 
-## 🔧 Configuration
-
-### Environment-Specific Configurations
-
-| Environment | Configuration Path | Purpose |
-|-------------|-------------------|---------|
-| **Production (AKS)** | `aks/config/helm-values/values-official.yaml` | Production deployment |
-| **Monitoring** | `aks/config/helm-values/monitoring-values.yaml` | Prometheus stack |
-| **Development** | `microk8s/config/` | Local development |
-
-### Key Configuration Files
-
-- **`monitoring-values.yaml`**: Complete Prometheus, Grafana, Loki 2.9.0 configuration
-- **`values-official.yaml`**: Rocket.Chat production settings
-- **`rocketchat-servicemonitors.yaml`**: Metrics collection configuration
-- **`rocketchat-dashboard-comprehensive.json`**: 28-panel comprehensive Grafana dashboard
-
-### 🔐 **Local Secrets Management**
-
-**Never commit real credentials to Git!** Use local environment files for secure credential management.
-
-#### **Setup Local Secrets**
-```bash
-# 1. Copy the example file
-cp .env.example .env
-
-# 2. Edit with your real credentials
-nano .env  # or your preferred editor
-
-# 3. Apply secrets to Kubernetes
-./scripts/apply-secrets.sh
-```
-
-#### **Required Credentials**
-- **Gmail App Password**: Generate at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
-- **Rocket.Chat Webhook**: Create in Rocket.Chat Admin → Integrations → New Incoming Webhook
-- **Alert Email**: Your email for receiving monitoring alerts
-
-#### **Environment File Structure**
-```bash
-# .env (local only - never commit!)
-GMAIL_USERNAME=your-email@gmail.com
-GMAIL_APP_PASSWORD=abcd-efgh-ijkl-mnop
-ROCKETCHAT_WEBHOOK_URL=https://your-chat-url/hooks/YOUR_TOKEN
-ALERT_EMAIL_RECIPIENT=your-alert-email@gmail.com
-```
-
-#### **Security Benefits**
-- ✅ **Repository Safe**: Only placeholders in Git
-- ✅ **Local Control**: Real credentials stay on your machine
-- ✅ **Easy Deployment**: One command applies all secrets
-- ✅ **Team Friendly**: Each developer uses their own `.env`
+---
 
 ## 📚 Documentation
 
-### 📖 **Comprehensive Guides**
+### Quick Links
 
-| Guide | Description | Audience |
-|-------|-------------|----------|
-| **[Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md)** | Complete issue resolution (5300+ lines) | DevOps, SRE |
-| **[Monitoring Setup Guide](docs/MONITORING_SETUP_GUIDE.md)** | Production monitoring implementation | Platform Engineers |
-| **[Cost Optimization Guide](docs/COST_OPTIMIZATION_GUIDE.md)** | Resource optimization strategies | FinOps, Management |
-| **[Lifecycle Automation](docs/LIFECYCLE_AUTOMATION.md)** | Complete cluster lifecycle automation | DevOps, Platform Engineers |
-| **[Backup & Restore Guide](docs/BACKUP_RESTORE_GUIDE.md)** | Comprehensive backup and restore procedures | DevOps, SRE |
-| **[Cost Management Automation](docs/COST_MANAGEMENT_AUTOMATION.md)** | Automated cost management and optimization | FinOps, Management |
-| **[Secrets Management](docs/SECRETS_MANAGEMENT.md)** | Azure Key Vault and secrets automation | Security, DevOps |
-| **[Disaster Recovery](docs/DISASTER_RECOVERY.md)** | Disaster recovery procedures and runbooks | SRE, Management |
+| Document | Description | Audience |
+|----------|-------------|----------|
+| [Terraform Setup](infrastructure/terraform/TERRAFORM_SETUP.md) | Infrastructure deployment | DevOps |
+| [Deployment Guide](DEPLOYMENT_GUIDE.md) | Complete deployment walkthrough | All |
+| [Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md) | Issue resolution (5300+ lines) | SRE |
+| [Monitoring Guide](docs/MONITORING_SETUP_GUIDE.md) | Observability setup | Platform Engineers |
+| [Examples README](examples/helm-values/README.md) | Configuration examples | All |
 
-### 🎯 **Quick Reference**
-
-- **[AKS Setup Guide](aks/docs/AKS_SETUP_GUIDE.md)**: Azure Kubernetes Service deployment
-- **[Enhanced Monitoring Plan](aks/docs/ENHANCED_MONITORING_PLAN.md)**: Complete monitoring implementation
-- **[DNS Migration Guide](aks/docs/DNS_MIGRATION_GUIDE.md)**: Domain and DNS configuration
-- **[Remote Access Guide](aks/docs/REMOTE_ACCESS_GUIDE.md)**: Service access and port-forwarding
-
-### 🎯 **Portfolio Integration**
-
-- **[Portfolio Guide](portfolio/portfolio-integration-guide.md)**: Complete portfolio integration with HTML/CSS examples
-- **[Demo Access](portfolio/portfolio-demo-access.md)**: Live demo URLs and access instructions
-- **[Setup Script](portfolio/setup-portfolio-demo.sh)**: Automated public dashboard deployment
+---
 
 ## 🛡️ Security
 
-### 🔐 **Security Features**
+### Security Features
 
-- **Transport Security**: TLS 1.3 encryption for all external traffic
-- **Network Isolation**: Kubernetes network policies
-- **Secret Management**: Kubernetes secrets with encryption at rest
-- **Container Security**: Non-privileged containers with security contexts
-- **Access Control**: RBAC for service accounts and API access
+- ✅ **Transport Encryption**: TLS 1.3 for all external traffic
+- ✅ **Certificate Management**: Automated Let's Encrypt certificates
+- ✅ **Network Policies**: Kubernetes network isolation
+- ✅ **Secret Management**: Kubernetes secrets (Azure Key Vault optional)
+- ✅ **RBAC**: Role-based access control
+- ✅ **Security Contexts**: Non-root containers
 
-### 🔒 **Security Best Practices**
+### Security Checklist
 
-```bash
-# Regular security checks
-kubectl get networkpolicies -A
-kubectl get podsecuritypolicies
-kubectl auth can-i --list --as=system:serviceaccount:rocketchat:default
-```
+Before production deployment:
 
-## 💰 Cost Optimization
+- [ ] Change all default passwords (MongoDB, Grafana)
+- [ ] Restrict SSH access in NSG (`ssh_source_address_prefix`)
+- [ ] Enable `prevent_destroy` in Terraform for production
+- [ ] Configure Azure Key Vault for secrets (optional)
+- [ ] Review and apply network policies
+- [ ] Enable audit logging
+- [ ] Set up backup encryption
 
-### 📊 **Current Optimizations**
-
-| Component | Before | After | Savings |
-|-----------|--------|-------|---------|
-| **Rocket.Chat CPU** | 1000m | 750m | 25% |
-| **Rocket.Chat Memory** | 2Gi | 1Gi | 50% |
-| **MongoDB CPU** | 1000m | 300m | 70% |
-| **MongoDB Memory** | 2Gi | 512Mi | 75% |
-| **Monthly Cost** | £70-100 | £57-80 | 15-20% |
-
-### 💡 **Cost Monitoring**
-
-```bash
-# Run cost analysis
-./aks/scripts/cost-monitoring.sh
-
-# Apply optimizations
-./aks/scripts/apply-cost-optimizations.sh
-
-# Monitor via Grafana
-# Dashboard: "Azure Cost Management"
-```
+---
 
 ## 🔄 Maintenance
 
-### 📅 **Regular Tasks**
+### Regular Tasks
 
-| Frequency | Task | Command |
-|-----------|------|---------|
-| **Daily** | Check service health | Visit Grafana dashboards |
+| Frequency | Task | Command/Action |
+|-----------|------|----------------|
+| **Daily** | Check service health | View Grafana dashboards |
 | **Weekly** | Review logs | Loki queries in Grafana |
-| **Monthly** | Cost review | Azure portal + cost scripts |
-| **Quarterly** | Update dependencies | Helm chart upgrades |
+| **Monthly** | Update dependencies | `helm upgrade` commands |
+| **Monthly** | Review costs | Azure Cost Management |
+| **Quarterly** | Test backups | Restore to test environment |
 
-### 🔄 **Update Procedures**
+### Update Procedures
 
 ```bash
-# Update Rocket.Chat
+# Update RocketChat
 helm upgrade rocketchat rocketchat/rocketchat \
   -f aks/config/helm-values/values-official.yaml \
   -n rocketchat
@@ -540,165 +502,88 @@ helm upgrade rocketchat rocketchat/rocketchat \
 helm upgrade monitoring prometheus-community/kube-prometheus-stack \
   -f aks/config/helm-values/monitoring-values.yaml \
   -n monitoring
-
-# Update Kubernetes cluster
-az aks upgrade --resource-group <rg> --name <cluster> --kubernetes-version <version>
 ```
+
+---
 
 ## 🆘 Support
 
-### 📞 **Getting Help**
+### Getting Help
 
-1. **📖 Check Documentation**: Start with [Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md)
-2. **🔍 Search Issues**: Look for similar problems in the guides
-3. **📊 Monitor Dashboards**: Check Grafana for system health
-4. **📝 Collect Information**: Gather logs and metrics before seeking help
+1. 📖 Check [Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md)
+2. 📊 Review Grafana dashboards for system health
+3. 🔍 Search GitHub issues
+4. 💬 RocketChat Community Forums
+5. 📧 Azure Support (for infrastructure issues)
 
-### 🚨 **Emergency Contacts**
+### Common Issues
 
-- **Infrastructure Issues**: Azure Support Portal
-- **Application Issues**: Rocket.Chat Community Forums
-- **Monitoring Issues**: Check [Monitoring Troubleshooting](docs/TROUBLESHOOTING_GUIDE.md#monitoring-stack-issues)
+- **Pods not starting**: Check resource limits and node capacity
+- **Domain not accessible**: Verify DNS A records and ingress configuration
+- **Certificate errors**: Check cert-manager logs
+- **Database connection issues**: Verify MongoDB service and credentials
 
-### 🔄 **Rollback Procedures**
-
-```bash
-# Emergency rollback to previous version
-helm rollback rocketchat -n rocketchat
-
-# Complete environment rollback
-# See docs/EMERGENCY_PROCEDURES.md
-```
-
-## 🎯 **Current Status: ENTERPRISE-GRADE PRODUCTION READY** ✅
-
-### ✅ **Latest Achievements (December 2024)**
-
-- **🚀 Complete Deployment**: Rocket.Chat running on AKS with SSL and high availability
-- **📊 Comprehensive Monitoring**: 1238+ metric series, 34-panel production dashboard
-- **🎯 Advanced Observability**: Desired vs actual state monitoring, pod health tracking
-- **📝 Enhanced Logging**: Loki 2.9.0 with volume API support and structured queries
-- **🔍 Distributed Tracing**: Complete request tracing with Tempo and OpenTelemetry
-- **🔔 Intelligent Alerting**: 12+ alert rules with multi-channel notifications
-- **📚 Complete Documentation**: 5300+ lines of troubleshooting guides with JSON syntax error resolution
-- **💰 Cost Optimized**: 15-20% monthly savings through resource optimization
-- **🔧 Production Ready**: Dashboard import issues resolved, comprehensive pod monitoring active
-- **🆕 CI/CD Pipeline**: GitHub Actions automated deployment and testing
-- **🆕 Health Monitoring**: Automated health checks with comprehensive reporting
-- **🆕 Cost Management**: Real-time Azure cost monitoring and budget alerts
-- **🆕 Auto-scaling**: Horizontal and Vertical Pod Autoscalers for optimal resource usage
-- **🆕 High Availability**: Multi-zone deployment with pod disruption budgets and anti-affinity
-- **🔄 Lifecycle Automation**: Complete cluster lifecycle management with automated teardown/recreation
-- **💾 Backup System**: Comprehensive backup strategy with MongoDB dumps, PVC snapshots, and cluster state
-- **🔐 Secrets Management**: Azure Key Vault integration with automated secret synchronization
-- **🏗️ Infrastructure as Code**: Complete Terraform configuration for repeatable deployments
-- **🚨 Disaster Recovery**: Automated recovery from subscription suspensions and cluster failures
-
-### 🆕 **New Enterprise Features (October 2025)**
-
-- **✅ GitHub Actions CI/CD**: Automated deployment pipeline with security scanning
-- **✅ Health Check Automation**: Comprehensive health monitoring with 15+ checks
-- **✅ Azure Cost Management**: Real-time cost tracking and optimization recommendations
-- **✅ Auto-scaling Configuration**: HPA and VPA for dynamic resource management
-- **✅ High Availability Setup**: Multi-zone deployment with disaster recovery
-- **✅ Enhanced Security**: Network policies, priority classes, and security scanning
-- **✅ Monitoring Automation**: Automated health checks and cost monitoring
-- **✅ Distributed Tracing**: **FULLY OPERATIONAL** - Complete request tracing with Tempo, OpenTelemetry, and metrics-generator
-  - 1.8MB of traces stored in Tempo WAL
-  - 124KB of generated span metrics
-  - Service graphs and span metrics processors active
-  - Local-blocks processor configured for Grafana drilldown
-  - Fixed deprecated OpenTelemetry exporter
-  - TraceQL queries fully functional
-- **✅ Lifecycle Automation**: Complete cluster lifecycle management with automated teardown/recreation
-- **✅ Backup System**: Comprehensive backup strategy with MongoDB dumps, PVC snapshots, and cluster state
-- **✅ Secrets Management**: Azure Key Vault integration with automated secret synchronization
-- **✅ Infrastructure as Code**: Complete Terraform configuration for repeatable deployments
-- **✅ Disaster Recovery**: Automated recovery from subscription suspensions and cluster failures
-
-### 📋 **Next Sprint Tasks**
-
-- [x] **CI/CD Pipeline**: GitHub Actions automated deployment ✅
-- [x] **Health Monitoring**: Automated health check system ✅
-- [x] **Cost Management**: Azure cost monitoring integration ✅
-- [x] **Auto-scaling**: HPA and VPA configuration ✅
-- [x] **High Availability**: Multi-zone deployment setup ✅
-- [x] **Lifecycle Automation**: Complete cluster lifecycle management ✅
-- [x] **Backup System**: Comprehensive backup strategy ✅
-- [x] **Secrets Management**: Azure Key Vault integration ✅
-- [x] **Infrastructure as Code**: Terraform configuration ✅
-- [x] **Disaster Recovery**: Automated recovery procedures ✅
-- [x] **Distributed Tracing**: Complete request tracing with Tempo and OpenTelemetry - FULLY OPERATIONAL ✅
-- [ ] **Terraform Consolidation**: Migrate all resources to Terraform for unified infrastructure management
-- [ ] **Performance Optimization**: Advanced caching and CDN integration
-- [ ] **Security Hardening**: Pod Security Standards and audit logging
-- [ ] **Multi-Region Support**: Cross-region backup and failover procedures
+---
 
 ## 🤝 Contributing
 
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
+Contributions are welcome! Please:
 
-### 📝 **Development Guidelines**
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-- Follow Kubernetes best practices
-- Update documentation for any configuration changes
-- Test changes in development environment first
-- Include monitoring for new components
+---
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+---
+
 ## 🙏 Acknowledgments
 
-- **Rocket.Chat Team**: For the excellent open-source chat platform
-- **Prometheus Community**: For the comprehensive monitoring stack
-- **Kubernetes Community**: For the robust orchestration platform
-- **Azure Team**: For the reliable cloud infrastructure
+- **RocketChat Team**: Excellent open-source chat platform
+- **Prometheus Community**: Comprehensive monitoring stack
+- **Kubernetes Community**: Robust orchestration platform
+- **Azure Team**: Reliable cloud infrastructure
 
 ---
 
-## 📞 **Quick Links**
+## 📞 Quick Reference
 
-| Resource | Link | Description |
-|----------|------|-------------|
-| **🚀 Live Chat** | [<YOUR_DOMAIN>](https://<YOUR_DOMAIN>) | Production Rocket.Chat instance |
-| **📊 Monitoring** | [grafana.<YOUR_DOMAIN>](https://grafana.<YOUR_DOMAIN>) | Grafana dashboards |
-| **📖 Troubleshooting** | [Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md) | Complete issue resolution |
-| **🔧 Setup Guide** | [Monitoring Setup](docs/MONITORING_SETUP_GUIDE.md) | Monitoring implementation |
-| **💰 Cost Guide** | [Cost Optimization](docs/COST_OPTIMIZATION_GUIDE.md) | Resource optimization |
+### Essential Commands
+
+```bash
+# View cluster status
+kubectl get nodes
+kubectl get pods -A
+
+# View RocketChat logs
+kubectl logs -f deployment/rocketchat -n rocketchat
+
+# Access Grafana
+kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
+
+# Terraform commands
+terraform plan
+terraform apply
+terraform destroy
+
+# Get load balancer IP
+kubectl get svc -n ingress-nginx
+```
+
+### Important URLs (After Configuration)
+
+- **RocketChat**: `https://<YOUR_DOMAIN>`
+- **Grafana**: `https://<YOUR_GRAFANA_DOMAIN>`
+- **Azure Portal**: https://portal.azure.com
 
 ---
 
-**🎯 Built with ❤️ for production reliability, monitoring excellence, and operational efficiency.**
+**🎯 Ready to deploy?** Start with the [Quick Start](#-quick-start) section above!
 
-> 💼 **Portfolio Ready**: This project includes live demo access and comprehensive integration guides for showcasing in professional portfolios. See the [portfolio/](portfolio/) directory for HTML/CSS templates and deployment instructions.
-
-*Last Updated: October 30, 2025 - Production-ready with distributed tracing fully operational, comprehensive monitoring, and complete documentation*
----
-
-## 🔐 Security & Privacy Notice
-
-### **Public Repository Information**
-This repository is designed for public sharing and portfolio demonstration. All sensitive information has been:
-
-- ✅ **Externalized**: Secrets stored in Kubernetes secrets, not in code
-- ✅ **Parameterized**: Configuration examples use placeholders
-- ✅ **Sanitized**: Personal information replaced with examples
-- ✅ **Demo-Safe**: Live demos configured for public access
-
-### **Live Demo Domains**
-The following domains are intentionally public for portfolio demonstration:
-- `<YOUR_DOMAIN>` - Live Rocket.Chat instance with guest access
-- `<YOUR_GRAFANA_DOMAIN>` - Observability platform (metrics, logs, traces)
-
-### **Configuration Security**
-- All credentials stored in Kubernetes secrets
-- Configuration files use environment variables and placeholders
-- No hardcoded passwords, API keys, or private information
-- Azure resource names replaced with placeholders for reusability
-
+*Last Updated: December 2025 - Template Version 1.0*
