@@ -1,0 +1,87 @@
+# MongoDB Production Configuration Example
+# Use this as a reference for production deployments
+
+# Official MongoDB image
+image:
+  repository: mongo
+  tag: "6.0"
+  pullPolicy: IfNotPresent
+
+# Authentication configuration
+auth:
+  enabled: true
+  rootPassword: "CHANGE_THIS_IN_PRODUCTION"  # Use strong password
+  database: "rocketchat"
+  username: "rocketchat"
+  password: "CHANGE_THIS_IN_PRODUCTION"      # Use strong password
+
+# Production persistent storage
+persistence:
+  enabled: true
+  size: 50Gi                              # Larger storage for production
+  storageClass: "managed-premium"         # Premium SSD for better performance
+
+# ReplicaSet for high availability
+replicaSet:
+  enabled: true
+  name: "rs0"
+  replicas: 3  # Standard production setup with 3 replicas
+
+# Production resource configuration
+resources:
+  limits:
+    cpu: 1000m     # 1 full CPU core per replica
+    memory: 2Gi    # 2GB RAM per replica
+  requests:
+    cpu: 500m      # Reserve 0.5 CPU per replica
+    memory: 1Gi    # Reserve 1GB RAM per replica
+
+# Production metrics and monitoring
+metrics:
+  enabled: true
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+# Security configuration
+securityContext:
+  enabled: true
+  fsGroup: 999
+  runAsUser: 999
+  runAsNonRoot: true
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2  # Maintain at least 2 replicas during disruptions
+
+# Anti-affinity to spread replicas across nodes
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app: mongodb
+        topologyKey: kubernetes.io/hostname
+
+# Backup configuration (recommended)
+# backup:
+#   enabled: true
+#   schedule: "0 2 * * *"  # Daily at 2 AM
+#   retention: 30          # Keep 30 days of backups
+#   storageClass: "standard"
+
+# Production node selector (optional)
+# nodeSelector:
+#   workload: database
+
+# Tolerations for dedicated nodes (optional)
+# tolerations:
+#   - key: "dedicated"
+#     operator: "Equal"
+#     value: "database"
+#     effect: "NoSchedule"

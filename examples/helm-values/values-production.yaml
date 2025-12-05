@@ -1,0 +1,149 @@
+# RocketChat Production Configuration Example
+# Use this as a reference for production deployments
+
+image:
+  pullPolicy: IfNotPresent
+  repository: registry.rocket.chat/rocketchat/rocket.chat
+  tag: "7.9.3"
+
+# MongoDB disabled - using external deployment
+mongodb:
+  enabled: false
+  auth:
+    passwords: ["rocketchat"]
+    rootPassword: "rocketchatroot"
+    database: "rocketchat"
+  service:
+    nameOverride: "mongodb"
+    ports:
+      mongodb: 27017
+
+# External MongoDB configuration
+externalDatabase:
+  host: mongodb-headless.rocketchat.svc.cluster.local
+  port: 27017
+
+# Microservices configuration for production
+microservices:
+  enabled: true
+  presence:
+    replicas: 2      # Increased for HA
+  ddpStreamer:
+    replicas: 3      # Increased for load distribution
+  account:
+    replicas: 2      # Increased for HA
+  authorization:
+    replicas: 2      # Increased for HA
+  streamHub:
+    replicas: 2      # Increased for HA
+  nats:
+    replicas: 1
+
+# Your production domain
+host: "<YOUR_DOMAIN>"
+
+# Ingress configuration
+ingress:
+  enabled: true
+  ingressClassName: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "production-cert-issuer"
+  tls:
+    - secretName: "rocketchat-tls"
+      hosts:
+        - "<YOUR_DOMAIN>"
+
+# Enable Prometheus metrics
+prometheusScraping:
+  enabled: true
+  port: 9458
+  msPort: 9459
+
+podMonitor:
+  enabled: false
+
+serviceMonitor:
+  enabled: false
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+    interval: "30s"
+    scrapeTimeout: "10s"
+    path: "/metrics"
+    port: "http"
+
+# Production resource configuration
+replicaCount: 3  # High availability with 3 replicas
+
+resources:
+  limits:
+    cpu: 1000m     # 1 full CPU core per pod
+    memory: 2Gi    # 2GB RAM per pod
+  requests:
+    cpu: 500m      # Reserve 0.5 CPU per pod
+    memory: 1Gi    # Reserve 1GB RAM per pod
+
+# Pod disruption budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2  # Maintain at least 2 pods during disruptions
+
+# Security context
+securityContext:
+  runAsUser: 999
+  runAsGroup: 999
+  fsGroup: 999
+
+# Health checks
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Production anti-affinity rules
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - rocketchat
+          topologyKey: kubernetes.io/hostname
+
+# Production node affinity
+nodeSelector:
+  workload: rocketchat
+
+# Tolerations for dedicated nodes (optional)
+# tolerations:
+#   - key: "dedicated"
+#     operator: "Equal"
+#     value: "rocketchat"
+#     effect: "NoSchedule"
+
+# Autoscaling configuration (optional)
+# autoscaling:
+#   enabled: true
+#   minReplicas: 3
+#   maxReplicas: 10
+#   targetCPUUtilizationPercentage: 70
+#   targetMemoryUtilizationPercentage: 80

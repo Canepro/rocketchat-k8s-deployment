@@ -1,0 +1,334 @@
+# Prometheus Stack Configuration
+# Optimized for Development/Test environments
+#
+# CURRENT SETTINGS: Minimal resource usage for dev/test
+# PRODUCTION RECOMMENDATIONS:
+#   - Prometheus: 500m CPU, 1-2Gi memory, 50Gi storage
+#   - Grafana: 300m CPU, 512Mi memory, 10Gi storage
+#   - Retention: 15-30 days (currently 7 days)
+#   - Enable HA mode with multiple replicas
+#   - Use premium storage class
+#
+# Prometheus configuration (following Rocket.Chat official recommendations)
+prometheus:
+  prometheusSpec:
+    # Enable monitoring of ALL ServiceMonitors and PodMonitors (not just Helm-created ones)
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    # Enable admin API for debugging
+    enableAdminAPI: true
+    retention: "7d"
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: "default"  # Azure Premium SSD (managed)
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi  # Increased for AKS
+    resources:
+      limits:
+        cpu: 300m
+        memory: 512Mi
+      requests:
+        cpu: 150m
+        memory: 256Mi
+
+  # Additional PodMonitors rendered and owned by the Helm release to prevent
+  # external pruning and to satisfy Prometheus label selectors (release=monitoring)
+  additionalPodMonitors:
+    - name: rocketchat-metrics
+      namespace: monitoring
+      labels:
+        app.kubernetes.io/name: rocketchat
+        app.kubernetes.io/instance: rocketchat
+        release: monitoring
+      selector:
+        matchLabels:
+          app.kubernetes.io/instance: rocketchat
+          app.kubernetes.io/name: rocketchat
+      namespaceSelector:
+        matchNames:
+          - rocketchat
+      podMetricsEndpoints:
+        - portNumber: 9458
+          path: /metrics
+          interval: 30s
+          scrapeTimeout: 10s
+          honorLabels: false
+          relabelings:
+            - sourceLabels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+              targetLabel: service_name
+              replacement: rocketchat
+            - sourceLabels: [__meta_kubernetes_pod_namespace]
+              targetLabel: namespace
+            - sourceLabels: [__meta_kubernetes_pod_name]
+              targetLabel: pod
+
+    - name: rocketchat-microservices
+      namespace: monitoring
+      labels:
+        app.kubernetes.io/name: rocketchat
+        app.kubernetes.io/instance: rocketchat
+        release: monitoring
+      selector:
+        matchExpressions:
+          - key: app.kubernetes.io/instance
+            operator: In
+            values:
+              - rocketchat
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+              - rocketchat-account
+              - rocketchat-authorization
+              - rocketchat-ddp-streamer
+              - rocketchat-presence
+              - rocketchat-stream-hub
+      namespaceSelector:
+        matchNames:
+          - rocketchat
+      podMetricsEndpoints:
+        - portNumber: 9459
+          path: /metrics
+          interval: 30s
+          scrapeTimeout: 10s
+          honorLabels: false
+          relabelings:
+            - sourceLabels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+              targetLabel: service_name
+            - sourceLabels: [__meta_kubernetes_pod_namespace]
+              targetLabel: namespace
+            - sourceLabels: [__meta_kubernetes_pod_name]
+              targetLabel: pod
+
+    - name: mongodb-metrics
+      namespace: monitoring
+      labels:
+        app.kubernetes.io/name: mongodb
+        app.kubernetes.io/instance: rocketchat
+        release: monitoring
+      selector:
+        matchLabels:
+          app: mongodb
+      namespaceSelector:
+        matchNames:
+          - rocketchat
+      podMetricsEndpoints:
+        - portNumber: 9216
+          path: /metrics
+          interval: 30s
+          scrapeTimeout: 10s
+          honorLabels: false
+          relabelings:
+            - sourceLabels: [__meta_kubernetes_pod_label_app]
+              targetLabel: service_name
+              replacement: mongodb
+            - sourceLabels: [__meta_kubernetes_pod_namespace]
+              targetLabel: namespace
+            - sourceLabels: [__meta_kubernetes_pod_name]
+              targetLabel: pod
+
+# Enable Kubernetes service monitoring (Rocket.Chat official recommendation)
+kubernetesServiceMonitors:
+  enabled: true
+
+# Enable core monitoring components
+kubeStateMetrics:
+  enabled: true
+  resources:
+    limits:
+      cpu: 50m
+      memory: 64Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
+
+nodeExporter:
+  enabled: true
+  resources:
+    limits:
+      cpu: 50m
+      memory: 64Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
+
+# Grafana configuration
+grafana:
+  adminPassword: "prom-operator"  # Match existing setup
+  persistence:
+    enabled: true
+    storageClassName: "default"  # Azure Premium SSD
+    size: 5Gi  # Increased for AKS
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  sidecar:
+    datasources:
+      enabled: true
+      label: grafana_datasource
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      folders:
+        - rocketchat
+      searchNamespace: monitoring
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+  dashboards:
+    rocketchat:
+      - name: "rocketchat-metrics"
+        folder: "rocketchat"
+        id: "23428"
+        revision: latest
+      - name: "rocketchat-microservices"
+        folder: "rocketchat"
+        id: "23427"
+        revision: latest
+    community:
+      - name: "node-exporter-full"
+        id: "1860"
+        revision: latest
+      - name: "kubernetes-deployment"
+        id: "741"
+        revision: latest
+      - name: "kubernetes-pod"
+        id: "740"
+        revision: latest
+      - name: "kubernetes-node"
+        id: "739"
+        revision: latest
+      - name: "ingress-nginx"
+        id: "20275"
+        revision: latest
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      isDefault: false
+      url: http://loki.monitoring.svc.cluster.local:3100
+      jsonData:
+        timeInterval: 10s
+  # Official Rocket.Chat dashboards from Rocket.Chat Helm chart
+  dashboards:
+    rocketchat:
+      - name: "rocketchat-metrics"
+        folder: "rocketchat"
+        id: "23428"
+        revision: latest
+      - name: "rocketchat-microservices"
+        folder: "rocketchat"
+        id: "23427"
+        revision: latest
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'rocketchat'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/rocketchat
+  ingress:
+    enabled: false
+    ingressClassName: nginx  # AKS standard ingress class
+    annotations:
+      cert-manager.io/cluster-issuer: production-cert-issuer
+    hosts:
+      - grafana.<YOUR_DOMAIN>
+    tls:
+      - secretName: grafana-tls
+        hosts:
+          - grafana.<YOUR_DOMAIN>
+  grafana.ini:
+    server:
+      root_url: https://grafana.<YOUR_DOMAIN>
+
+# Alertmanager configuration with enhanced notifications
+alertmanager:
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: "default"  # Azure Premium SSD
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi  # Increased for AKS
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    # Enhanced alert routing and notifications
+    route:
+      group_by: ['alertname', 'severity', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 1h
+      receiver: 'email-notifications'
+      routes:
+        - match:
+            severity: critical
+          receiver: 'email-notifications'
+          continue: true
+        - match:
+            severity: warning
+          receiver: 'email-notifications'
+          continue: true
+        - match:
+            severity: info
+          receiver: 'email-notifications'
+    receivers:
+      - name: 'email-notifications'
+        email_configs:
+          - to: 'mogah.vincent@hotmail.com'  # Replace with your email
+            from: 'alerts@rocketchat-monitoring.com'
+            smarthost: 'smtp.gmail.com:587'  # Configure your SMTP server
+            auth_username: 'your-email@gmail.com'  # Replace with your SMTP username
+            auth_password: 'your-app-password'  # Replace with your SMTP password
+            require_tls: true
+            headers:
+              subject: '[{{ .GroupLabels.alertname }}] {{ .Annotations.summary }}'
+            html: |
+              <h2>Rocket.Chat Alert</h2>
+              <p><strong>Alert:</strong> {{ .GroupLabels.alertname }}</p>
+              <p><strong>Severity:</strong> {{ .GroupLabels.severity }}</p>
+              <p><strong>Service:</strong> {{ .GroupLabels.service }}</p>
+              <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+              <p><strong>Time:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}</p>
+              <p><a href="{{ .Annotations.runbook_url }}">View Runbook</a></p>
+              <p><a href="https://grafana.<YOUR_DOMAIN>">View Grafana Dashboard</a></p>
+    # Additional notification channels (uncomment and configure as needed)
+    # slack_configs:
+    #   - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+    #     channel: '#rocketchat-alerts'
+    #     title: '[{{ .GroupLabels.alertname }}] {{ .Annotations.summary }}'
+    #     text: |
+    #       *Alert:* {{ .GroupLabels.alertname }}
+    #       *Severity:* {{ .GroupLabels.severity }}
+    #       *Service:* {{ .GroupLabels.service }}
+    #       *Description:* {{ .Annotations.description }}
+    #       *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+    #       <{{ .Annotations.runbook_url }}|View Runbook>
+    # webhook_configs:
+    #   - url: 'https://your-webhook-endpoint.com/alerts'
+    #     http_config:
+    #       basic_auth:
+    #         username: 'webhook-user'
+    #         password: 'webhook-password'
+
+# Additional monitoring components are configured above

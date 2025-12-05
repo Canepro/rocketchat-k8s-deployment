@@ -1,0 +1,152 @@
+# Official Rocket.Chat Helm Chart Configuration
+# Based on: https://docs.rocket.chat/docs/deploy-with-kubernetes
+
+image:
+  pullPolicy: IfNotPresent
+  repository: registry.rocket.chat/rocketchat/rocket.chat
+  tag: "7.9.3"  # Rocket.Chat release version
+
+mongodb:
+  enabled: false  # Disabled due to Bitnami brownout, using external MongoDB
+  auth:
+    # These values are required by the Helm chart even when MongoDB is disabled
+    passwords:
+      - "rocketchat"
+    rootPassword: "rocketchatroot"
+    database: "rocketchat"
+  service:
+    # Required by Helm chart template even when disabled
+    nameOverride: "mongodb"
+    ports:
+      mongodb: 27017
+
+# External MongoDB configuration (using standalone deployment)
+externalDatabase:
+  host: mongodb-headless.rocketchat.svc.cluster.local
+  port: 27017
+
+# Microservices configuration (optional - improves scalability)
+# NOTE: Dev/test uses single replicas to minimize resource usage
+# PRODUCTION RECOMMENDATIONS:
+#   - presence: 2 replicas
+#   - ddpStreamer: 2-3 replicas
+#   - account: 2 replicas
+#   - authorization: 2 replicas
+#   - streamHub: 2 replicas
+microservices:
+  enabled: true
+  presence:
+    replicas: 1  # Production: 2
+  ddpStreamer:
+    replicas: 1  # Production: 2-3
+  account:
+    replicas: 1  # Production: 2
+  authorization:
+    replicas: 1  # Production: 2
+  streamHub:
+    replicas: 1  # Production: 2
+  nats:
+    replicas: 1
+
+host: "<YOUR_DOMAIN>"  # Your Rocket.Chat domain
+
+ingress:
+  enabled: true
+  ingressClassName: "nginx"  # Ingress controller in K8s cluster
+  annotations:
+    cert-manager.io/cluster-issuer: "production-cert-issuer"  # Your ClusterIssuer name
+  tls:
+    - secretName: "rocketchat-tls"  # Use different name if preferred
+      hosts:
+        - "<YOUR_DOMAIN>"  # Your Rocket.Chat domain
+
+# Enhanced monitoring configuration (optional additions)
+# Enable Prometheus metrics scraping for Rocket.Chat
+prometheusScraping:
+  enabled: true  # Keep enabled for monitoring
+  port: 9458  # Main Rocket.Chat metrics port
+  msPort: 9459  # Different port for microservices to avoid conflicts
+
+# Enable PodMonitor for automated metrics discovery (recommended for v6.25.0+)
+podMonitor:
+  enabled: false
+  interval: 30s
+
+# Disable ServiceMonitor - using PodMonitor instead
+serviceMonitor:
+  enabled: false
+
+# Legacy monitoring configuration (disable ServiceMonitor)
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: false  # Disabled - using PodMonitor instead
+    interval: "30s"
+    scrapeTimeout: "10s"
+    path: "/metrics"
+    port: "http"
+
+# Development/Test resource configuration
+# NOTE: These are minimal settings for development and testing
+# PRODUCTION RECOMMENDATIONS:
+#   - Increase replicaCount to 2-3 for high availability
+#   - CPU limits: 750m-1000m per pod
+#   - Memory limits: 1-2Gi per pod
+#   - CPU requests: 300-500m per pod
+#   - Memory requests: 512Mi-1Gi per pod
+replicaCount: 1
+
+resources:
+  limits:
+    cpu: 250m      # Production: 750m-1000m
+    memory: 512Mi  # Production: 1-2Gi
+  requests:
+    cpu: 100m      # Production: 300-500m
+    memory: 256Mi  # Production: 512Mi-1Gi
+
+# Pod disruption budget for high availability
+# NOTE: Disabled for dev/test to allow easier pod management
+# PRODUCTION: Enable with minAvailable: 1 or percentage
+podDisruptionBudget:
+  enabled: false  # Production: true
+  minAvailable: 1
+
+# Security context
+securityContext:
+  runAsUser: 999
+  runAsGroup: 999
+  fsGroup: 999
+
+# Health checks
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Persistence for uploads and files
+persistence:
+  enabled: true
+  storageClass: "default"
+  size: 30Gi
+
+# Environment variables for production
+extraEnv:
+  - name: NODE_ENV
+    value: "production"
+  - name: MONGO_URL
+    value: "mongodb://mongodb-headless.rocketchat.svc.cluster.local:27017/rocketchat"
+  - name: MONGO_OPLOG_URL
+    value: "mongodb://mongodb-headless.rocketchat.svc.cluster.local:27017/local"

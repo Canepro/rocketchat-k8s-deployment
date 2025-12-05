@@ -1,0 +1,51 @@
+# MongoDB Community Operator Helm Values
+# Using official MongoDB image to bypass Bitnami brownout
+
+image:
+  repository: mongo
+  tag: "6.0"
+  pullPolicy: IfNotPresent
+
+auth:
+  enabled: true
+  rootPassword: "rocketchatroot"
+  database: "rocketchat"
+  username: "rocketchat"
+  password: "rocketchat"
+
+# Persistent storage configuration
+# NOTE: Dev/test uses smaller storage size
+# PRODUCTION RECOMMENDATIONS:
+#   - Size: 20-50Gi or more depending on message volume
+#   - Use premium storage class for better performance
+#   - Enable automatic backups
+persistence:
+  enabled: true
+  size: 5Gi        # Production: 20-50Gi
+  storageClass: "default"  # Production: "managed-premium"
+
+# ReplicaSet configuration
+# NOTE: Dev/test uses single replica to minimize resources
+# PRODUCTION RECOMMENDATIONS:
+#   - Enable replicaSet for high availability
+#   - Use 3 replicas for proper consensus
+#   - Ensure proper storage for each replica
+replicaSet:
+  enabled: false  # Production: true
+  name: "rs0"
+  replicas: 1     # Production: 3
+
+# Resource limits and requests
+# NOTE: Dev/test uses minimal resources
+# PRODUCTION RECOMMENDATIONS:
+#   - CPU limits: 500m-1000m per replica
+#   - Memory limits: 1-2Gi per replica
+#   - CPU requests: 250-500m per replica
+#   - Memory requests: 512Mi-1Gi per replica
+resources:
+  limits:
+    cpu: 250m      # Production: 500m-1000m
+    memory: 512Mi  # Production: 1-2Gi
+  requests:
+    cpu: 100m      # Production: 250-500m
+    memory: 256Mi  # Production: 512Mi-1Gi
