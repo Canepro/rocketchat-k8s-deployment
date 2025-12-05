@@ -5340,12 +5340,15 @@ c:\Users\i\rocketchat-k8s-deployment\
 │   ├── deploy-rocketchat.sh
 │   └── README.md           # Step-by-step deployment guide
 ├── docs/                   # Comprehensive documentation
-│   ├── DNS_MIGRATION_GUIDE.md
-│   ├── ENHANCED_MONITORING_PLAN.md
-│   ├── FUTURE_IMPROVEMENTS.md
-│   ├── PROJECT_HISTORY.md
-│   ├── PROJECT_STATUS.md
+│   ├── BACKUP_RESTORE_GUIDE.md
+│   ├── COST_OPTIMIZATION_GUIDE.md
+│   ├── DISASTER_RECOVERY.md
+│   ├── ENHANCED_FEATURES_GUIDE.md
+│   ├── ENHANCED_MONITORING_GUIDE.md
+│   ├── HOW_TO_GUIDE.md
+│   ├── MONITORING_SETUP_GUIDE.md
 │   ├── README.md
+│   ├── SECRETS_MANAGEMENT.md
 │   └── TROUBLESHOOTING_GUIDE.md
 ├── monitoring/             # Monitoring configurations
 │   ├── grafana-datasource-loki.yaml

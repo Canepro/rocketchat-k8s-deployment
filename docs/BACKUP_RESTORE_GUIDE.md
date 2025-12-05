@@ -245,18 +245,21 @@ scripts/backup/
 ./scripts/backup/backup-integrity-check.sh --component mongodb
 ```
 
-## 🔄 Automated Backup Pipeline
+## 🔄 Automated Backup (Optional)
 
-### Azure DevOps Pipeline
+### Manual Backup Scripts
 
-**Pipeline**: `azure-pipelines/backup-automation.yml`
+The repository includes backup scripts that can be run manually or scheduled:
 
-**Features**:
-- Daily automated backups
-- MongoDB data backup
-- PVC snapshot creation
-- Backup validation
-- Notification system
+**Scripts Location**: `scripts/backup/`
+
+**Available Scripts**:
+- `mongodb-backup.sh` - MongoDB database backup
+- `create-pvc-snapshots.sh` - PVC snapshot creation
+- `backup-integrity-check.sh` - Backup validation
+- `mongodb-restore.sh` - Restore from backup
+
+**Manual Execution**:
 
 **Triggers**:
 - **Scheduled**: Daily at 2:00 AM UTC
