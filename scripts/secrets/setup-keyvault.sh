@@ -142,7 +142,7 @@ create_ssl_secrets() {
     print_status "Creating SSL certificate secrets (placeholder)..."
     
     # Create self-signed certificate for testing
-    openssl req -x509 -newkey rsa:4096 -keyout /tmp/ssl.key -out /tmp/ssl.crt -days 365 -nodes -subj "/CN=chat.canepro.me" &> /dev/null
+    openssl req -x509 -newkey rsa:4096 -keyout /tmp/ssl.key -out /tmp/ssl.crt -days 365 -nodes -subj "/CN=<YOUR_DOMAIN>" &> /dev/null
     
     # Store in Key Vault
     az keyvault secret set --vault-name "$KEY_VAULT_NAME" --name "ssl-certificate" --file /tmp/ssl.crt &> /dev/null

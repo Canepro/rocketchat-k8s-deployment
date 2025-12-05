@@ -13,7 +13,7 @@ This folder contains the AKS migration planning and documentation. This is our t
 ## 🎯 Current Plan
 
 ### Phase 1: Prerequisites ✅
-- ✅ Domain: `chat.canepro.me` and `grafana.chat.canepro.me`
+- ✅ Domain: `<YOUR_DOMAIN>` and `grafana.<YOUR_DOMAIN>`
 - ✅ AKS cluster: Ready for deployment
 - ✅ Helm v3: Available
 - ✅ Backup: 6,986 documents + all configurations
@@ -49,29 +49,29 @@ chmod +x ../deploy-aks-official.sh
 #### **Current DNS Configuration (Migration Complete):**
 ```
 PRODUCTION ACTIVE (AKS):
-├── chat.canepro.me       → 4.250.169.133 (AKS Ingress)
-└── grafana.chat.canepro.me → 4.250.169.133 (AKS Ingress)
+├── <YOUR_DOMAIN>       → <YOUR_STATIC_IP> (AKS Ingress)
+└── grafana.<YOUR_DOMAIN> → <YOUR_STATIC_IP> (AKS Ingress)
 ```
 
 #### **Rollback DNS Configuration (Available for 3-5 days):**
 ```
 LEGACY MicroK8s (Emergency Rollback):
-├── chat.canepro.me       → 20.68.53.249 (MicroK8s VM)
-└── grafana.chat.canepro.me → 20.68.53.249 (MicroK8s VM)
+├── <YOUR_DOMAIN>       → 20.68.53.249 (MicroK8s VM)
+└── grafana.<YOUR_DOMAIN> → 20.68.53.249 (MicroK8s VM)
 ```
 
 #### **Production Verification (Migration Complete):**
 1. **Verify Production Access:**
    ```bash
    # Test Rocket.Chat
-   curl -I https://chat.canepro.me
+   curl -I https://<YOUR_DOMAIN>
 
    # Test Grafana
-   curl -I https://grafana.chat.canepro.me
+   curl -I https://grafana.<YOUR_DOMAIN>
 
    # Check SSL certificates
-   curl -v https://chat.canepro.me 2>&1 | grep -E "(subject:|issuer:)"
-   curl -v https://grafana.chat.canepro.me 2>&1 | grep -E "(subject:|issuer:)"
+   curl -v https://<YOUR_DOMAIN> 2>&1 | grep -E "(subject:|issuer:)"
+   curl -v https://grafana.<YOUR_DOMAIN> 2>&1 | grep -E "(subject:|issuer:)"
    ```
 
 2. **Verify Kubernetes Services:**
@@ -113,8 +113,8 @@ LEGACY MicroK8s (Emergency Rollback):
 
 ## 📊 Success Criteria
 
-- ✅ Rocket.Chat accessible at `https://chat.canepro.me`
-- ✅ Grafana accessible at `https://grafana.chat.canepro.me`
+- ✅ Rocket.Chat accessible at `https://<YOUR_DOMAIN>`
+- ✅ Grafana accessible at `https://grafana.<YOUR_DOMAIN>`
 - ✅ All user data migrated successfully
 - ✅ Enhanced monitoring active
 - ✅ Cost-effective within £100/month Azure credit

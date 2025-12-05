@@ -3,13 +3,13 @@
 ## 📊 Dashboard Access Options
 
 ### Option 1: Direct Public Dashboard
-**URL:** `https://grafana.chat.canepro.me/d/public-rocketchat-overview`
+**URL:** `https://grafana.<YOUR_DOMAIN>/d/public-rocketchat-overview`
 - **View:** Full dashboard with navigation
 - **Refresh:** Auto-refresh every 30 seconds
 - **Interactive:** Users can zoom, select time ranges
 
 ### Option 2: Kiosk Mode (Recommended for Portfolio)
-**URL:** `https://grafana.chat.canepro.me/d/public-rocketchat-overview?kiosk=tv&theme=dark`
+**URL:** `https://grafana.<YOUR_DOMAIN>/d/public-rocketchat-overview?kiosk=tv&theme=dark`
 - **View:** Full-screen without Grafana UI
 - **Clean:** No navigation bars or menus
 - **Professional:** Perfect for portfolio embedding
@@ -17,7 +17,7 @@
 ### Option 3: Embedded iframe
 ```html
 <iframe 
-  src="https://grafana.chat.canepro.me/d-solo/public-rocketchat-overview?orgId=1&refresh=30s&panelId=5&kiosk=tv&theme=dark"
+  src="https://grafana.<YOUR_DOMAIN>/d-solo/public-rocketchat-overview?orgId=1&refresh=30s&panelId=5&kiosk=tv&theme=dark"
   width="100%" 
   height="500" 
   frameborder="0"
@@ -28,7 +28,7 @@
 ## 💬 Chat Application Access
 
 ### Live Production Instance
-**URL:** `https://chat.canepro.me`
+**URL:** `https://<YOUR_DOMAIN>`
 
 **For Portfolio Visitors:**
 1. **Guest Access:** Users can join as guests without registration
@@ -37,7 +37,7 @@
 
 **Portfolio Button HTML:**
 ```html
-<a href="https://chat.canepro.me" 
+<a href="https://<YOUR_DOMAIN>" 
    class="portfolio-demo-btn chat-btn" 
    target="_blank"
    rel="noopener noreferrer">
@@ -59,13 +59,13 @@
   </div>
   
   <div class="demo-buttons">
-    <a href="https://chat.canepro.me" 
+    <a href="https://<YOUR_DOMAIN>" 
        class="btn-primary" 
        target="_blank">
       💬 Live Chat Demo
     </a>
     
-    <a href="https://grafana.chat.canepro.me/d/public-rocketchat-overview?kiosk=tv" 
+    <a href="https://grafana.<YOUR_DOMAIN>/d/public-rocketchat-overview?kiosk=tv" 
        class="btn-secondary" 
        target="_blank">
       📊 Live Dashboard
@@ -96,13 +96,13 @@ const RocketChatProject = () => {
       
       <div className="demo-actions">
         <button 
-          onClick={() => openDemo('https://chat.canepro.me', 'chat_demo')}
+          onClick={() => openDemo('https://<YOUR_DOMAIN>', 'chat_demo')}
           className="demo-btn primary">
           💬 Try Live Chat
         </button>
         
         <button 
-          onClick={() => openDemo('https://grafana.chat.canepro.me/d/public-rocketchat-overview?kiosk=tv', 'dashboard_demo')}
+          onClick={() => openDemo('https://grafana.<YOUR_DOMAIN>/d/public-rocketchat-overview?kiosk=tv', 'dashboard_demo')}
           className="demo-btn secondary">
           📊 View Monitoring
         </button>
@@ -118,7 +118,7 @@ const RocketChatProject = () => {
 ```bash
 # Use headless browser to capture dashboard screenshots
 npx playwright-cli screenshot \
-  "https://grafana.chat.canepro.me/d/public-rocketchat-overview?kiosk=tv&theme=dark" \
+  "https://grafana.<YOUR_DOMAIN>/d/public-rocketchat-overview?kiosk=tv&theme=dark" \
   dashboard-screenshot.png \
   --viewport-size 1920,1080 \
   --wait-for-timeout 5000

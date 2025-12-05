@@ -17,7 +17,7 @@ data:
     plugins = /var/lib/grafana/plugins
     provisioning = /etc/grafana/provisioning
     [server]
-    domain = grafana.canepro.me
+    domain = <YOUR_GRAFANA_DOMAIN>
     
     # Public Dashboard Access Configuration
     [auth.anonymous]
@@ -230,13 +230,13 @@ data:
       "links": [
         {
           "title": "View Full Dashboard",
-          "url": "https://grafana.canepro.me/d/rocketchat-comprehensive",
+          "url": "https://<YOUR_GRAFANA_DOMAIN>/d/rocketchat-comprehensive",
           "type": "link",
           "icon": "external link"
         },
         {
           "title": "Access Chat Application",
-          "url": "https://chat.canepro.me",
+          "url": "https://<YOUR_DOMAIN>",
           "type": "link",
           "icon": "external link"
         }

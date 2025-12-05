@@ -160,13 +160,13 @@ variable "snapshot_retention_days" {
 variable "rocketchat_domain" {
   description = "Domain name for Rocket.Chat"
   type        = string
-  default     = "chat.canepro.me"
+  default     = "<YOUR_DOMAIN>"
 }
 
 variable "grafana_domain" {
   description = "Domain name for Grafana"
   type        = string
-  default     = "grafana.chat.canepro.me"
+  default     = "grafana.<YOUR_DOMAIN>"
 }
 
 # Resource tags

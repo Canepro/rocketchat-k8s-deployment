@@ -9,7 +9,7 @@ commonLabels:
   managed-by: kustomize
 
 # Namespace for all resources
-namespace: rocketchat
+# namespace: rocketchat
 
 # Resources to include
 resources:
@@ -26,8 +26,8 @@ commonAnnotations:
 # Image transformations
 images:
 - name: registry.rocket.chat/rocketchat/rocket.chat
-  newTag: 7.9.3
+  newTag: "7.9.3"
 - name: mongo
-  newTag: 6.0
+  newTag: "6.0"
 - name: bitnami/mongodb-exporter
-  newTag: 0.40.0
+  newTag: "latest"

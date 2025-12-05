@@ -263,8 +263,8 @@ configure_dns_and_certificates() {
     if [ -n "$cluster_ip" ]; then
         print_status "Cluster IP: $cluster_ip"
         print_status "Update DNS records to point to: $cluster_ip"
-        print_status "  • chat.canepro.me -> $cluster_ip"
-        print_status "  • grafana.chat.canepro.me -> $cluster_ip"
+        print_status "  • <YOUR_DOMAIN> -> $cluster_ip"
+        print_status "  • grafana.<YOUR_DOMAIN> -> $cluster_ip"
     else
         print_warning "Cluster IP not available yet"
     fi
@@ -356,9 +356,9 @@ generate_recreation_report() {
     echo ""
     echo "🌐 Access Information:"
     echo "   • Cluster IP: $cluster_ip"
-    echo "   • Rocket.Chat: https://chat.canepro.me"
+    echo "   • Rocket.Chat: https://<YOUR_DOMAIN>"
     if [ "$ENABLE_MONITORING" = "true" ]; then
-        echo "   • Grafana: https://grafana.chat.canepro.me"
+        echo "   • Grafana: https://grafana.<YOUR_DOMAIN>"
     fi
     echo ""
     echo "📋 Next steps:"

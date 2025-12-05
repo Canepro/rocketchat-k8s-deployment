@@ -130,7 +130,7 @@ if [ "$MONGODB_READY" -ge 1 ] && [ "$ROCKETCHAT_READY" -ge 1 ]; then
     echo ""
     echo "📊 Next steps:"
     echo "1. Wait 2-3 minutes for all services to stabilize"
-    echo "2. Check the application at: https://chat.canepro.me"
+    echo "2. Check the application at: https://<YOUR_DOMAIN>"
     echo "3. Monitor pods with: kubectl get pods -n rocketchat -w"
 else
     print_warning "⏳ Deployment is still initializing. This is normal."

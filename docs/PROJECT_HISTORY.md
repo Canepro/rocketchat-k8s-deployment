@@ -21,7 +21,7 @@
 
 **What We Did:**
 - Deployed Rocket.Chat on Azure Ubuntu VM using MicroK8s
-- Set up domain `chat.canepro.me` with DNS configuration
+- Set up domain `<YOUR_DOMAIN>` with DNS configuration
 - Configured SSL certificates using Let's Encrypt
 - Implemented basic monitoring with Prometheus/Grafana
 - Created initial backup procedures
@@ -232,13 +232,13 @@ rocketchat-k8s-deployment/
 
 **🟢 MicroK8s (Legacy - Active):**
 - **Status**: Running and operational
-- **Domain**: `https://chat.canepro.me`
+- **Domain**: `https://<YOUR_DOMAIN>`
 - **Location**: Azure Ubuntu VM (20.68.53.249)
 - **Purpose**: Current production, rollback option (3-5 day window)
 
 **🟢 AKS (New - Deployed):**
 - **Status**: ✅ Successfully deployed and running
-- **Domain**: `chat.canepro.me` (after DNS cutover)
+- **Domain**: `<YOUR_DOMAIN>` (after DNS cutover)
 - **Technology**: Official Rocket.Chat Helm charts
 - **Features**: Microservices, enhanced monitoring, scalability
 - **SSL**: Rocket.Chat ✅ READY, Grafana 🔄 ISSUING
@@ -318,7 +318,7 @@ solvers:
 1. **Identified Missing Ingress**: Confirmed ingress resource was deleted during upgrade
 2. **Verified Service Names**: Found correct service name `monitoring-grafana` vs backup's `grafana-service`
 3. **Created Correct Ingress**: Applied ingress with proper service reference and TLS configuration
-4. **Verified Functionality**: Confirmed Grafana accessible at `https://grafana.chat.canepro.me`
+4. **Verified Functionality**: Confirmed Grafana accessible at `https://grafana.<YOUR_DOMAIN>`
 
 **Technical Details:**
 ```yaml
@@ -469,8 +469,8 @@ service:
 - **Validation Status**: 100% successful restore testing
 
 **Domain Information:**
-- **Primary Domain**: `chat.canepro.me`
-- **Monitoring Domain**: `grafana.chat.canepro.me`
+- **Primary Domain**: `<YOUR_DOMAIN>`
+- **Monitoring Domain**: `grafana.<YOUR_DOMAIN>`
 - **Current IP**: `20.68.53.249` (MicroK8s VM)
 - **SSL Provider**: Let's Encrypt (cert-manager)
 
@@ -497,7 +497,7 @@ service:
 **Rollback to MicroK8s:**
 1. Ensure MicroK8s VM is still running
 2. Update DNS to point to `20.68.53.249`
-3. Verify `https://chat.canepro.me` functionality
+3. Verify `https://<YOUR_DOMAIN>` functionality
 4. Monitor for 24 hours before cleanup
 
 **Data Recovery:**
@@ -538,7 +538,7 @@ service:
 
 1. **Wait for SSL**: Grafana certificate should be ready soon
 2. **Test Services**: Verify Rocket.Chat and Grafana functionality
-3. **DNS Cutover**: Update domain records to AKS (4.250.169.133)
+3. **DNS Cutover**: Update domain records to AKS (<YOUR_STATIC_IP>)
 4. **Data Migration**: Restore from MicroK8s backup to AKS MongoDB
 5. **Testing**: Comprehensive functionality validation
 6. **Monitoring**: Configure enhanced Azure Monitor (optional)
@@ -669,7 +669,7 @@ After: 10 organized directories
 - ✅ **Future-Ready**: Structure supports continued development and maintenance
 
 ### **Operational Readiness:**
-- ✅ **Production Active**: `https://chat.canepro.me` and `https://grafana.chat.canepro.me`
+- ✅ **Production Active**: `https://<YOUR_DOMAIN>` and `https://grafana.<YOUR_DOMAIN>`
 - ✅ **Monitoring Functional**: Real-time metrics and log collection working
 - ✅ **Cost Optimized**: Deployment within £100/month Azure credit limits
 - ✅ **Documentation Current**: All guides reflect actual deployment state

@@ -151,7 +151,7 @@
 # Components Backed Up:
 # ✅ ConfigMaps: 6 (MongoDB scripts, NATS config, Rocket.Chat scripts)
 # ✅ Secrets: 5 metadata (safe, no sensitive data exposed)
-# ✅ Helm Values: Rocket.Chat 7.9.3, domain chat.canepro.me
+# ✅ Helm Values: Rocket.Chat 7.9.3, domain <YOUR_DOMAIN>
 # ✅ Ingress: Domain and SSL configuration
 # ✅ PVCs: 2 volumes (20Gi each), uploads/avatars backed up
 # ✅ MongoDB: 6,986 documents, all collections, indexes intact

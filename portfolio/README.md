@@ -16,14 +16,14 @@ This directory contains all the resources needed to integrate the Rocket.Chat AK
 ### HTML Buttons
 ```html
 <!-- Live Chat Demo -->
-<a href="https://chat.canepro.me" 
+<a href="https://<YOUR_DOMAIN>" 
    class="portfolio-btn chat-btn" 
    target="_blank">
    💬 Try Live Chat
 </a>
 
 <!-- Anonymous Dashboard -->
-<a href="https://grafana.chat.canepro.me/d/public-rocketchat-overview/rocket-chat-production-monitoring-portfolio-view?orgId=1&refresh=30s&kiosk=tv&theme=dark" 
+<a href="https://grafana.<YOUR_DOMAIN>/d/public-rocketchat-overview/rocket-chat-production-monitoring-portfolio-view?orgId=1&refresh=30s&kiosk=tv&theme=dark" 
    class="portfolio-btn dashboard-btn" 
    target="_blank">
    📊 View Live Dashboard

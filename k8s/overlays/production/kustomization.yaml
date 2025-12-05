@@ -28,7 +28,7 @@ configMapGenerator:
 - name: rocketchat-config
   literals:
   - NODE_ENV=production
-  - ROOT_URL=https://chat.canepro.me
+  - ROOT_URL=https://<YOUR_DOMAIN>
   - MONGO_URL=mongodb://mongodb-0.mongodb-headless.rocketchat.svc.cluster.local:27017,mongodb-1.mongodb-headless.rocketchat.svc.cluster.local:27017,mongodb-2.mongodb-headless.rocketchat.svc.cluster.local:27017/rocketchat?replicaSet=rs0&readPreference=primaryPreferred
 
 # Production secrets (templates)
@@ -41,3 +41,6 @@ secretGenerator:
   literals:
   - mongo-url=mongodb://rocketchat:SuperStrongPass!@mongodb-0.mongodb-headless.rocketchat.svc.cluster.local:27017,mongodb-1.mongodb-headless.rocketchat.svc.cluster.local:27017,mongodb-2.mongodb-headless.rocketchat.svc.cluster.local:27017/rocketchat?replicaSet=rs0&readPreference=primaryPreferred
   - mongo-oplog-url=mongodb://rocketchat:SuperStrongPass!@mongodb-0.mongodb-headless.rocketchat.svc.cluster.local:27017/local?replicaSet=rs0&readPreference=primaryPreferred
+
+generatorOptions:
+  disableNameSuffixHash: true

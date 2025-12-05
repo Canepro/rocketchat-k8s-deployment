@@ -217,7 +217,7 @@ Perf
 kubectl scale deployment rocketchat-rocketchat -n rocketchat --replicas=0
 
 # Wait 5+ minutes for alert to trigger
-# Check Alertmanager: https://grafana.chat.canepro.me/alertmanager
+# Check Alertmanager: https://grafana.<YOUR_DOMAIN>/alertmanager
 
 # Restore service
 kubectl scale deployment rocketchat-rocketchat -n rocketchat --replicas=2
@@ -322,9 +322,9 @@ helm upgrade monitoring prometheus-community/kube-prometheus-stack \
 - **[Cost Optimization](COST_OPTIMIZATION_GUIDE.md)**: Cost monitoring procedures
 
 ### Monitoring Tools
-- **Grafana**: `https://grafana.chat.canepro.me` (admin/prom-operator)
-- **Alertmanager**: `https://grafana.chat.canepro.me/alertmanager`
-- **Prometheus**: `https://grafana.chat.canepro.me/prometheus`
+- **Grafana**: `https://grafana.<YOUR_DOMAIN>` (admin/prom-operator)
+- **Alertmanager**: `https://grafana.<YOUR_DOMAIN>/alertmanager`
+- **Prometheus**: `https://grafana.<YOUR_DOMAIN>/prometheus`
 - **Azure Monitor**: Portal → Monitor → Containers
 
 ### Contact Information

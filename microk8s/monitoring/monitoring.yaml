@@ -172,10 +172,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - grafana.chat.canepro.me
+    - grafana.<YOUR_DOMAIN>
     secretName: grafana-tls
   rules:
-  - host: grafana.chat.canepro.me
+  - host: grafana.<YOUR_DOMAIN>
     http:
       paths:
       - path: /

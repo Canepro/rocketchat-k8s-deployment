@@ -129,9 +129,9 @@ This document tracks potential enhancements for the Rocket.Chat on AKS deploymen
 - **Azure AKS**: https://docs.microsoft.com/en-us/azure/aks/
 
 ### Current Deployment
-- **Production**: `https://chat.canepro.me` (AKS - post-deployment)
-- **Rollback**: `https://chat.canepro.me` (MicroK8s - 3-5 days)
-- **Monitoring**: `https://grafana.chat.canepro.me` (post-deployment)
+- **Production**: `https://<YOUR_DOMAIN>` (AKS - post-deployment)
+- **Rollback**: `https://<YOUR_DOMAIN>` (MicroK8s - 3-5 days)
+- **Monitoring**: `https://grafana.<YOUR_DOMAIN>` (post-deployment)
 
 ### Cost Monitoring
 - **Azure Credit**: £100/month Visual Studio Enterprise

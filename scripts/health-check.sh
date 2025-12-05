@@ -380,8 +380,8 @@ $(kubectl top pods -A 2>/dev/null || echo "Metrics not available")
 
 ## 🔗 Access Information
 
-- **Rocket.Chat**: https://chat.canepro.me
-- **Grafana**: https://grafana.chat.canepro.me
+- **Rocket.Chat**: https://<YOUR_DOMAIN>
+- **Grafana**: https://grafana.<YOUR_DOMAIN>
 - **Port Forward**: \`kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring\`
 
 EOF

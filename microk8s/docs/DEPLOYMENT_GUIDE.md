@@ -6,7 +6,7 @@ This guide will walk you through deploying Rocket.Chat with monitoring on your A
 
 - ✅ Azure Ubuntu VM (B2s: 2 vCPUs, 4GB RAM)
 - ✅ Public IP: `20.68.53.249`
-- ✅ Domain: `chat.canepro.me` (DNS A record configured)
+- ✅ Domain: `<YOUR_DOMAIN>` (DNS A record configured)
 - ✅ Email: `your-email@example.com` (for Let's Encrypt)
 
 ## 🔧 **Step 1: Server Setup**
@@ -76,7 +76,7 @@ kubectl logs -f deployment/rocketchat -n rocketchat
 ## 🌐 **Step 3: Access Your Applications**
 
 ### 3.1 Rocket.Chat
-- **URL**: https://chat.canepro.me
+- **URL**: https://<YOUR_DOMAIN>
 - **Setup**: Complete the initial setup wizard
 
 ### 3.2 Grafana (Monitoring)
@@ -120,7 +120,7 @@ kubectl get certificates -n rocketchat
 ```
 
 ### 5.2 Test Rocket.Chat
-1. Visit https://chat.canepro.me
+1. Visit https://<YOUR_DOMAIN>
 2. Complete the setup wizard
 3. Create your first user account
 4. Test sending messages
@@ -182,11 +182,11 @@ kubectl describe certificaterequest <name> -n rocketchat
 #### 3. DNS issues
 ```bash
 # Test DNS resolution
-nslookup chat.canepro.me
-dig chat.canepro.me
+nslookup <YOUR_DOMAIN>
+dig <YOUR_DOMAIN>
 
 # Check if domain points to your IP
-curl -I http://chat.canepro.me
+curl -I http://<YOUR_DOMAIN>
 ```
 
 #### 4. Resource issues
@@ -251,7 +251,7 @@ If you encounter issues:
 1. Check the troubleshooting section above
 2. Review logs: `kubectl logs -f deployment/rocketchat -n rocketchat`
 3. Check system resources: `htop`
-4. Verify network connectivity: `curl -I https://chat.canepro.me`
+4. Verify network connectivity: `curl -I https://<YOUR_DOMAIN>`
 
 ## 🎉 **Congratulations!**
 
@@ -269,8 +269,8 @@ Your Rocket.Chat instance is ready for production use!
 1) Prepare VM networking and DNS
 - Open inbound 80/443 in Azure NSG
 - A records:
-  - chat.canepro.me → VM IP
-  - grafana.chat.canepro.me → VM IP
+  - <YOUR_DOMAIN> → VM IP
+  - grafana.<YOUR_DOMAIN> → VM IP
 
 2) SSH and clone repo
 ```bash
@@ -306,10 +306,10 @@ kubectl get ingress -n rocketchat
 
 5) Verify DNS and TLS
 ```bash
-dig +short chat.canepro.me
+dig +short <YOUR_DOMAIN>
 kubectl get certificate -n rocketchat
 kubectl describe certificaterequest -n rocketchat | sed -n '1,120p'
-curl -I https://chat.canepro.me
+curl -I https://<YOUR_DOMAIN>
 ```
 
 6) Enable Grafana via Ingress (subdomain)
@@ -317,7 +317,7 @@ curl -I https://chat.canepro.me
 helm upgrade prometheus prometheus-community/kube-prometheus-stack \
   -n monitoring -f monitoring-values.yaml
 kubectl get ingress -n monitoring
-# Open https://grafana.chat.canepro.me (admin / GrafanaAdmin2024!)
+# Open https://grafana.<YOUR_DOMAIN> (admin / GrafanaAdmin2024!)
 ```
 
 7) Upgrade Rocket.Chat (example: 7.9.3)
@@ -332,7 +332,7 @@ kubectl rollout status deploy/rocketchat-rocketchat -n rocketchat
 - SSH to GitHub failed with sanitized hostname ([email protected]) → fix remote to `git@github.com:...` and add SSH key; verify with `ssh -T git@github.com`.
 - MicroK8s permissions: needed `usermod -aG microk8s` and `newgrp microk8s` before `microk8s status` worked.
 - Ingress on MicroK8s shows 127.0.0.1: that’s expected; it still listens on the node’s public IP.
-- Grafana access without port-forward: added Ingress at `grafana.chat.canepro.me` with cert-manager TLS in `monitoring-values.yaml`.
+- Grafana access without port-forward: added Ingress at `grafana.<YOUR_DOMAIN>` with cert-manager TLS in `monitoring-values.yaml`.
 - Cert-manager: confirmed `Certificate` Ready and HTTP→HTTPS redirect worked.
 
 ## Ongoing Ops
@@ -349,8 +349,8 @@ helm upgrade prometheus prometheus-community/kube-prometheus-stack -n monitoring
 helm upgrade rocketchat -n rocketchat -f values-production.yaml rocketchat/rocketchat
 ```
 - Access:
-  - https://chat.canepro.me
-  - https://grafana.chat.canepro.me
+  - https://<YOUR_DOMAIN>
+  - https://grafana.<YOUR_DOMAIN>
 
 ## Best practices
 - Database: use managed MongoDB for prod or a dedicated VM; ensure replica set and periodic backups.

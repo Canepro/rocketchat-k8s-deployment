@@ -27,7 +27,7 @@ spec:
         args:
         - --config.file=/etc/alertmanager/alertmanager.yml
         - --storage.path=/alertmanager
-        - --web.external-url=https://alertmanager.chat.canepro.me
+        - --web.external-url=https://alertmanager.<YOUR_DOMAIN>
         resources:
           requests:
             cpu: 50m

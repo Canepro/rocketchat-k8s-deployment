@@ -99,7 +99,7 @@
 - ✅ **SSL Certificates**: Both Rocket.Chat and Grafana SSL certificates issued and working
 - ✅ **Clean URLs**: Grafana configured without /grafana path
 - ✅ **Microservices Architecture**: Full Rocket.Chat microservices running
-- ✅ **DNS Migration**: Both domains successfully migrated to AKS (4.250.169.133)
+- ✅ **DNS Migration**: Both domains successfully migrated to AKS (<YOUR_STATIC_IP>)
 - ✅ **Final Testing**: Rocket.Chat and Grafana thoroughly tested and working
 - ✅ **Production Cutover**: Complete migration from MicroK8s to AKS
 - ✅ **Phase 1 Monitoring**: Rocket.Chat ServiceMonitor configured for metrics collection
@@ -110,10 +110,10 @@
 - ✅ **Cross-namespace Monitoring**: Prometheus configured for multi-namespace monitoring
 
 ### Current State Overview
-- 🟢 **MicroK8s (Legacy)**: Running and operational at `https://chat.canepro.me` (rollback ready)
+- 🟢 **MicroK8s (Legacy)**: Running and operational at `https://<YOUR_DOMAIN>` (rollback ready)
 - 🟢 **AKS (Production)**: ✅ **ACTIVE** - Rocket.Chat and monitoring stack running
 - 🟢 **SSL Certificates**: Both Rocket.Chat and Grafana ✅ READY and working
-- ✅ **DNS Migration**: Both domains migrated to AKS (4.250.169.133)
+- ✅ **DNS Migration**: Both domains migrated to AKS (<YOUR_STATIC_IP>)
 - ✅ **Data Backup**: 6,986 documents + all configurations safely backed up
 - ✅ **Clean URLs**: Both services accessible at clean URLs
 - ✅ **Production Testing**: Both Rocket.Chat and Grafana thoroughly tested
@@ -234,7 +234,7 @@ microk8s/                         # Legacy deployment (rollback)
 - [x] **Ingress Management**: Documented service naming and backup strategies
 
 ### ✅ Prerequisites Verified
-- [x] **Domain Configuration**: `chat.canepro.me` and `grafana.chat.canepro.me` ready
+- [x] **Domain Configuration**: `<YOUR_DOMAIN>` and `grafana.<YOUR_DOMAIN>` ready
 - [x] **SSL Certificates**: Let's Encrypt configuration prepared
 - [x] **Official Helm Repository**: `https://rocketchat.github.io/helm-charts` added
 - [x] **Backup Integrity**: All data safely backed up and tested
@@ -356,8 +356,8 @@ tree -I '.git|*.tmp' --dirsfirst
 ### Key Resources
 - **Official Rocket.Chat Docs**: https://docs.rocket.chat/docs/deploy-with-kubernetes
 - **Helm Charts Repository**: https://github.com/RocketChat/helm-charts
-- **Production Deployment**: `https://chat.canepro.me` (AKS - active)
-- **Monitoring**: `https://grafana.chat.canepro.me` (AKS - active)
+- **Production Deployment**: `https://<YOUR_DOMAIN>` (AKS - active)
+- **Monitoring**: `https://grafana.<YOUR_DOMAIN>` (AKS - active)
 - **Backup Files**: Complete data backup in repository root
 
 ---

@@ -134,8 +134,8 @@ kubectl exec -n monitoring tempo-0 -- du -sh /var/tempo/generator/
 - **Tempo Datasource**: Configured (`uid: tempo`)
 - **URL**: `http://tempo.monitoring.svc.cluster.local:3200`
 - **Dashboard**: `rocket-chat-tracing` deployed
-- **Grafana Access**: `https://grafana.canepro.me`
-- **Dashboard URL**: `https://grafana.canepro.me/d/rocket-chat-tracing`
+- **Grafana Access**: `https://<YOUR_GRAFANA_DOMAIN>`
+- **Dashboard URL**: `https://<YOUR_GRAFANA_DOMAIN>/d/rocket-chat-tracing`
 
 ---
 
@@ -195,13 +195,13 @@ kubectl exec -n monitoring tempo-0 -- du -sh /var/tempo/generator/
 ### Test Trace Visibility
 ```bash
 # Generate traffic to Rocket.Chat
-# Visit: https://chat.canepro.me
+# Visit: https://<YOUR_DOMAIN>
 
 # View traces in Grafana
-# 1. Go to: https://grafana.canepro.me/explore
+# 1. Go to: https://<YOUR_GRAFANA_DOMAIN>/explore
 # 2. Select "Tempo" datasource
 # 3. Query: {}
-# 4. Or use dashboard: https://grafana.canepro.me/d/rocket-chat-tracing
+# 4. Or use dashboard: https://<YOUR_GRAFANA_DOMAIN>/d/rocket-chat-tracing
 ```
 
 ---

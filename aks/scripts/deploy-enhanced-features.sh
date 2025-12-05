@@ -273,8 +273,8 @@ $(kubectl get cronjob -n $NAMESPACE_MONITORING -l app=health-check 2>/dev/null |
 
 ## 🔗 Access Information
 
-- **Rocket.Chat**: https://chat.canepro.me
-- **Grafana**: https://grafana.chat.canepro.me
+- **Rocket.Chat**: https://<YOUR_DOMAIN>
+- **Grafana**: https://grafana.<YOUR_DOMAIN>
 - **Health Check**: \`./scripts/health-check.sh\`
 
 ## 📋 Next Steps
@@ -318,8 +318,8 @@ main() {
     echo "📄 **Report**: $report_file"
     echo ""
     echo "🔗 **Access Information**:"
-    echo "   • Rocket.Chat: https://chat.canepro.me"
-    echo "   • Grafana: https://grafana.chat.canepro.me"
+    echo "   • Rocket.Chat: https://<YOUR_DOMAIN>"
+    echo "   • Grafana: https://grafana.<YOUR_DOMAIN>"
     echo "   • Health Check: ./scripts/health-check.sh"
     echo ""
     echo "📋 **Next Steps**:"

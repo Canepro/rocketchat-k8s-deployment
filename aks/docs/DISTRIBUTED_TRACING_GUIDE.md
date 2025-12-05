@@ -119,7 +119,7 @@ kubectl patch deployment rocketchat-rocketchat -n rocketchat \
 - **Trace Search**: Find traces by service, operation, duration
 - **Trace Search (All Services)**: View all traces with empty query `{}`
 - **Rocket.Chat Traces**: Filtered view for `{ resource.service.name = "rocket-chat" }`
-- **Access URL**: `https://grafana.canepro.me/d/rocket-chat-tracing`
+- **Access URL**: `https://<YOUR_GRAFANA_DOMAIN>/d/rocket-chat-tracing`
 
 ### Data Source Configuration
 - **Tempo URL**: `http://tempo.monitoring.svc.cluster.local:3200`
@@ -199,7 +199,7 @@ kubectl logs -n rocketchat -l app.kubernetes.io/name=rocketchat | head -10
 # Should see: "[OpenTelemetry] Auto-instrumentation started successfully! ✅"
 
 # Generate test traffic to create traces
-# Visit https://chat.canepro.me and navigate around
+# Visit https://<YOUR_DOMAIN> and navigate around
 ```
 
 #### OpenTelemetry Collector Issues
@@ -365,9 +365,9 @@ overrides:
 - **Metrics Generation**: Service graphs and span metrics operational
 
 ### 📊 **Access Points**
-- **Grafana URL**: `https://grafana.canepro.me`
-- **Tracing Dashboard**: `https://grafana.canepro.me/d/rocket-chat-tracing`
-- **Explore (Tempo)**: `https://grafana.canepro.me/explore` → Select "Tempo" datasource
+- **Grafana URL**: `https://<YOUR_GRAFANA_DOMAIN>`
+- **Tracing Dashboard**: `https://<YOUR_GRAFANA_DOMAIN>/d/rocket-chat-tracing`
+- **Explore (Tempo)**: `https://<YOUR_GRAFANA_DOMAIN>/explore` → Select "Tempo" datasource
 
 ### 🔍 **Trace Queries**
 ```traceql

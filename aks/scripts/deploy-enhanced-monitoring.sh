@@ -168,7 +168,7 @@ echo "🔧 Next Steps:"
 echo "1. Configure email SMTP settings in monitoring-values.yaml"
 echo "2. Test alerts by temporarily stopping a pod:"
 echo "   kubectl scale deployment rocketchat-rocketchat -n rocketchat --replicas=0"
-echo "3. Check Alertmanager UI: https://grafana.chat.canepro.me/alertmanager"
+echo "3. Check Alertmanager UI: https://grafana.<YOUR_DOMAIN>/alertmanager"
 echo "4. Review Azure Monitor dashboards (if enabled)"
 echo ""
 

@@ -61,10 +61,10 @@
   </div>
 
   <div class="project-buttons">
-    <a href="https://chat.canepro.me" class="btn btn-primary" target="_blank">
+    <a href="https://<YOUR_DOMAIN>" class="btn btn-primary" target="_blank">
       💬 Access Live Chat
     </a>
-    <a href="https://grafana.chat.canepro.me/d/rocketchat-comprehensive" class="btn btn-secondary" target="_blank">
+    <a href="https://grafana.<YOUR_DOMAIN>/d/rocketchat-comprehensive" class="btn btn-secondary" target="_blank">
       📊 View Live Dashboard
     </a>
     <a href="https://github.com/your-username/rocketchat-k8s-deployment" class="btn btn-outline" target="_blank">
@@ -145,7 +145,7 @@ kubectl apply -f aks/monitoring/grafana-public-access.yaml
 
 2. **Create public-specific dashboard URL:**
 ```
-https://grafana.chat.canepro.me/d/rocketchat-comprehensive/rocket-chat-comprehensive-production-monitoring?orgId=1&refresh=30s&kiosk=tv
+https://grafana.<YOUR_DOMAIN>/d/rocketchat-comprehensive/rocket-chat-comprehensive-production-monitoring?orgId=1&refresh=30s&kiosk=tv
 ```
 
 ### **Option 2: Dashboard Snapshots**
@@ -155,7 +155,7 @@ Create static snapshots for portfolio:
 ```bash
 # Create dashboard snapshot (expires in 30 days)
 curl -X POST \
-  https://grafana.chat.canepro.me/api/snapshots \
+  https://grafana.<YOUR_DOMAIN>/api/snapshots \
   -H 'Content-Type: application/json' \
   -d '{
     "dashboard": {...dashboard-json...},
@@ -169,7 +169,7 @@ curl -X POST \
 
 ```html
 <iframe 
-  src="https://grafana.chat.canepro.me/d-solo/rocketchat-comprehensive/rocket-chat-comprehensive-production-monitoring?orgId=1&refresh=30s&panelId=1&kiosk=tv&theme=dark" 
+  src="https://grafana.<YOUR_DOMAIN>/d-solo/rocketchat-comprehensive/rocket-chat-comprehensive-production-monitoring?orgId=1&refresh=30s&panelId=1&kiosk=tv&theme=dark" 
   width="100%" 
   height="400" 
   frameborder="0">
@@ -241,10 +241,10 @@ This project demonstrates expertise in container orchestration, infrastructure m
   <h3>Experience Live Production Infrastructure</h3>
   <p>See real-time monitoring of a production Kubernetes deployment</p>
   <div class="cta-buttons">
-    <a href="https://chat.canepro.me" class="btn-cta primary">
+    <a href="https://<YOUR_DOMAIN>" class="btn-cta primary">
       Launch Chat Application →
     </a>
-    <a href="https://grafana.chat.canepro.me/d/rocketchat-comprehensive" class="btn-cta secondary">
+    <a href="https://grafana.<YOUR_DOMAIN>/d/rocketchat-comprehensive" class="btn-cta secondary">
       View Live Monitoring →
     </a>
   </div>

@@ -128,10 +128,10 @@ kubectl logs -n rocketchat -l app.kubernetes.io/name=rocketchat | grep OpenTelem
 
 ```bash
 # Rocket.Chat
-echo "https://chat.canepro.me"
+echo "https://<YOUR_DOMAIN>"
 
 # Grafana
-echo "https://grafana.canepro.me"
+echo "https://<YOUR_GRAFANA_DOMAIN>"
 
 # Or port-forward
 kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
@@ -177,7 +177,7 @@ kubectl port-forward -n monitoring svc/monitoring-kube-prometheus-prometheus 909
 ```bash
 # Via Grafana
 # Go to Explore → Select "Tempo" → Search traces with: {}
-# Or visit: https://grafana.canepro.me/d/rocket-chat-tracing
+# Or visit: https://<YOUR_GRAFANA_DOMAIN>/d/rocket-chat-tracing
 ```
 
 ---
@@ -292,7 +292,7 @@ Your Rocket.Chat instance is now running with:
 - ✅ High availability
 
 Access your services:
-- 💬 **Chat**: https://chat.canepro.me
-- 📊 **Monitoring**: https://grafana.canepro.me
-- 🔍 **Traces**: https://grafana.canepro.me/d/rocket-chat-tracing
+- 💬 **Chat**: https://<YOUR_DOMAIN>
+- 📊 **Monitoring**: https://<YOUR_GRAFANA_DOMAIN>
+- 🔍 **Traces**: https://<YOUR_GRAFANA_DOMAIN>/d/rocket-chat-tracing
 

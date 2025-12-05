@@ -10,7 +10,7 @@
 ## 🏆 **MONITORING STACK: SECURITY HARDENED & PRODUCTION READY**
 - ✅ **Rocket.Chat Metrics**: 1238+ series flowing, all dashboards operational
 - ✅ **Prometheus**: ServiceMonitor discovery resolved, all targets UP
-- ✅ **Grafana**: Beautiful real-time dashboards with corrected panels and proper data (now accessible at `grafana.canepro.me`)
+- ✅ **Grafana**: Beautiful real-time dashboards with corrected panels and proper data (now accessible at `<YOUR_GRAFANA_DOMAIN>`)
 - ✅ **Loki 2.9.0**: Log aggregation with volume API support for advanced log visualization
 - ✅ **Alertmanager**: Email notifications configured with secure webhook integration
 - ✅ **Dashboard Panels**: Fixed Pod Restarts panel and added Total vs Active Users panel
@@ -101,19 +101,19 @@ nano .env  # Your real Gmail app password & webhook token
 - [x] **SMTP Configuration**: Credentials secured, ready for rate limit reset
 - [x] **Webhook Integration**: ✅ **CONFIRMED** - Rocket.Chat receives alerts
 
-### **🌐 DOMAIN MIGRATION COMPLETED ✅ (grafana.chat.canepro.me → grafana.canepro.me)**
+### **🌐 DOMAIN MIGRATION COMPLETED ✅ (grafana.<YOUR_DOMAIN> → <YOUR_GRAFANA_DOMAIN>)**
 
 **✅ Migration Summary:**
-- **DNS Status:** Domain `grafana.canepro.me` configured and resolving to AKS IP (4.250.169.133)
+- **DNS Status:** Domain `<YOUR_GRAFANA_DOMAIN>` configured and resolving to AKS IP (<YOUR_STATIC_IP>)
 - **SSL Certificate:** Let's Encrypt certificate issued and working
 - **Ingress:** New ingress created with SSL redirect enabled
 - **Dashboard Config:** Public dashboard URLs updated to new domain
 - **Domain Switch:** Primary domain successfully switched
 - **Old Domain:** Returns 404 (no longer accessible)
-- **New Domain:** `https://grafana.canepro.me` fully operational
+- **New Domain:** `https://<YOUR_GRAFANA_DOMAIN>` fully operational
 
 **✅ Completed Tasks:**
-- [x] Create new ingress for `grafana.canepro.me` with SSL certificate
+- [x] Create new ingress for `<YOUR_GRAFANA_DOMAIN>` with SSL certificate
 - [x] Update dashboard configurations to use new domain
 - [x] Test new domain accessibility and SSL (HTTP/2 200 ✅)
 - [x] Switch primary domain (cutover completed)
@@ -407,7 +407,7 @@ curl http://localhost:9100/metrics | grep node_cpu_seconds_total | head -5
 
 ### **Loki Volume API 404 Error**
 **Symptoms:** 
-- Console error: `GET https://grafana.chat.canepro.me/api/datasources/uid/loki/resources/index/volume?end=... 404 (Not Found)`
+- Console error: `GET https://grafana.<YOUR_DOMAIN>/api/datasources/uid/loki/resources/index/volume?end=... 404 (Not Found)`
 - Grafana shows "Log volume has not been configured" message
 - Loki version 2.6.1 doesn't support volume API
 
@@ -751,7 +751,7 @@ kubectl rollout restart deployment/monitoring-grafana -n monitoring
 **Quick Diagnosis:**
 ```bash
 # Check if you're logged in as admin user
-# Go to: https://chat.canepro.me/admin/users
+# Go to: https://<YOUR_DOMAIN>/admin/users
 # Verify your user has "admin" role assigned
 
 # Check if integrations are enabled globally
@@ -831,7 +831,7 @@ kubectl get pods -n rocketchat
 kubectl get pvc -n rocketchat
 
 # Verify Rocket.Chat access
-curl -k https://chat.canepro.me/health
+curl -k https://<YOUR_DOMAIN>/health
 
 # Check application logs
 kubectl logs -n rocketchat deployment/rocketchat-rocketchat
@@ -872,7 +872,7 @@ kubectl rollout restart deployment rocketchat-account -n rocketchat
 kubectl rollout restart deployment rocketchat-authorization -n rocketchat
 
 # 3. Re-register workspace via web UI:
-# - Go to https://chat.canepro.me
+# - Go to https://<YOUR_DOMAIN>
 # - Administration > Workspace > Register workspace
 # - Paste your registration token
 # - Administration > Subscription > Sync license update
@@ -916,7 +916,7 @@ kubectl get pods -n rocketchat
 kubectl logs -n rocketchat deployment/rocketchat-ddp-streamer --tail=20
 
 # Verify license status via API
-curl -k https://chat.canepro.me/api/v1/licenses.info
+curl -k https://<YOUR_DOMAIN>/api/v1/licenses.info
 ```
 
 **Related Issues:**
@@ -929,7 +929,7 @@ curl -k https://chat.canepro.me/api/v1/licenses.info
 ### **Issue: Grafana Returns 404 Not Found**
 
 **Symptoms:**
-- `GET https://grafana.chat.canepro.me/ 404 (Not Found)`
+- `GET https://grafana.<YOUR_DOMAIN>/ 404 (Not Found)`
 - Grafana pod is running but not accessible via browser
 - `kubectl get ingress -n monitoring` returns no resources
 - Grafana service exists but no ingress routes traffic to it
@@ -958,10 +958,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - grafana.chat.canepro.me
+    - grafana.<YOUR_DOMAIN>
     secretName: grafana-tls
   rules:
-  - host: grafana.chat.canepro.me
+  - host: grafana.<YOUR_DOMAIN>
     http:
       paths:
       - path: /
@@ -992,8 +992,8 @@ kubectl port-forward -n monitoring svc/monitoring-grafana 3000:80
 **Expected Resolution Time:** 1-2 minutes after ingress creation
 
 **Success Indicators:**
-- ✅ Grafana accessible at `https://grafana.chat.canepro.me`
-- ✅ SSL certificate issued for grafana.chat.canepro.me
+- ✅ Grafana accessible at `https://grafana.<YOUR_DOMAIN>`
+- ✅ SSL certificate issued for grafana.<YOUR_DOMAIN>
 - ✅ Login page loads successfully
 - ✅ Ingress shows proper external IP and ports
 
@@ -1006,7 +1006,7 @@ kubectl get ingress -n monitoring
 kubectl get certificate -n monitoring
 
 # Test access
-curl -k https://grafana.chat.canepro.me
+curl -k https://grafana.<YOUR_DOMAIN>
 
 # Check ingress controller logs
 kubectl logs -n ingress-nginx deployment/ingress-nginx-controller --tail=20
@@ -1037,7 +1037,7 @@ kubectl get secret grafana-admin -n monitoring -o yaml
 **Grafana Authentication Troubleshooting:**
 ```bash
 # Test login API directly
-curl -k -X POST "https://grafana.chat.canepro.me/login" \
+curl -k -X POST "https://grafana.<YOUR_DOMAIN>/login" \
   -H "Content-Type: application/json" \
   -d '{"user":"admin","password":"prom-operator"}'
 
@@ -1049,7 +1049,7 @@ kubectl exec deployment/monitoring-grafana -n monitoring -- \
   grafana-cli admin reset-admin-password prom-operator
 
 # Verify login works after reset
-curl -k -X POST "https://grafana.chat.canepro.me/login" \
+curl -k -X POST "https://grafana.<YOUR_DOMAIN>/login" \
   -H "Content-Type: application/json" \
   -d '{"user":"admin","password":"prom-operator"}' \
   -s -o /dev/null -w "%{http_code}"
@@ -1537,7 +1537,7 @@ python -c "import yaml; yaml.safe_load(open('values-official.yaml'))"
 ```yaml
 # Common fixes in values-official.yaml:
 # Fix indentation
-host: "chat.canepro.me"
+host: "<YOUR_DOMAIN>"
 
 # Fix boolean values
 microservices:
@@ -1685,7 +1685,7 @@ ingress:
   tls:
     - secretName: rocketchat-tls
       hosts:
-        - chat.canepro.me
+        - <YOUR_DOMAIN>
 ```
 
 **Option B: Check Ingress Controller**
@@ -1771,11 +1771,11 @@ kubectl describe certificaterequest <name> -n rocketchat
 **Option A: Fix DNS Configuration**
 ```bash
 # Verify DNS points to correct IP
-nslookup chat.canepro.me
-# Should return AKS ingress IP: 4.250.169.133
+nslookup <YOUR_DOMAIN>
+# Should return AKS ingress IP: <YOUR_STATIC_IP>
 
 # Check domain ownership
-curl -I http://chat.canepro.me/.well-known/acme-challenge/test
+curl -I http://<YOUR_DOMAIN>/.well-known/acme-challenge/test
 ```
 
 **Option B: Check ClusterIssuer**
@@ -1877,7 +1877,7 @@ metadata:
   namespace: monitoring
 spec:
   dnsNames:
-  - grafana.chat.canepro.me
+  - grafana.<YOUR_DOMAIN>
   issuerRef:
     group: cert-manager.io
     kind: ClusterIssuer
@@ -1963,7 +1963,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: grafana.chat.canepro.me
+  - host: grafana.<YOUR_DOMAIN>
     http:
       paths:
       - backend:
@@ -1975,7 +1975,7 @@ spec:
         pathType: Prefix
   tls:
   - hosts:
-    - grafana.chat.canepro.me
+    - grafana.<YOUR_DOMAIN>
     secretName: grafana-tls
 EOF
 ```
@@ -1989,7 +1989,7 @@ ingress:
   tls: true
   grafana:
     enabled: true
-    host: "grafana.chat.canepro.me"
+    host: "grafana.<YOUR_DOMAIN>"
     path: "/"
 
 # Redeploy with corrected values
@@ -2027,7 +2027,7 @@ kubectl edit ingress monitoring-ingress -n monitoring
 **Post-Resolution Verification:**
 ```bash
 # Test ingress accessibility
-curl -I https://grafana.chat.canepro.me
+curl -I https://grafana.<YOUR_DOMAIN>
 
 # Check ingress logs
 kubectl logs -n ingress-nginx deployment/ingress-nginx-controller
@@ -2276,7 +2276,7 @@ extraEnv:
   - name: NODE_ENV
     value: "production"
   - name: ROOT_URL
-    value: "https://chat.canepro.me"
+    value: "https://<YOUR_DOMAIN>"
   - name: MONGO_URL
     value: "mongodb://..."
 ```
@@ -2445,7 +2445,7 @@ grafana:
   ingress:
     enabled: true
     hosts:
-      - grafana.chat.canepro.me
+      - grafana.<YOUR_DOMAIN>
 ```
 
 **Option B: Fix Service Issues**
@@ -3090,12 +3090,12 @@ kubectl exec -n monitoring <prometheus-pod> -- curl http://rocketchat.rocketchat
 **Diagnosis:**
 ```bash
 # Check DNS propagation globally
-nslookup chat.canepro.me 8.8.8.8      # Google DNS
-nslookup chat.canepro.me 1.1.1.1      # Cloudflare DNS
-nslookup chat.canepro.me 208.67.222.222  # OpenDNS
+nslookup <YOUR_DOMAIN> 8.8.8.8      # Google DNS
+nslookup <YOUR_DOMAIN> 1.1.1.1      # Cloudflare DNS
+nslookup <YOUR_DOMAIN> 208.67.222.222  # OpenDNS
 
 # Check DNS cache
-dig chat.canepro.me @8.8.8.8
+dig <YOUR_DOMAIN> @8.8.8.8
 ```
 
 **Solutions:**
@@ -3116,7 +3116,7 @@ sudo resolvectl flush-caches
 # DNS Record Configuration:
 # Type: A
 # Name: chat
-# Value: 4.250.169.133
+# Value: <YOUR_STATIC_IP>
 # TTL: 300 (5 minutes during migration)
 ```
 
@@ -3138,14 +3138,14 @@ sudo resolvectl flush-caches
 **Immediate Rollback (2 minutes):**
 ```bash
 # Update DNS records back to MicroK8s
-# chat.canepro.me → 20.68.53.249
-# grafana.chat.canepro.me → 20.68.53.249
+# <YOUR_DOMAIN> → 20.68.53.249
+# grafana.<YOUR_DOMAIN> → 20.68.53.249
 
 # Verify rollback
-nslookup chat.canepro.me
+nslookup <YOUR_DOMAIN>
 # Should return: 20.68.53.249
 
-curl -I https://chat.canepro.me
+curl -I https://<YOUR_DOMAIN>
 # Should return: HTTP/2 200
 ```
 
@@ -3156,7 +3156,7 @@ kubectl get pods -n rocketchat
 kubectl logs -f deployment/rocketchat -n rocketchat
 
 # Compare with MicroK8s
-# Access MicroK8s at: https://chat.canepro.me
+# Access MicroK8s at: https://<YOUR_DOMAIN>
 ```
 
 **Prevention:**
@@ -3398,7 +3398,7 @@ kubectl get secret grafana-tls -n monitoring
 **Option A: Add TLS Configuration to Existing Ingress**
 ```bash
 # Patch existing ingress to add TLS configuration
-kubectl patch ingress monitoring-ingress -n monitoring --type merge -p '{"spec":{"tls":[{"hosts":["grafana.chat.canepro.me"],"secretName":"grafana-tls"}]}}'
+kubectl patch ingress monitoring-ingress -n monitoring --type merge -p '{"spec":{"tls":[{"hosts":["grafana.<YOUR_DOMAIN>"],"secretName":"grafana-tls"}]}}'
 
 # Add SSL redirect annotations
 kubectl patch ingress monitoring-ingress -n monitoring --type merge -p '{"metadata":{"annotations":{"nginx.ingress.kubernetes.io/ssl-redirect":"true","nginx.ingress.kubernetes.io/force-ssl-redirect":"true"}}}'
@@ -3418,8 +3418,8 @@ kubectl patch ingress monitoring-ingress -n monitoring --type merge -p '{"metada
 # Set DNS record to "DNS only" (grey cloud) during certificate issuance
 # Cloudflare DNS Settings:
 # Type: A
-# Name: grafana.chat.canepro.me
-# Value: 4.250.169.133
+# Name: grafana.<YOUR_DOMAIN>
+# Value: <YOUR_STATIC_IP>
 # Proxy Status: DNS only (grey cloud)
 
 # After certificate issues, change back to:
@@ -3431,7 +3431,7 @@ kubectl patch ingress monitoring-ingress -n monitoring --type merge -p '{"metada
 **Verification:**
 ```bash
 # Test HTTPS connectivity
-curl -I https://grafana.chat.canepro.me
+curl -I https://grafana.<YOUR_DOMAIN>
 # Should return: HTTP/2 200 (not HTTP/2 302 redirect)
 
 # Check ingress TLS configuration
@@ -3553,7 +3553,7 @@ kubectl describe svc grafana-service -n monitoring
 **Verification:**
 ```bash
 # Test Grafana accessibility after fix
-curl -I https://grafana.chat.canepro.me
+curl -I https://grafana.<YOUR_DOMAIN>
 # Should return: HTTP/2 200
 
 # Check Grafana logs for successful authentication
@@ -3649,7 +3649,7 @@ kubectl apply -f monitoring/grafana-datasource-loki.yaml
 kubectl rollout restart deployment monitoring-grafana -n monitoring
 
 # Verify Loki appears in Grafana Explore
-# Access: https://grafana.chat.canepro.me/explore
+# Access: https://grafana.<YOUR_DOMAIN>/explore
 ```
 
 **Verification:**
@@ -4016,7 +4016,7 @@ kubectl run test-prom-targets --image=curlimages/curl --rm -i --restart=Never --
   curl -s "http://monitoring-kube-prometheus-prometheus:9090/api/v1/targets" | jq '.data.activeTargets[] | select(.labels.job=="rocketchat")'
 
 # Check Grafana dashboard
-# Access: https://grafana.chat.canepro.me/d/rocket-chat-metrics
+# Access: https://grafana.<YOUR_DOMAIN>/d/rocket-chat-metrics
 # Should show: UP status and current metrics
 ```
 
@@ -4293,8 +4293,8 @@ kubectl top nodes
 **Cloudflare DNS Settings:**
 ```
 Type: A
-Name: chat.canepro.me
-Value: 4.250.169.133
+Name: <YOUR_DOMAIN>
+Value: <YOUR_STATIC_IP>
 Proxy Status: DNS only (grey cloud)
 TTL: Auto
 ```
@@ -4409,7 +4409,7 @@ After successful login, change the default password:
 ### **Issue: Grafana 404 Not Found Error (September 4, 2025)**
 
 **Symptoms:**
-- `https://grafana.chat.canepro.me` returns "404 Not Found nginx error"
+- `https://grafana.<YOUR_DOMAIN>` returns "404 Not Found nginx error"
 - Error appears only in incognito browser mode
 - Port forwarding to Grafana pod fails or doesn't connect
 - Grafana service exists and is running but not accessible via domain
@@ -4424,7 +4424,7 @@ kubectl get ingress monitoring-ingress -n monitoring -o yaml | grep -A 5 "paths:
 kubectl describe pod grafana-deployment-774dff4b6c-rrsdd -n monitoring
 # Shows:
 # GF_SERVER_SERVE_FROM_SUB_PATH: true
-# GF_SERVER_ROOT_URL: https://grafana.chat.canepro.me/grafana/
+# GF_SERVER_ROOT_URL: https://grafana.<YOUR_DOMAIN>/grafana/
 
 # Check ingress path configuration
 kubectl get ingress monitoring-ingress -n monitoring -o yaml | grep -A 20 "paths:"
@@ -4433,7 +4433,7 @@ kubectl get ingress monitoring-ingress -n monitoring -o yaml | grep -A 20 "paths
 # Attempt port forwarding (multiple attempts)
 kubectl port-forward svc/grafana-service -n monitoring 3001:3000 --address 0.0.0.0
 curl -I http://localhost:3001/grafana  # Connection refused
-curl -I http://4.250.169.133:3001/grafana  # Connection timeout
+curl -I http://<YOUR_STATIC_IP>:3001/grafana  # Connection timeout
 ```
 
 **Current Configuration:**
@@ -4445,12 +4445,12 @@ ingress:
   tls: true
   grafana:
     enabled: true
-    host: "grafana.chat.canepro.me"
+    host: "grafana.<YOUR_DOMAIN>"
     path: "/grafana"
 
 # Grafana deployment environment
 GF_SERVER_SERVE_FROM_SUB_PATH: true
-GF_SERVER_ROOT_URL: https://grafana.chat.canepro.me/grafana/
+GF_SERVER_ROOT_URL: https://grafana.<YOUR_DOMAIN>/grafana/
 POD_IP: (v1:status.podIP)
 ```
 
@@ -4523,10 +4523,10 @@ kubectl logs -n ingress-nginx deployment/ingress-nginx-controller --tail=50 | gr
 - **Prevention**: Monitor certificate status with `kubectl get certificates -n monitoring -w`
 
 **Issue: Clean URL Configuration**
-- **Symptom**: Grafana accessible at `https://grafana.chat.canepro.me/grafana` (unwanted path)
+- **Symptom**: Grafana accessible at `https://grafana.<YOUR_DOMAIN>/grafana` (unwanted path)
 - **Root Cause**: Ingress configured with `/grafana` path instead of root `/`
 - **Resolution**: Updated ingress path and restarted Grafana deployment
-- **Result**: Now accessible at clean URL `https://grafana.chat.canepro.me`
+- **Result**: Now accessible at clean URL `https://grafana.<YOUR_DOMAIN>`
 - **Prevention**: Plan URL structure during initial configuration
 
 ---

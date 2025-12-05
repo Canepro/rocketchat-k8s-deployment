@@ -258,8 +258,8 @@ stages:
           CLUSTER_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
           if [ -n "$CLUSTER_IP" ]; then
             echo "Cluster IP: $CLUSTER_IP"
-            echo "Rocket.Chat should be accessible at: https://chat.canepro.me"
-            echo "Grafana should be accessible at: https://grafana.chat.canepro.me"
+            echo "Rocket.Chat should be accessible at: https://<YOUR_DOMAIN>"
+            echo "Grafana should be accessible at: https://grafana.<YOUR_DOMAIN>"
           else
             echo "Cluster IP not available yet"
           fi

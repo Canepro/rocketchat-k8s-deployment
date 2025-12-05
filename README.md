@@ -1,7 +1,7 @@
 # 🚀 Enterprise Rocket.Chat on Azure Kubernetes Service
 
-[![Production Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)](https://chat.canepro.me)
-[![Monitoring](https://img.shields.io/badge/Monitoring-Complete-blue.svg)](https://grafana.chat.canepro.me)
+[![Production Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)](https://<YOUR_DOMAIN>)
+[![Monitoring](https://img.shields.io/badge/Monitoring-Complete-blue.svg)](https://grafana.<YOUR_DOMAIN>)
 [![Documentation](https://img.shields.io/badge/Documentation-Comprehensive-orange.svg)](./docs/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -36,9 +36,9 @@ This repository contains a **production-ready, enterprise-grade deployment** of 
 
 | Service | URL | Status | Description |
 |---------|-----|--------|-------------|
-| **Rocket.Chat** | [chat.canepro.me](https://chat.canepro.me) | 🟢 Production | Main chat application with microservices |
-| **Grafana** | [grafana.canepro.me](https://grafana.canepro.me) | 🟢 Production | Unified observability dashboards |
-| **Tracing Dashboard** | [grafana.canepro.me/d/rocket-chat-tracing](https://grafana.canepro.me/d/rocket-chat-tracing) | 🟢 Production | Distributed tracing visualization |
+| **Rocket.Chat** | [<YOUR_DOMAIN>](https://<YOUR_DOMAIN>) | 🟢 Production | Main chat application with microservices |
+| **Grafana** | [<YOUR_GRAFANA_DOMAIN>](https://<YOUR_GRAFANA_DOMAIN>) | 🟢 Production | Unified observability dashboards |
+| **Tracing Dashboard** | [<YOUR_GRAFANA_DOMAIN>/d/rocket-chat-tracing](https://<YOUR_GRAFANA_DOMAIN>/d/rocket-chat-tracing) | 🟢 Production | Distributed tracing visualization |
 | **Tempo (Traces)** | Internal | 🟢 Production | Distributed tracing backend (1.8MB traces, 124KB metrics) |
 | **Prometheus** | Internal | 🟢 Production | Metrics collection (1238+ series) |
 | **Loki** | Internal | 🟢 Production | Log aggregation (2.9.0 with volume API) |
@@ -48,12 +48,12 @@ This repository contains a **production-ready, enterprise-grade deployment** of 
 
 Experience the live production infrastructure:
 
-- **💬 [Try Live Chat](https://chat.canepro.me)** - Interactive Rocket.Chat instance with guest access
-- **📊 [View Monitoring Dashboard](https://grafana.canepro.me)** - Real-time metrics, logs, and traces
-- **🔍 [View Distributed Tracing](https://grafana.canepro.me/d/rocket-chat-tracing)** - Live request tracing with Tempo
-- **📈 [Explore Metrics](https://grafana.canepro.me/explore)** - Query 1238+ metric series
-- **📝 [Query Logs](https://grafana.canepro.me/explore)** - Search logs with Loki (select Loki datasource)
-- **🔎 [Search Traces](https://grafana.canepro.me/explore)** - TraceQL queries (select Tempo datasource)
+- **💬 [Try Live Chat](https://<YOUR_DOMAIN>)** - Interactive Rocket.Chat instance with guest access
+- **📊 [View Monitoring Dashboard](https://<YOUR_GRAFANA_DOMAIN>)** - Real-time metrics, logs, and traces
+- **🔍 [View Distributed Tracing](https://<YOUR_GRAFANA_DOMAIN>/d/rocket-chat-tracing)** - Live request tracing with Tempo
+- **📈 [Explore Metrics](https://<YOUR_GRAFANA_DOMAIN>/explore)** - Query 1238+ metric series
+- **📝 [Query Logs](https://<YOUR_GRAFANA_DOMAIN>/explore)** - Search logs with Loki (select Loki datasource)
+- **🔎 [Search Traces](https://<YOUR_GRAFANA_DOMAIN>/explore)** - TraceQL queries (select Tempo datasource)
 
 ## 🏗️ Architecture
 
@@ -238,12 +238,12 @@ kubectl apply -f aks/monitoring/grafana-public-dashboard-setup.yaml
 
 | Service | Access Method | Credentials |
 |---------|---------------|-------------|
-| **Rocket.Chat** | `https://chat.canepro.me` | Your admin account |
-| **Grafana** | `https://grafana.canepro.me` or Port-forward: `kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring` | `admin` / `prom-operator` |
+| **Rocket.Chat** | `https://<YOUR_DOMAIN>` | Your admin account |
+| **Grafana** | `https://<YOUR_GRAFANA_DOMAIN>` or Port-forward: `kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring` | `admin` / `prom-operator` |
 | **Prometheus** | Port-forward: `kubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090 -n monitoring` | No auth required |
-| **Tempo (Traces)** | Via Grafana: `https://grafana.canepro.me/explore` (select Tempo) | Same as Grafana |
-| **Loki (Logs)** | Via Grafana: `https://grafana.canepro.me/explore` (select Loki) | Same as Grafana |
-| **Tracing Dashboard** | `https://grafana.canepro.me/d/rocket-chat-tracing` | Same as Grafana |
+| **Tempo (Traces)** | Via Grafana: `https://<YOUR_GRAFANA_DOMAIN>/explore` (select Tempo) | Same as Grafana |
+| **Loki (Logs)** | Via Grafana: `https://<YOUR_GRAFANA_DOMAIN>/explore` (select Loki) | Same as Grafana |
+| **Tracing Dashboard** | `https://<YOUR_GRAFANA_DOMAIN>/d/rocket-chat-tracing` | Same as Grafana |
 | **Health Check** | `./scripts/health-check.sh` | Automated health monitoring |
 | **Cost Dashboard** | Available in Grafana under "Azure Cost Management" | Same as Grafana |
 
@@ -666,8 +666,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 | Resource | Link | Description |
 |----------|------|-------------|
-| **🚀 Live Chat** | [chat.canepro.me](https://chat.canepro.me) | Production Rocket.Chat instance |
-| **📊 Monitoring** | [grafana.chat.canepro.me](https://grafana.chat.canepro.me) | Grafana dashboards |
+| **🚀 Live Chat** | [<YOUR_DOMAIN>](https://<YOUR_DOMAIN>) | Production Rocket.Chat instance |
+| **📊 Monitoring** | [grafana.<YOUR_DOMAIN>](https://grafana.<YOUR_DOMAIN>) | Grafana dashboards |
 | **📖 Troubleshooting** | [Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md) | Complete issue resolution |
 | **🔧 Setup Guide** | [Monitoring Setup](docs/MONITORING_SETUP_GUIDE.md) | Monitoring implementation |
 | **💰 Cost Guide** | [Cost Optimization](docs/COST_OPTIMIZATION_GUIDE.md) | Resource optimization |
@@ -693,8 +693,8 @@ This repository is designed for public sharing and portfolio demonstration. All 
 
 ### **Live Demo Domains**
 The following domains are intentionally public for portfolio demonstration:
-- `chat.canepro.me` - Live Rocket.Chat instance with guest access
-- `grafana.canepro.me` - Observability platform (metrics, logs, traces)
+- `<YOUR_DOMAIN>` - Live Rocket.Chat instance with guest access
+- `<YOUR_GRAFANA_DOMAIN>` - Observability platform (metrics, logs, traces)
 
 ### **Configuration Security**
 - All credentials stored in Kubernetes secrets

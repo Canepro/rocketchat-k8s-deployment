@@ -134,7 +134,7 @@ The monitoring stack includes:
 ### Accessing Monitoring
 
 After deployment:
-- **Grafana**: `https://grafana.chat.canepro.me`
+- **Grafana**: `https://grafana.<YOUR_DOMAIN>`
 - **Prometheus**: `kubectl port-forward svc/prometheus-operated 9090:9090 -n monitoring`
 
 ### Grafana Credentials
@@ -177,8 +177,8 @@ kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-prometheus 909
 ### 3. DNS Configuration
 
 Update your DNS records to point to the AKS ingress IP:
-- `chat.canepro.me` → AKS Ingress IP
-- `grafana.chat.canepro.me` → AKS Ingress IP
+- `<YOUR_DOMAIN>` → AKS Ingress IP
+- `grafana.<YOUR_DOMAIN>` → AKS Ingress IP
 
 ## Troubleshooting
 

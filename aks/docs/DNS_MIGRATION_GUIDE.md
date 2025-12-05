@@ -10,12 +10,12 @@
 ## 🎯 **Migration Overview**
 
 ### **Domains to Migrate:**
-1. **chat.canepro.me** - Rocket.Chat application
-2. **grafana.chat.canepro.me** - Monitoring dashboards
+1. **<YOUR_DOMAIN>** - Rocket.Chat application
+2. **grafana.<YOUR_DOMAIN>** - Monitoring dashboards
 
 ### **IP Addresses:**
 - **Current (MicroK8s):** `20.68.53.249`
-- **Target (AKS):** `4.250.169.133`
+- **Target (AKS):** `<YOUR_STATIC_IP>`
 
 ### **Timeline:**
 - **DNS Propagation:** 5-10 minutes
@@ -30,8 +30,8 @@
 - [x] Official Rocket.Chat deployed successfully
 - [x] MongoDB replica set running
 - [x] SSL certificates issued by cert-manager ✅ **RESOLVED**
-- [x] Rocket.Chat accessible at `https://4.250.169.133` (SSL working)
-- [x] Grafana accessible at `https://grafana.chat.canepro.me` (SSL working)
+- [x] Rocket.Chat accessible at `https://<YOUR_STATIC_IP>` (SSL working)
+- [x] Grafana accessible at `https://grafana.<YOUR_DOMAIN>` (SSL working)
 - [x] DNS migration completed ✅ **SUCCESSFUL**
 - [x] Production testing completed ✅ **VALIDATED**
 
@@ -56,7 +56,7 @@
 **Test Rocket.Chat:**
 ```bash
 # Test direct IP access
-curl -I http://4.250.169.133
+curl -I http://<YOUR_STATIC_IP>
 
 # Should return: HTTP/1.1 200 OK
 ```
@@ -84,18 +84,18 @@ kubectl get certificates -n rocketchat
 **Update BOTH domains simultaneously:**
 
 1. **Log into DNS Provider**
-2. **Update chat.canepro.me:**
+2. **Update <YOUR_DOMAIN>:**
    ```
    Type: A
    Name: chat
-   Value: 4.250.169.133
+   Value: <YOUR_STATIC_IP>
    TTL: 300 (5 minutes)
    ```
-3. **Update grafana.chat.canepro.me:**
+3. **Update grafana.<YOUR_DOMAIN>:**
    ```
    Type: A
    Name: grafana.chat
-   Value: 4.250.169.133
+   Value: <YOUR_STATIC_IP>
    TTL: 300 (5 minutes)
    ```
 4. **Save Changes**
@@ -105,18 +105,18 @@ kubectl get certificates -n rocketchat
 **Monitor DNS propagation:**
 ```bash
 # Check multiple DNS servers
-nslookup chat.canepro.me 8.8.8.8
-nslookup chat.canepro.me 1.1.1.1
-nslookup grafana.chat.canepro.me 8.8.8.8
+nslookup <YOUR_DOMAIN> 8.8.8.8
+nslookup <YOUR_DOMAIN> 1.1.1.1
+nslookup grafana.<YOUR_DOMAIN> 8.8.8.8
 
-# Should return: 4.250.169.133
+# Should return: <YOUR_STATIC_IP>
 ```
 
 **Test production access:**
 ```bash
 # Test HTTPS access
-curl -I https://chat.canepro.me
-curl -I https://grafana.chat.canepro.me
+curl -I https://<YOUR_DOMAIN>
+curl -I https://grafana.<YOUR_DOMAIN>
 
 # Should return: HTTP/2 200
 ```
@@ -140,7 +140,7 @@ kubectl logs -f deployment/rocketchat -n rocketchat
 - [ ] Search functionality
 
 **Test monitoring:**
-- [ ] Access Grafana at `https://grafana.chat.canepro.me`
+- [ ] Access Grafana at `https://grafana.<YOUR_DOMAIN>`
 - [ ] View Rocket.Chat dashboards
 - [ ] Check Prometheus metrics
 - [ ] Verify alerting setup
@@ -154,16 +154,16 @@ kubectl logs -f deployment/rocketchat -n rocketchat
 **Immediate Action (2 minutes):**
 1. **Update DNS back to MicroK8s:**
    ```
-   chat.canepro.me → 20.68.53.249
-   grafana.chat.canepro.me → 20.68.53.249
+   <YOUR_DOMAIN> → 20.68.53.249
+   grafana.<YOUR_DOMAIN> → 20.68.53.249
    ```
 
 2. **Verify rollback:**
    ```bash
-   nslookup chat.canepro.me
+   nslookup <YOUR_DOMAIN>
    # Should return: 20.68.53.249
 
-   curl -I https://chat.canepro.me
+   curl -I https://<YOUR_DOMAIN>
    # Should return: HTTP/2 200
    ```
 
@@ -191,7 +191,7 @@ kubectl logs -f deployment/rocketchat -n rocketchat
 ## 📊 **Success Metrics**
 
 ### **Immediate Success Criteria:**
-- [ ] DNS resolves to `4.250.169.133`
+- [ ] DNS resolves to `<YOUR_STATIC_IP>`
 - [ ] HTTPS access works for both domains
 - [ ] SSL certificates valid
 - [ ] Rocket.Chat login successful
@@ -284,8 +284,8 @@ kubectl logs -f deployment/rocketchat -n rocketchat
 **Status**: ✅ **SUCCESSFUL** - Zero downtime achieved
 **Duration**: <5 minutes DNS propagation
 **Domains Migrated**:
-- `chat.canepro.me` → 4.250.169.133 ✅
-- `grafana.chat.canepro.me` → 4.250.169.133 ✅
+- `<YOUR_DOMAIN>` → <YOUR_STATIC_IP> ✅
+- `grafana.<YOUR_DOMAIN>` → <YOUR_STATIC_IP> ✅
 
 **Validation Results**:
 - [x] DNS propagation confirmed

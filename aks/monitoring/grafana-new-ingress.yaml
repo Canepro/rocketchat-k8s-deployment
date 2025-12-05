@@ -10,10 +10,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - grafana.canepro.me
+    - <YOUR_GRAFANA_DOMAIN>
     secretName: grafana-new-tls
   rules:
-  - host: grafana.canepro.me
+  - host: <YOUR_GRAFANA_DOMAIN>
     http:
       paths:
       - path: /

@@ -36,7 +36,7 @@ spec:
               name: grafana-admin
               key: password
         - name: GF_SERVER_ROOT_URL
-          value: "https://grafana.chat.canepro.me"
+          value: "https://grafana.<YOUR_DOMAIN>"
         - name: GF_SERVER_SERVE_FROM_SUB_PATH
           value: "false"
         resources:
@@ -103,10 +103,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - grafana.chat.canepro.me
+    - grafana.<YOUR_DOMAIN>
     secretName: grafana-tls
   rules:
-  - host: grafana.chat.canepro.me
+  - host: grafana.<YOUR_DOMAIN>
     http:
       paths:
       - path: /

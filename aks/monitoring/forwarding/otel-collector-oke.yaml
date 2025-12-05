@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: monitoring
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+      resource:
+        attributes:
+          - key: cluster
+            value: rocket-chat-aks
+            action: insert
+          - key: environment
+            value: production
+            action: insert
+
+    exporters:
+      otlphttp:
+        endpoint: https://<YOUR_OBSERVABILITY_DOMAIN>/tempo
+        auth:
+          authenticator: basicauth
+        tls:
+          insecure: false
+
+    extensions:
+      basicauth:
+        client_auth:
+          username: ${OKE_USERNAME}
+          password: ${OKE_PASSWORD}
+
+    service:
+      extensions: [basicauth]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [resource, batch]
+          exporters: [otlphttp]
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: monitoring
+  labels:
+    app: otel-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.88.0
+          args:
+            - "--config=/etc/otel-collector-config.yaml"
+          env:
+            - name: OKE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: oke-auth-secret
+                  key: username
+            - name: OKE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: oke-auth-secret
+                  key: password
+          ports:
+            - containerPort: 4317 # Default endpoint for OpenTelemetry gRPC receiver.
+            - containerPort: 4318 # Default endpoint for OpenTelemetry HTTP receiver.
+          volumeMounts:
+            - name: otel-collector-config-vol
+              mountPath: /etc/otel-collector-config.yaml
+              subPath: otel-collector-config.yaml
+      volumes:
+        - name: otel-collector-config-vol
+          configMap:
+            name: otel-collector-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: monitoring
+  labels:
+    app: otel-collector
+spec:
+  type: ClusterIP
+  ports:
+    - name: grpc-otlp
+      port: 4317
+      targetPort: 4317
+    - name: http-otlp
+      port: 4318
+      targetPort: 4318
+  selector:
+    app: otel-collector
+

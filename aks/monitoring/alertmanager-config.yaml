@@ -39,6 +39,6 @@ spec:
 
   - name: 'rocketchat-webhook'
     webhookConfigs:
-      - url: 'https://chat.canepro.me/hooks/68d1f706fcb9489bcd5d7d07/wDtoAHhAAPfnerGDfGEt8Cnw4pvK5dPwGYJxF28HDDMBiPGC'
+      - url: 'https://<YOUR_DOMAIN>/hooks/68d1f706fcb9489bcd5d7d07/wDtoAHhAAPfnerGDfGEt8Cnw4pvK5dPwGYJxF28HDDMBiPGC'
         sendResolved: true
         maxAlerts: 5

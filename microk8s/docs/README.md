@@ -20,7 +20,7 @@ This folder contains the legacy MicroK8s deployment files and documentation. Thi
 ## 🔄 Current Status
 
 - **Status**: ✅ **Running and operational**
-- **Domain**: `chat.canepro.me` (currently active)
+- **Domain**: `<YOUR_DOMAIN>` (currently active)
 - **Data**: 6,986 documents backed up
 - **Backup**: Available for rollback
 
@@ -37,7 +37,7 @@ If you need to rollback to MicroK8s:
 
 1. Ensure MicroK8s VM is still running
 2. Update DNS to point back to MicroK8s VM IP: `20.68.53.249`
-3. Verify `https://chat.canepro.me` works
+3. Verify `https://<YOUR_DOMAIN>` works
 4. Keep this VM for 3-5 days as insurance
 
 ---

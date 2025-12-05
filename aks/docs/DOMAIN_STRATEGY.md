@@ -3,8 +3,8 @@
 ## Current Domain Configuration
 
 ### Active Domains
-- **Rocket.Chat**: `chat.canepro.me` ✅
-- **Grafana**: `grafana.chat.canepro.me` ✅
+- **Rocket.Chat**: `<YOUR_DOMAIN>` ✅
+- **Grafana**: `grafana.<YOUR_DOMAIN>` ✅
 - **SSL**: Let's Encrypt certificates via cert-manager
 - **DNS**: A records pointing to MicroK8s VM
 
@@ -23,10 +23,10 @@ spec:
   ingressClassName: public
   tls:
   - hosts:
-    - chat.canepro.me
+    - <YOUR_DOMAIN>
     secretName: rocketchat-tls
   rules:
-  - host: chat.canepro.me
+  - host: <YOUR_DOMAIN>
     http:
       paths:
       - path: /
@@ -50,10 +50,10 @@ spec:
   ingressClassName: public
   tls:
   - hosts:
-    - grafana.chat.canepro.me
+    - grafana.<YOUR_DOMAIN>
     secretName: grafana-tls
   rules:
-  - host: grafana.chat.canepro.me
+  - host: grafana.<YOUR_DOMAIN>
     http:
       paths:
       - path: /
@@ -73,12 +73,12 @@ spec:
 #### DNS Configuration During Migration
 ```
 Current Setup (MicroK8s):
-chat.canepro.me       → 20.68.53.249 (VM Public IP)
-grafana.chat.canepro.me → 20.68.53.249 (VM Public IP)
+<YOUR_DOMAIN>       → 20.68.53.249 (VM Public IP)
+grafana.<YOUR_DOMAIN> → 20.68.53.249 (VM Public IP)
 
 Migration Setup (Parallel):
-chat.canepro.me       → 20.68.53.249 (VM Public IP) - PRIMARY
-grafana.chat.canepro.me → 20.68.53.249 (VM Public IP) - PRIMARY
+<YOUR_DOMAIN>       → 20.68.53.249 (VM Public IP) - PRIMARY
+grafana.<YOUR_DOMAIN> → 20.68.53.249 (VM Public IP) - PRIMARY
 chat-aks.canepro.me  → [AKS Ingress IP] - TESTING ONLY
 grafana-aks.canepro.me → [AKS Ingress IP] - TESTING ONLY
 ```
@@ -94,8 +94,8 @@ grafana-aks.canepro.me → [AKS Ingress IP] - TESTING ONLY
 #### Cutover DNS Configuration
 ```
 Post-Migration (AKS):
-chat.canepro.me       → [AKS Ingress IP] - PRIMARY
-grafana.chat.canepro.me → [AKS Ingress IP] - PRIMARY
+<YOUR_DOMAIN>       → [AKS Ingress IP] - PRIMARY
+grafana.<YOUR_DOMAIN> → [AKS Ingress IP] - PRIMARY
 
 Backup (Rollback):
 chat-microk8s.canepro.me → 20.68.53.249 - BACKUP
@@ -134,10 +134,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - chat.canepro.me
+    - <YOUR_DOMAIN>
     secretName: rocketchat-tls
   rules:
-  - host: chat.canepro.me
+  - host: <YOUR_DOMAIN>
     http:
       paths:
       - path: /
@@ -151,15 +151,15 @@ spec:
 
 ## Consolidated Grafana Vision
 
-### Your Idea: `grafana.canepro.me`
+### Your Idea: `<YOUR_GRAFANA_DOMAIN>`
 **Unified monitoring domain** that encompasses everything:
 
 #### Subdomain Strategy
 ```
-grafana.canepro.me/microk8s → Current MicroK8s metrics (during migration)
-grafana.canepro.me/aks      → AKS deployment metrics
-grafana.canepro.me/azure    → Azure infrastructure metrics
-grafana.canepro.me/unified  → Combined dashboard
+<YOUR_GRAFANA_DOMAIN>/microk8s → Current MicroK8s metrics (during migration)
+<YOUR_GRAFANA_DOMAIN>/aks      → AKS deployment metrics
+<YOUR_GRAFANA_DOMAIN>/azure    → Azure infrastructure metrics
+<YOUR_GRAFANA_DOMAIN>/unified  → Combined dashboard
 ```
 
 #### Implementation Approach
@@ -177,10 +177,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - grafana.canepro.me
+    - <YOUR_GRAFANA_DOMAIN>
     secretName: grafana-unified-tls
   rules:
-  - host: grafana.canepro.me
+  - host: <YOUR_GRAFANA_DOMAIN>
     http:
       paths:
       - path: /microk8s
@@ -217,8 +217,8 @@ spec:
 ### Pre-Migration DNS Setup
 ```bash
 # Verify current DNS configuration
-nslookup chat.canepro.me
-nslookup grafana.chat.canepro.me
+nslookup <YOUR_DOMAIN>
+nslookup grafana.<YOUR_DOMAIN>
 
 # Expected output: 20.68.53.249 (your VM IP)
 
@@ -234,15 +234,15 @@ AKS_INGRESS_IP=$(kubectl get svc -n ingress-nginx nginx-ingress-controller -o js
 
 # Step 2: Update DNS records
 # Update A records:
-# chat.canepro.me → $AKS_INGRESS_IP
-# grafana.chat.canepro.me → $AKS_INGRESS_IP
+# <YOUR_DOMAIN> → $AKS_INGRESS_IP
+# grafana.<YOUR_DOMAIN> → $AKS_INGRESS_IP
 
 # Step 3: Wait for DNS propagation (5-10 minutes)
-nslookup chat.canepro.me  # Should return AKS IP
+nslookup <YOUR_DOMAIN>  # Should return AKS IP
 
 # Step 4: Verify services
-curl -I https://chat.canepro.me
-curl -I https://grafana.chat.canepro.me
+curl -I https://<YOUR_DOMAIN>
+curl -I https://grafana.<YOUR_DOMAIN>
 
 # Step 5: Monitor for 30 minutes
 kubectl logs -f deployment/nginx-ingress-controller -n ingress-nginx
@@ -252,11 +252,11 @@ kubectl logs -f deployment/nginx-ingress-controller -n ingress-nginx
 ```bash
 # Emergency rollback (< 5 minutes)
 # Update DNS records back to VM IP:
-# chat.canepro.me → 20.68.53.249
-# grafana.chat.canepro.me → 20.68.53.249
+# <YOUR_DOMAIN> → 20.68.53.249
+# grafana.<YOUR_DOMAIN> → 20.68.53.249
 
 # Verify rollback
-curl -I https://chat.canepro.me  # Should work on MicroK8s
+curl -I https://<YOUR_DOMAIN>  # Should work on MicroK8s
 ```
 
 ## SSL Certificate Strategy
@@ -281,7 +281,7 @@ kubectl get certificaterequests -A
 kubectl get certificates -A
 
 # 4. Test SSL connectivity
-openssl s_client -connect chat.canepro.me:443 -servername chat.canepro.me
+openssl s_client -connect <YOUR_DOMAIN>:443 -servername <YOUR_DOMAIN>
 ```
 
 ## Remote Access Integration
@@ -290,12 +290,12 @@ openssl s_client -connect chat.canepro.me:443 -servername chat.canepro.me
 ```bash
 # Direct domain access (post-migration)
 kubectl config set-cluster aks-cluster \
-  --server=https://chat.canepro.me \
+  --server=https://<YOUR_DOMAIN> \
   --insecure-skip-tls-verify=true
 
 # Secure access with certificates
 kubectl config set-cluster aks-cluster \
-  --server=https://chat.canepro.me \
+  --server=https://<YOUR_DOMAIN> \
   --certificate-authority=/path/to/ca.crt \
   --embed-certs=true
 ```
@@ -358,8 +358,8 @@ spec:
 ### Load Testing
 ```bash
 # Test domain performance
-ab -n 1000 -c 10 https://chat.canepro.me/
-hey -n 1000 -c 10 https://grafana.chat.canepro.me/
+ab -n 1000 -c 10 https://<YOUR_DOMAIN>/
+hey -n 1000 -c 10 https://grafana.<YOUR_DOMAIN>/
 
 # Monitor response times
 kubectl logs -f deployment/nginx-ingress-controller -n ingress-nginx
@@ -387,7 +387,7 @@ kubectl logs -f deployment/nginx-ingress-controller -n ingress-nginx
 
 ### Multi-Region Strategy
 ```
-Production: chat.canepro.me → East US
+Production: <YOUR_DOMAIN> → East US
 DR:        chat-dr.canepro.me → West US
 Staging:   chat-staging.canepro.me → East US 2
 ```
@@ -422,8 +422,8 @@ Staging:   chat-staging.canepro.me → East US 2
 **Domain Strategy Version**: 1.0
 **Last Updated**: Current Date
 **Domains Managed**:
-- ✅ chat.canepro.me (Rocket.Chat)
-- ✅ grafana.chat.canepro.me (Monitoring)
-- ✅ grafana.canepro.me (Unified - Future)
+- ✅ <YOUR_DOMAIN> (Rocket.Chat)
+- ✅ grafana.<YOUR_DOMAIN> (Monitoring)
+- ✅ <YOUR_GRAFANA_DOMAIN> (Unified - Future)
 **SSL Provider**: Let's Encrypt
 **DNS Provider**: [Your DNS Provider]

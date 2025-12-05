@@ -41,8 +41,8 @@ backup_retention_days    = 7
 snapshot_retention_days  = 7
 
 # Domain Configuration
-rocketchat_domain = "chat.canepro.me"
-grafana_domain    = "grafana.chat.canepro.me"
+rocketchat_domain = "<YOUR_DOMAIN>"
+grafana_domain    = "grafana.<YOUR_DOMAIN>"
 
 # Additional Tags
 additional_tags = {

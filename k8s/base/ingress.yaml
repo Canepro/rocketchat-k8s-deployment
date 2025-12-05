@@ -17,10 +17,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - chat.canepro.me
+    - <YOUR_DOMAIN>
     secretName: rocketchat-tls
   rules:
-  - host: chat.canepro.me
+  - host: <YOUR_DOMAIN>
     http:
       paths:
       - path: /
