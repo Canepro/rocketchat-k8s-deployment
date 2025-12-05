@@ -49,3 +49,10 @@ id_rsa.pub
 # Backup files
 *.orig
 *.rej
+
+# Terraform
+terraform.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl

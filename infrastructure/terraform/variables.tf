@@ -1,16 +1,34 @@
 # Terraform Variables for AKS Cluster
 # Parameterized configuration for different environments
 
-variable "resource_group_name" {
-  description = "Name of the Azure Resource Group"
+# Azure Configuration
+variable "subscription_id" {
+  description = "Azure Subscription ID (Optional - will use Azure CLI default if not provided)"
   type        = string
-  default     = "rocketchat-k8s-rg"
+  default     = null
+  sensitive   = true
+}
+
+variable "resource_group_name" {
+  description = "Name of the Azure Resource Group (must already exist)"
+  type        = string
+  default     = "<YOUR_RESOURCE_GROUP_NAME>"
+  
+  validation {
+    condition     = var.resource_group_name != "<YOUR_RESOURCE_GROUP_NAME>"
+    error_message = "Please set resource_group_name in terraform.tfvars - template placeholder detected."
+  }
 }
 
 variable "cluster_name" {
-  description = "Name of the AKS cluster"
+  description = "Name of the AKS cluster (used as prefix for related resources)"
   type        = string
-  default     = "rocketchat-aks"
+  default     = "<YOUR_CLUSTER_NAME>"
+  
+  validation {
+    condition     = var.cluster_name != "<YOUR_CLUSTER_NAME>"
+    error_message = "Please set cluster_name in terraform.tfvars - template placeholder detected."
+  }
 }
 
 variable "environment" {
@@ -158,20 +176,35 @@ variable "snapshot_retention_days" {
 
 # Domain configuration
 variable "rocketchat_domain" {
-  description = "Domain name for Rocket.Chat"
+  description = "Domain name for Rocket.Chat (e.g., chat.example.com)"
   type        = string
   default     = "<YOUR_DOMAIN>"
+  
+  validation {
+    condition     = var.rocketchat_domain != "<YOUR_DOMAIN>"
+    error_message = "Please set rocketchat_domain in terraform.tfvars - template placeholder detected."
+  }
 }
 
 variable "grafana_domain" {
-  description = "Domain name for Grafana"
+  description = "Domain name for Grafana monitoring (e.g., grafana.example.com)"
   type        = string
-  default     = "grafana.<YOUR_DOMAIN>"
+  default     = "<YOUR_GRAFANA_DOMAIN>"
+  
+  validation {
+    condition     = var.grafana_domain != "<YOUR_GRAFANA_DOMAIN>"
+    error_message = "Please set grafana_domain in terraform.tfvars - template placeholder detected."
+  }
 }
 
 # Resource tags
 variable "additional_tags" {
-  description = "Additional tags to apply to all resources"
+  description = "Additional tags to apply to all resources for organization and cost tracking"
   type        = map(string)
-  default     = {}
+  default     = {
+    # Example tags - customize in terraform.tfvars
+    # Owner       = "platform-team"
+    # Project     = "rocketchat-deployment"
+    # CostCenter  = "engineering"
+  }
 }

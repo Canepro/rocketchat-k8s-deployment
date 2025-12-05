@@ -25,6 +25,10 @@ provider "azurerm" {
       prevent_deletion_if_contains_resources = false
     }
   }
+  
+  # Optional: Use explicit subscription ID if provided
+  # Otherwise uses Azure CLI default subscription
+  subscription_id = var.subscription_id
 }
 
 # Data sources
