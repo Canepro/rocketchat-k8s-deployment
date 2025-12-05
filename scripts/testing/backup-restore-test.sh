@@ -20,8 +20,8 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 print_status "🧪 Starting full end-to-end backup and restore validation"
 
 # Configuration
-CLUSTER_NAME="${CLUSTER_NAME:-rocketchat-aks}"
-RESOURCE_GROUP="${RESOURCE_GROUP:-rocketchat-k8s-rg}"
+CLUSTER_NAME="${CLUSTER_NAME:-<YOUR_CLUSTER_NAME>}"
+RESOURCE_GROUP="${RESOURCE_GROUP:-<YOUR_RESOURCE_GROUP>}"
 NAMESPACE="${NAMESPACE:-rocketchat}"
 TEST_NAMESPACE="${TEST_NAMESPACE:-rocketchat-test}"
 BACKUP_STORAGE_ACCOUNT="${BACKUP_STORAGE_ACCOUNT:-rocketchatbackups}"

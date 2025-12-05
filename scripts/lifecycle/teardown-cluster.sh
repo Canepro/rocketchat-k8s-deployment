@@ -20,8 +20,8 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 print_status "🗑️ Starting safe cluster teardown process"
 
 # Configuration
-CLUSTER_NAME="${CLUSTER_NAME:-rocketchat-aks}"
-RESOURCE_GROUP="${RESOURCE_GROUP:-rocketchat-k8s-rg}"
+CLUSTER_NAME="${CLUSTER_NAME:-<YOUR_CLUSTER_NAME>}"
+RESOURCE_GROUP="${RESOURCE_GROUP:-<YOUR_RESOURCE_GROUP>}"
 NAMESPACES="${NAMESPACES:-rocketchat monitoring}"
 DRY_RUN="${DRY_RUN:-false}"
 FORCE_TEARDOWN="${FORCE_TEARDOWN:-false}"

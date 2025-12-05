@@ -21,7 +21,7 @@ print_status "🔐 Syncing secrets from Azure Key Vault to Kubernetes"
 
 # Configuration
 KEY_VAULT_NAME="${KEY_VAULT_NAME:-rocketchat-kv}"
-RESOURCE_GROUP="${RESOURCE_GROUP:-rocketchat-k8s-rg}"
+RESOURCE_GROUP="${RESOURCE_GROUP:-<YOUR_RESOURCE_GROUP>}"
 NAMESPACE="${NAMESPACE:-rocketchat}"
 
 # Check prerequisites

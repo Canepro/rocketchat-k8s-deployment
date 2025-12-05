@@ -20,8 +20,8 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 print_status "🚀 Starting staged rollout of automation system"
 
 # Configuration
-CLUSTER_NAME="${CLUSTER_NAME:-rocketchat-aks}"
-RESOURCE_GROUP="${RESOURCE_GROUP:-rocketchat-k8s-rg}"
+CLUSTER_NAME="${CLUSTER_NAME:-<YOUR_CLUSTER_NAME>}"
+RESOURCE_GROUP="${RESOURCE_GROUP:-<YOUR_RESOURCE_GROUP>}"
 NAMESPACE="${NAMESPACE:-rocketchat}"
 ROLLOUT_STAGE="${ROLLOUT_STAGE:-1}"  # 1-6
 MONITORING_ENABLED="${MONITORING_ENABLED:-false}"

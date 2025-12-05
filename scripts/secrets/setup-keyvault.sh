@@ -21,7 +21,7 @@ print_status "🔐 Setting up Azure Key Vault for secrets management"
 
 # Configuration
 KEY_VAULT_NAME="${KEY_VAULT_NAME:-rocketchat-kv}"
-RESOURCE_GROUP="${RESOURCE_GROUP:-rocketchat-k8s-rg}"
+RESOURCE_GROUP="${RESOURCE_GROUP:-<YOUR_RESOURCE_GROUP>}"
 LOCATION="${LOCATION:-UK South}"
 SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 TENANT_ID=$(az account show --query tenantId -o tsv)

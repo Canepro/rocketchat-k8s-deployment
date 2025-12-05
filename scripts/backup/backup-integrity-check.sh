@@ -23,7 +23,7 @@ print_status "🔍 Starting comprehensive backup integrity check"
 BACKUP_STORAGE_ACCOUNT="${BACKUP_STORAGE_ACCOUNT:-rocketchatbackups}"
 MONGODB_CONTAINER="${MONGODB_CONTAINER:-mongodb-backups}"
 CLUSTER_STATE_CONTAINER="${CLUSTER_STATE_CONTAINER:-cluster-state}"
-RESOURCE_GROUP="${RESOURCE_GROUP:-rocketchat-k8s-rg}"
+RESOURCE_GROUP="${RESOURCE_GROUP:-<YOUR_RESOURCE_GROUP>}"
 KEY_VAULT_NAME="${KEY_VAULT_NAME:-rocketchat-kv}"
 
 # Check prerequisites

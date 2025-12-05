@@ -20,8 +20,8 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 print_status "🔄 Starting cluster recreation process"
 
 # Configuration
-CLUSTER_NAME="${CLUSTER_NAME:-rocketchat-aks}"
-RESOURCE_GROUP="${RESOURCE_GROUP:-rocketchat-k8s-rg}"
+CLUSTER_NAME="${CLUSTER_NAME:-<YOUR_CLUSTER_NAME>}"
+RESOURCE_GROUP="${RESOURCE_GROUP:-<YOUR_RESOURCE_GROUP>}"
 NAMESPACES="${NAMESPACES:-rocketchat monitoring}"
 SNAPSHOT_TIMESTAMP="${SNAPSHOT_TIMESTAMP:-}"
 ENABLE_MONITORING="${ENABLE_MONITORING:-false}"

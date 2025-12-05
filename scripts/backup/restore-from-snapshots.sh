@@ -20,7 +20,7 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 print_status "📸 Starting PVC restore from snapshots"
 
 # Configuration
-RESOURCE_GROUP="${RESOURCE_GROUP:-rocketchat-k8s-rg}"
+RESOURCE_GROUP="${RESOURCE_GROUP:-<YOUR_RESOURCE_GROUP>}"
 NAMESPACE="${NAMESPACE:-rocketchat}"
 SNAPSHOT_TIMESTAMP="${SNAPSHOT_TIMESTAMP:-}"
 RESTORE_NAMESPACE="${RESTORE_NAMESPACE:-rocketchat}"

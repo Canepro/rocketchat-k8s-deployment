@@ -21,7 +21,7 @@ print_status "🔐 Backing up Kubernetes secrets to Azure Key Vault"
 
 # Configuration
 KEY_VAULT_NAME="${KEY_VAULT_NAME:-rocketchat-kv}"
-RESOURCE_GROUP="${RESOURCE_GROUP:-rocketchat-k8s-rg}"
+RESOURCE_GROUP="${RESOURCE_GROUP:-<YOUR_RESOURCE_GROUP>}"
 ROCKETCHAT_NAMESPACE="${ROCKETCHAT_NAMESPACE:-rocketchat}"
 MONITORING_NAMESPACE="${MONITORING_NAMESPACE:-monitoring}"
 

@@ -20,8 +20,8 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 print_status "🧪 Starting dry-run testing of all automation scripts"
 
 # Configuration
-CLUSTER_NAME="${CLUSTER_NAME:-rocketchat-aks}"
-RESOURCE_GROUP="${RESOURCE_GROUP:-rocketchat-k8s-rg}"
+CLUSTER_NAME="${CLUSTER_NAME:-<YOUR_CLUSTER_NAME>}"
+RESOURCE_GROUP="${RESOURCE_GROUP:-<YOUR_RESOURCE_GROUP>}"
 NAMESPACE="${NAMESPACE:-rocketchat}"
 TEST_RESULTS_DIR="/tmp/dry-run-test-results-$(date +%Y%m%d_%H%M%S)"
 

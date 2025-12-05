@@ -20,8 +20,8 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 print_status "🔍 Starting subscription monitoring and recovery"
 
 # Configuration
-CLUSTER_NAME="${CLUSTER_NAME:-rocketchat-aks}"
-RESOURCE_GROUP="${RESOURCE_GROUP:-rocketchat-k8s-rg}"
+CLUSTER_NAME="${CLUSTER_NAME:-<YOUR_CLUSTER_NAME>}"
+RESOURCE_GROUP="${RESOURCE_GROUP:-<YOUR_RESOURCE_GROUP>}"
 SUBSCRIPTION_ID="${SUBSCRIPTION_ID:-}"
 CHECK_INTERVAL="${CHECK_INTERVAL:-300}"  # 5 minutes
 MAX_RETRIES="${MAX_RETRIES:-3}"

@@ -20,7 +20,7 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 print_status "📸 Starting PVC snapshot creation"
 
 # Configuration
-RESOURCE_GROUP="${RESOURCE_GROUP:-rocketchat-k8s-rg}"
+RESOURCE_GROUP="${RESOURCE_GROUP:-<YOUR_RESOURCE_GROUP>}"
 SNAPSHOT_RETENTION_DAYS="${SNAPSHOT_RETENTION_DAYS:-7}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 SNAPSHOT_PREFIX="pvc-snapshot-${TIMESTAMP}"
